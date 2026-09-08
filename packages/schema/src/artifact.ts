@@ -70,6 +70,7 @@ export const ArtifactKindSchema = z.enum([
   'endpoint-index',
   'flow-trace',
   'stage-report',
+  'coverage-report',
 ]);
 
 /**

@@ -121,9 +121,13 @@ Deterministic, no LLM. This stage is a well-written crawler and nothing more.
 Fixed viewport (default 1280×800, plus 390×844 if `--responsive`). Pinned UA. `prefers-reduced-motion: reduce`. Inject a shim before any page script that freezes `Date.now`, `performance.now`, `Math.random`, and `crypto.randomUUID` against the run seed — you need this here as well as in the clone, or your "identical" recrawls will never be identical.
 
 ### Asset capture
-Attach to `page.route('**/*')` and persist **every** response body content-addressed by sha256. Rewrite nothing yet. Separately, walk `document.styleSheets` and extract every `url()` reference, every `@font-face`, and every rule whose selector contains `:hover`, `:focus`, `:focus-visible`, `:active`, `:checked`, `:disabled`, `[aria-expanded]`, or `[data-state]`.
+Attach to `page.route('**/*')` and persist **every** response body content-addressed by sha256. Rewrite nothing yet. Separately, walk `document.styleSheets` and extract every `url()` reference, every `@font-face`, and every state rule.
 
-**That last extraction is the highest-value trick in this project.** Reading pseudo-class rules straight out of the CSSOM gives you the true hover/focus definitions in one pass. Do not brute-force hover every element to discover them — that is O(n) page interactions for information already sitting in the stylesheet. Use hover probing only to resolve the handful of elements whose state changes are JS-driven and therefore absent from CSS.
+**Identify state rules by parsing the selector, never by substring test.** Run each `selectorText` through a real selector parser (`postcss-selector-parser`) and match *nodes*: a pseudo-class node whose value is an interaction pseudo (`:hover`, `:focus`, `:focus-visible`, `:focus-within`, `:active`, `:checked`, `:indeterminate`, `:disabled`, `:enabled`, `:target`, `:visited`, `:open`), or an attribute node whose attribute is **any** `aria-*` or `data-*` — regardless of value, because an enumerated list will always trail what sites actually write. To find the nodes a state rule applies to, strip only *bare, top-level* state pseudos and query the remainder; stripping one inside `:not()`/`:is()` inverts what the selector means, and `a:not(:visited)` must not become `a:not()`.
+
+A literal pattern list plus `String.includes` is what silently dropped every `[aria-expanded="true"]` rule in the rung-2 measurement, and turned `.btn:focus-visible` into `.btn-visible`. See docs/decisions/0008.
+
+**That last extraction is the highest-value trick in this project.** Reading state rules straight out of the CSSOM gives you the true hover/focus definitions in one pass. Do not brute-force hover every element to discover them — that is O(n) page interactions for information already sitting in the stylesheet. Use hover probing only to resolve the handful of elements whose state changes are JS-driven and therefore absent from CSS.
 
 ### Interaction discovery
 Build the candidate set from the union of:
@@ -150,6 +154,30 @@ Step scroll in 0.5-viewport increments to the bottom. Screenshot each step. Diff
 
 ### Authenticated capture
 `--auth` launches headful, navigates to the login route, and waits for the operator to sign in by hand (this handles MFA and CAPTCHA without any bypass logic). On success, persist `storageState`. Every subsequent run reuses it non-interactively until it expires. Anonymous and authenticated crawls are two **capture contexts** (`CaptureContext`, decision 0004), declared in the manifest and referenced by every `routeId` as `<pattern>--<context>--i<instance>`. Record which routes require auth (`RouteMeta.requiresAuth`) and what an anonymous visitor gets (`unauthenticatedBehavior`), because the clone must reproduce the redirect-to-login behavior.
+
+### Coverage invariants
+
+Every extraction bug found so far has been a **silent drop**: the input contained something, the output did not, and nothing failed. Write `coverage.json` per capture — counts of what the raw input held against what extraction produced — and assert the contradictions that no correct run can produce:
+
+| input | therefore output |
+|---|---|
+| stylesheets present | style table non-empty |
+| CSS has interaction pseudo-classes | pseudo-class state entries non-empty |
+| CSS has `aria-*`/`data-*` selectors | attribute state entries non-empty |
+| CSS has `@font-face` | font descriptors non-empty |
+| HAR has XHR/fetch entries | endpoints non-empty |
+| document taller than 2 viewports | more than one scroll step |
+| a11y tree has interactive roles | interaction candidates non-empty |
+| subresources were requested | asset entries non-empty |
+
+A broken invariant **fails the run** — `stage-report.json` status must be `failed`, and the schema enforces that.
+
+Two properties make an invariant actually work, both learned by reintroducing a fixed bug and watching the check stay green:
+
+1. **The observed side must be derived independently of the extraction.** Counting inputs with the same parser the extractor uses means a bug in that parser moves both sides, and the invariant goes vacuous instead of failing. Use raw text and a cruder detector; over-counting there is safe, sharing a code path is not.
+2. **It must compare like with like.** An aggregate output count lets one category mask another's disappearance.
+
+**Standing rule:** whenever a rung finds a silent drop, add the invariant that would have caught it. The list is meant to grow.
 
 ### Crawl frontier
 BFS from the entry URL. Same-origin only. Respect `--max-depth` (default 3), and the context-aware budget (decision 0004): `--max-routes` (default 40) applies **per context**, the cap of 3 instances applies **per (pattern, context)**, and `maxRoutesTotal` is a global ceiling across every context — without it, declaring six contexts silently costs six times as much. Three product pages is enough to infer the template, thirty is waste.

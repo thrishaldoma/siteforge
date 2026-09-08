@@ -199,15 +199,22 @@
     {
       "index": 0,
       "action": {
-        "type": "click",
-        "ref": "a11y_41f0dd5da03e"
+        "type": "click"
       },
       "target": {
-        "ref": "a11y_41f0dd5da03e",
-        "nodeId": "n_d078638531fe095b",
-        "selector": "button.accordion-trigger",
         "role": "button",
-        "name": "Product details"
+        "name": "Product details",
+        "entityRef": null,
+        "diagnostic": {
+          "nodeId": "n_d078638531fe095b",
+          "selector": "button.accordion-trigger",
+          "boundingBox": {
+            "x": 700,
+            "y": 428,
+            "width": 320,
+            "height": 36
+          }
+        }
       },
       "pre": {
         "url": "https://example.com/product/mug-blue-12oz",

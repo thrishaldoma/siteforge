@@ -155,6 +155,40 @@ describe('flow traces form a chain', () => {
     expect(FlowTraceSchema.safeParse(bad).success).toBe(false);
   });
 
+  it('rejects a click with no target', () => {
+    const bad = clone(addToCart);
+    const steps = bad['steps'] as Array<Record<string, unknown>>;
+    delete steps[1]!['target'];
+    const result = FlowTraceSchema.safeParse(bad);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('must say which element');
+  });
+
+  it('rejects a target on an action that addresses no element', () => {
+    const bad = clone(addToCart);
+    const steps = bad['steps'] as Array<Record<string, unknown>>;
+    steps[0]!['action'] = { type: 'scroll', dx: 0, dy: 200 };
+    const result = FlowTraceSchema.safeParse(bad);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('must carry no target');
+  });
+
+  it('rejects a capture that filled in entityRef (§7.4 is infer\'s job)', () => {
+    const bad = clone(addToCart);
+    const steps = bad['steps'] as Array<Record<string, Record<string, unknown>>>;
+    steps[1]!['target']!['entityRef'] = 'product:MUG-BLUE';
+    const result = FlowTraceSchema.safeParse(bad);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('populated by infer');
+  });
+
+  it('rejects a runtime ref smuggled into a recorded action', () => {
+    const bad = clone(addToCart);
+    const steps = bad['steps'] as Array<Record<string, Record<string, unknown>>>;
+    steps[1]!['action']!['ref'] = 'el_0123456789ab';
+    expect(FlowTraceSchema.safeParse(bad).success).toBe(false);
+  });
+
   it('rejects a probe carrying more than one action (§6: one action per probe)', () => {
     const bad = clone(addToCart);
     bad['kind'] = 'probe';
@@ -571,16 +605,85 @@ describe('state deltas keep their provenance distinguishable (§6)', () => {
     expect(StateDeltasDocumentSchema.safeParse(bad).success).toBe(false);
   });
 
-  it('only accepts the state selectors §6 enumerates', () => {
+  it.each([
+    [':hover', true],
+    [':focus-visible', true],
+    ['[aria-expanded]', true],
+    ['[data-state]', true],
+    // Widened deliberately: an enumerated list will always trail what sites write.
+    ['[data-collapsed]', true],
+    ['[aria-current]', true],
+    // Values are normalized away, so a valued form is not a state selector.
+    ['[data-state="open"]', false],
+    // Not a state at all.
+    [':nth-child(2)', false],
+    ['[href]', false],
+    ['.btn', false],
+  ])('state selector %s -> %s', (selector, ok) => {
     const bad = clone(routeStates);
     const entries = bad['entries'] as Array<Record<string, unknown>>;
     const cssom = entries.find((e) => e['source'] === 'cssom')!;
-    cssom['stateSelectors'] = [':visited'];
-    expect(StateDeltasDocumentSchema.safeParse(bad).success).toBe(false);
+    cssom['stateSelectors'] = [selector];
+    expect(StateDeltasDocumentSchema.safeParse(bad).success).toBe(ok);
   });
 });
 
 /* -------------------------------------------------------------- SiteModel */
+
+describe('coverage invariants gate the run (decision 0008)', () => {
+  const coverage = load<Record<string, unknown>>('coverage.json');
+
+  const modelWith = (cov: unknown, status: string): unknown => ({
+    modelVersion: CAPTURE_MODEL_VERSION,
+    siteId: 'northwind-supply',
+    manifest: (() => {
+      const x = clone(manifest) as Record<string, unknown>;
+      x['routeIds'] = [MUG];
+      x['patterns'] = [{ urlPattern: '/product/:id', observedUrlCount: 1, routeIds: [MUG] }];
+      return x;
+    })(),
+    routes: {
+      [MUG]: { meta: clone(routeMeta), dom: clone(routeDom), styles: clone(routeStyles), states: clone(routeStates) },
+    },
+    assets: load('assets/index.json'),
+    endpoints: clone(endpoints),
+    flows: {},
+    stageReport: { ...clone(report), status },
+    coverage: cov,
+  });
+
+  it('accepts a capture whose invariants all hold', () => {
+    const cov = clone(coverage) as Record<string, unknown>;
+    cov['routeIds'] = [MUG];
+    expect(CaptureModelSchema.safeParse(modelWith(cov, 'ok-with-gaps')).success).toBe(true);
+  });
+
+  it('forces the stage to fail when an invariant is broken', () => {
+    const cov = clone(coverage) as Record<string, Array<Record<string, unknown>>>;
+    (cov as Record<string, unknown>)['routeIds'] = [MUG];
+    cov['invariants']![0]!['vacuous'] = false;
+    cov['invariants']![0]!['holds'] = false;
+    const result = CaptureModelSchema.safeParse(modelWith(cov, 'ok-with-gaps'));
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain("must be 'failed'");
+  });
+
+  it('accepts a broken invariant only alongside a failed stage', () => {
+    const cov = clone(coverage) as Record<string, Array<Record<string, unknown>>>;
+    (cov as Record<string, unknown>)['routeIds'] = [MUG];
+    cov['invariants']![0]!['vacuous'] = false;
+    cov['invariants']![0]!['holds'] = false;
+    expect(CaptureModelSchema.safeParse(modelWith(cov, 'failed')).success).toBe(true);
+  });
+
+  it('rejects coverage that aggregates a route which was not loaded', () => {
+    const cov = clone(coverage) as Record<string, unknown>;
+    cov['routeIds'] = ['ghost--anon-desktop--i0'];
+    const result = CaptureModelSchema.safeParse(modelWith(cov, 'ok-with-gaps'));
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('was not loaded');
+  });
+});
 
 describe('SiteModel is reserved, not implemented (decision 0001)', () => {
   it('is versioned separately from the capture model', () => {

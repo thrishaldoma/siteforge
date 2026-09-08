@@ -1,0 +1,93 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "coverage-report",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 30
+  },
+  "siteId": "northwind-supply",
+  "routeIds": [
+    "root--anon-desktop--i0",
+    "product-id--anon-desktop--i0",
+    "product-id--anon-desktop--i1",
+    "product-id--anon-mobile--i0",
+    "embeds-size-guide--anon-desktop--i0",
+    "about--anon-desktop--i0",
+    "account-orders--auth-desktop--i0"
+  ],
+  "observed": {
+    "stylesheets": 2,
+    "cssPseudoClassRules": 21,
+    "cssAttributeStateRules": 6,
+    "cssFontFaceRules": 1,
+    "harXhrEntries": 7,
+    "documentHeightRatio": 2.625,
+    "axInteractiveRoles": 49,
+    "subresourceRequests": 8
+  },
+  "extracted": {
+    "styleTableEntries": 193,
+    "statesCssomPseudo": 21,
+    "statesCssomAttribute": 6,
+    "statesProbed": 6,
+    "statesScroll": 5,
+    "fonts": 1,
+    "endpoints": 8,
+    "scrollSteps": 14,
+    "interactionCandidates": 49,
+    "assets": 8,
+    "a11yNodes": 155
+  },
+  "invariants": [
+    {
+      "id": "stylesheets-imply-style-table",
+      "description": "a page with stylesheets must produce a non-empty style table",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "pseudo-classes-imply-pseudo-states",
+      "description": "CSS containing interaction pseudo-classes must produce pseudo-class state entries",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "attribute-states-imply-attribute-states",
+      "description": "CSS containing aria-*/data-* attribute selectors must produce attribute state entries",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "font-face-implies-fonts",
+      "description": "@font-face rules must produce font descriptors",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "xhr-implies-endpoints",
+      "description": "XHR or fetch traffic must produce endpoint descriptors",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "tall-document-implies-scroll-steps",
+      "description": "a document taller than 2 viewports must produce more than one scroll step",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "interactive-roles-imply-candidates",
+      "description": "an a11y tree with interactive roles must produce interaction candidates",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "subresources-imply-assets",
+      "description": "requested subresources must produce asset entries",
+      "vacuous": false,
+      "holds": true
+    }
+  ]
+}

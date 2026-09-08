@@ -587,12 +587,17 @@ write('network/endpoints.json', S.EndpointIndexSchema, {
 const mug = routes.get(ROUTE.mug);
 const orders = routes.get(ROUTE.orders);
 
+// role + name are the resolution path; nodeId and selector are quarantined under
+// `diagnostic` because they do not survive codegen (decision 0008).
 const targetFor = (r, node) => ({
-  ref: node.a11y.ref,
-  nodeId: node.nodeId,
-  selector: node.interaction.selector,
   role: node.a11y.role,
   name: node.a11y.name,
+  entityRef: null, // populated by infer (§7.4), never by capture
+  diagnostic: {
+    nodeId: node.nodeId,
+    selector: node.interaction.selector,
+    boundingBox: node.boundingBox,
+  },
 });
 const nodeById = (r, id) => findOne(r.root, (n) => n.attributes.id === id);
 const qty = nodeById(mug, 'qty');
@@ -619,7 +624,7 @@ write(`flows/add-mug-to-cart.trace.json`, S.FlowTraceSchema, {
   initialA11yTree: mug.a11yRoot,
   steps: [
     {
-      index: 0, action: { type: 'type', ref: qty.a11y.ref, text: '2' }, target: targetFor(mug, qty),
+      index: 0, action: { type: 'type', text: '2' }, target: targetFor(mug, qty),
       pre: snap(mug.domHash, mug.a11yHash),
       post: snap(h('mug-qty2'), h('mug-qty2-a11y'), qty.a11y.ref),
       domDelta: { ...emptyDom, attributeChanges: [{ nodeId: qty.nodeId, attribute: 'value', from: '1', to: '2' }] },
@@ -627,7 +632,7 @@ write(`flows/add-mug-to-cart.trace.json`, S.FlowTraceSchema, {
       networkCalls: [], urlChanged: false, waitStrategy: 'timeout',
     },
     {
-      index: 1, action: { type: 'click', ref: addToCart.a11y.ref }, target: targetFor(mug, addToCart),
+      index: 1, action: { type: 'click' }, target: targetFor(mug, addToCart),
       pre: snap(h('mug-qty2'), h('mug-qty2-a11y'), qty.a11y.ref),
       post: snap(h('mug-added'), h('mug-added-a11y'), addToCart.a11y.ref),
       domDelta: {
@@ -647,7 +652,7 @@ write(`flows/add-mug-to-cart.trace.json`, S.FlowTraceSchema, {
       urlChanged: false, waitStrategy: 'network-idle',
     },
     {
-      index: 2, action: { type: 'click', ref: cartBtn.a11y.ref }, target: targetFor(mug, cartBtn),
+      index: 2, action: { type: 'click' }, target: targetFor(mug, cartBtn),
       pre: snap(h('mug-added'), h('mug-added-a11y'), addToCart.a11y.ref),
       post: snap(h('mug-drawer'), h('mug-drawer-a11y'), cartBtn.a11y.ref),
       domDelta: {
@@ -676,7 +681,7 @@ write(`flows/toggle-product-details.trace.json`, S.FlowTraceSchema, {
   startRouteId: ROUTE.mug, discoveredBy: 'event-listeners',
   initialA11yTree: mug.a11yRoot,
   steps: [{
-    index: 0, action: { type: 'click', ref: accordion.a11y.ref }, target: targetFor(mug, accordion),
+    index: 0, action: { type: 'click' }, target: targetFor(mug, accordion),
     pre: snap(mug.domHash, mug.a11yHash),
     post: snap(h('mug-accordion-open'), h('mug-accordion-open-a11y'), accordion.a11y.ref),
     domDelta: {
@@ -810,6 +815,51 @@ write('manifest.json', S.CaptureManifestSchema, {
     gaps: GAPS.length,
   },
 });
+
+const allStates = [...routes.values()]
+  .filter((r) => !r.spec.sharedWith)
+  .map((r) => stateEntriesFor(r.spec.routeId, r, { ...r.spec, viewport: contextById.get(r.spec.contextId).viewport }));
+const flat = allStates.flat();
+const capturedRoutes = [...routes.values()].filter((r) => !r.spec.sharedWith);
+const observed = {
+  stylesheets: 2,
+  cssPseudoClassRules: flat.filter((e) => e.source === 'cssom' && e.stateSelectors.some((x) => x.startsWith(':'))).length,
+  cssAttributeStateRules: flat.filter((e) => e.source === 'cssom' && e.stateSelectors.some((x) => x.startsWith('['))).length,
+  cssFontFaceRules: 1,
+  harXhrEntries: ENDPOINTS.filter((e) => e.observedCount > 0).length,
+  documentHeightRatio: 2100 / 800,
+  axInteractiveRoles: capturedRoutes.reduce(
+    (n, r) => n + findAll(r.root, (x) => x.interaction !== undefined).length, 0),
+  subresourceRequests: FILES.length,
+};
+const extracted = {
+  styleTableEntries: capturedRoutes.reduce((n, r) => n + r.table.length, 0),
+  statesCssomPseudo: flat.filter(
+    (e) => e.source === 'cssom' && e.stateSelectors.some((x) => x.startsWith(':'))).length,
+  statesCssomAttribute: flat.filter(
+    (e) => e.source === 'cssom' && e.stateSelectors.some((x) => x.startsWith('['))).length,
+  statesProbed: flat.filter((e) => e.source === 'probed').length,
+  statesScroll: flat.filter((e) => e.source === 'scroll').length,
+  fonts: 1,
+  endpoints: ENDPOINTS.length,
+  scrollSteps: capturedRoutes.reduce((n, r) => n + r.spec.scrollSteps, 0),
+  interactionCandidates: observed.axInteractiveRoles,
+  assets: FILES.length,
+  a11yNodes: capturedRoutes.reduce(
+    (n, r) => n + findAll(r.root, (x) => x.a11y !== undefined).length, 0),
+};
+const invariants = S.evaluateCoverage(observed, extracted);
+write('coverage.json', S.CoverageReportSchema, {
+  ...envelope('coverage-report', 30),
+  siteId: SITE_ID,
+  routeIds: capturedRoutes.map((r) => r.spec.routeId),
+  observed, extracted, invariants,
+});
+const brokenInvariants = invariants.filter((i) => !i.vacuous && !i.holds);
+if (brokenInvariants.length) {
+  console.error(`✗ coverage invariants failed: ${brokenInvariants.map((i) => i.id).join(', ')}`);
+  process.exit(1);
+}
 
 write('stage-report.json', S.StageReportSchema, {
   ...envelope('stage-report', 41880),

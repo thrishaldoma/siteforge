@@ -30,6 +30,7 @@ export * from './states.js';
 export * from './assets.js';
 export * from './endpoints.js';
 export * from './flows.js';
+export * from './coverage.js';
 export * from './stage-report.js';
 export * from './capture-model.js';
 export * from './site-model.js';

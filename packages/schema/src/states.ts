@@ -31,19 +31,45 @@ import {
 import { artifactEnvelope } from './artifact.js';
 import { StyleDeclarationSchema } from './styles.js';
 
-/** The state selectors §6 enumerates for CSSOM extraction. */
-export const STATE_SELECTOR_PATTERNS = [
+/**
+ * Interaction pseudo-classes that make a rule a state rule.
+ *
+ * Matched by **parsing** the selector, never by substring test — see §6 and
+ * docs/decisions/0008. A literal list plus `String.includes` is what silently
+ * dropped every `[aria-expanded="true"]` rule in the rung-2 measurement.
+ */
+export const STATE_PSEUDO_CLASSES = [
   ':hover',
   ':focus',
   ':focus-visible',
+  ':focus-within',
   ':active',
   ':checked',
+  ':indeterminate',
   ':disabled',
-  '[aria-expanded]',
-  '[data-state]',
+  ':enabled',
+  ':target',
+  ':visited',
+  ':open',
 ] as const;
 
-export const StateSelectorSchema = z.enum(STATE_SELECTOR_PATTERNS);
+/**
+ * State-bearing attribute selectors, normalized to their bare attribute name:
+ * `[aria-expanded="true"]` is recorded as `[aria-expanded]`.
+ *
+ * **Any** `aria-*` or `data-*` attribute counts, regardless of value. §6 used to
+ * name `[aria-expanded]` and `[data-state]` specifically; an enumerated list
+ * will always trail what sites actually write, and the ones it misses are
+ * dropped in silence.
+ */
+export const StateAttributePatternSchema = z
+  .string()
+  .regex(/^\[(?:aria|data)-[a-z0-9-]+\]$/, 'expected [aria-*] or [data-*]');
+
+export const StateSelectorSchema = z.union([
+  z.enum(STATE_PSEUDO_CLASSES),
+  StateAttributePatternSchema,
+]);
 
 /** A single property's before/after values. */
 export const PropertyChangeSchema = z.strictObject({

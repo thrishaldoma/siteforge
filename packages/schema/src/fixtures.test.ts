@@ -19,7 +19,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AssetIndexSchema,
+  COVERAGE_INVARIANTS,
   CAPTURE_MODEL_VERSION,
+  CoverageReportSchema,
+  evaluateCoverage,
   CaptureManifestSchema,
   CaptureModelSchema,
   DomDocumentSchema,
@@ -188,6 +191,7 @@ describe('every fixture artifact parses', () => {
       endpoints,
       flows: Object.fromEntries(flows),
       stageReport: report,
+      coverage: CoverageReportSchema.parse(read('coverage.json')),
     });
     expect(Object.keys(model.routes)).toHaveLength(routes.size);
   });
@@ -401,15 +405,54 @@ describe('referential integrity across files', () => {
     expect(calls).toBeGreaterThan(0);
   });
 
-  it('every flow target resolves in both the a11y tree and the DOM', () => {
+  it('every flow target resolves by role and name, the way replay will', () => {
+    // §9 replays against a DOM codegen generated, not the original's. role+name is
+    // the resolution path, so the test asserts what replay will actually do.
     for (const flow of flows.values()) {
-      const refs = a11yRefs(flow.initialA11yTree);
-      const nodeIds = allNodeIds(captured.get(flow.startRouteId)!.dom);
+      const byRoleName = new Set<string>();
+      const collect = (n: A11yNode): void => {
+        byRoleName.add(`${n.role}\u0000${n.name}`);
+        n.children.forEach(collect);
+      };
+      collect(flow.initialA11yTree);
       for (const step of flow.steps) {
         if (!step.target) continue;
-        expect(refs.has(step.target.ref), `flow ${flow.flowId} targets unknown a11y ref`).toBe(true);
-        expect(nodeIds.has(step.target.nodeId), `flow ${flow.flowId} targets unknown node`).toBe(true);
-        if ('ref' in step.action) expect(step.action.ref).toBe(step.target.ref);
+        expect(
+          byRoleName.has(`${step.target.role}\u0000${step.target.name}`),
+          `flow ${flow.flowId} step ${step.index} targets role=${step.target.role} name=${step.target.name}, absent from the a11y tree`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('quarantines the fields that do not survive codegen (decision 0008)', () => {
+    const nodeIdsByRoute = new Map([...captured.entries()].map(([id, r]) => [id, allNodeIds(r.dom)]));
+    let targets = 0;
+    for (const flow of flows.values()) {
+      for (const step of flow.steps) {
+        if (!step.target) continue;
+        targets += 1;
+        // Diagnostics point at real capture-side nodes...
+        expect(nodeIdsByRoute.get(flow.startRouteId)?.has(step.target.diagnostic.nodeId)).toBe(true);
+        expect(step.target.diagnostic.selector.length).toBeGreaterThan(0);
+        // ...and live nowhere but under `diagnostic`, so nothing resolves against them.
+        expect(Object.keys(step.target).sort()).toEqual(['diagnostic', 'entityRef', 'name', 'role']);
+        // §7.4 populates entityRef; capture must not.
+        expect(step.target.entityRef).toBeNull();
+      }
+    }
+    expect(targets).toBeGreaterThan(0);
+  });
+
+  it('gives a target to exactly the element-directed actions', () => {
+    const directed = new Set(['click', 'type', 'select', 'hover']);
+    for (const flow of flows.values()) {
+      for (const step of flow.steps) {
+        expect(step.target !== undefined, `${flow.flowId} step ${step.index}`).toBe(
+          directed.has(step.action.type),
+        );
+        // A recorded action must carry no runtime ref: opposite lifetimes.
+        expect('ref' in step.action).toBe(false);
       }
     }
   });

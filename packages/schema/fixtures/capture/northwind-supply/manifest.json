@@ -179,7 +179,7 @@
     "toggle-product-details",
     "delete-account"
   ],
-  "contentHash": "6daac3ca6ef6762bcee57ac1b8f303696852fbbf7eb5a12994f423190048ac0a",
+  "contentHash": "9c2a10dd0327a441d6fc15e30a9b4139adcadc5a82183e6f9246084b236c6ff8",
   "counts": {
     "contexts": 3,
     "routes": 8,

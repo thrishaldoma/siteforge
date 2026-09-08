@@ -169,13 +169,13 @@
     },
     {
       "path": "flows/add-mug-to-cart.trace.json",
-      "sha256": "63f97a1dad2ab83ca62c2089e69c0ec295ca810007f7483c528128989d5f7066",
-      "bytes": 11631
+      "sha256": "cfa0cb7c91bd9506a83b477031c2f8cc534d571e563f30ee3bb0eb6dc97d9f73",
+      "bytes": 12014
     },
     {
       "path": "flows/toggle-product-details.trace.json",
-      "sha256": "af1ac1eaeb07b823f0e2a57e8fa5665e34a9a62e78e1c38b82bedec8568c4a4a",
-      "bytes": 7904
+      "sha256": "da9294952d7586a9fb3a3b7bfd711474dc4abacb34b93f3c33318ca7f4a2a251",
+      "bytes": 8032
     },
     {
       "path": "flows/delete-account.trace.json",
@@ -184,8 +184,13 @@
     },
     {
       "path": "manifest.json",
-      "sha256": "2c32f0cc5fbd9368bd0ae0411cc856edc31dbdda6699015a4de31c0261074982",
+      "sha256": "da816bbed663b12a54132f3e40912180023076def48607a7235b4ef9bf1e1cda",
       "bytes": 4576
+    },
+    {
+      "path": "coverage.json",
+      "sha256": "cd695101a0f9013a0afc50bee84d580e08fddb681e1fad3711d37f6a0632f7aa",
+      "bytes": 2616
     }
   ],
   "warnings": [

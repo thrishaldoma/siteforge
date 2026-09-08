@@ -19,5 +19,8 @@
     "build": "tsc --build",
     "test": "vitest run",
     "typecheck:tests": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@siteforge/schema": "workspace:*"
   }
 }

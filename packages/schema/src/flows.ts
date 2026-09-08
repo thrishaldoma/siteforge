@@ -21,6 +21,7 @@ import {
   FlowIdSchema,
   HttpMethodSchema,
   NodeIdSchema,
+  RectSchema,
   RouteIdSchema,
   ShortHashSchema,
   SiteIdSchema,
@@ -35,32 +36,79 @@ import { GapIdSchema } from './gap.js';
  * space. `hover` is capture-only (used by §6's probing); everything else is
  * exactly §10's list.
  */
-export const ActionSchema = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('click'), ref: A11yRefSchema }),
-  z.strictObject({ type: z.literal('type'), ref: A11yRefSchema, text: z.string() }),
-  z.strictObject({ type: z.literal('select'), ref: A11yRefSchema, option: z.string() }),
+/**
+ * The recorded action vocabulary. **Capture-time and durable** — this is what a
+ * `flows/*.trace.json` on disk says happened.
+ *
+ * Deliberately *not* shared with §10's runtime action type, which carries an
+ * `elementRef` (decision 0007/0008). The two have opposite lifetimes: this one
+ * lives on disk indefinitely, an `EnvAction`'s ref is episode-scoped and never
+ * persisted. A shared type would let an ephemeral ref be written to a file.
+ *
+ * There is no `ref` here. Element-directed actions name their target through
+ * `FlowStep.target`, which is a resolution *description*, not an address.
+ */
+export const RecordedActionSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('click') }),
+  z.strictObject({ type: z.literal('type'), text: z.string() }),
+  z.strictObject({ type: z.literal('select'), option: z.string() }),
+  /** Capture-only: §6 uses hover probing to resolve JS-driven state changes. */
+  z.strictObject({ type: z.literal('hover') }),
   z.strictObject({ type: z.literal('scroll'), dx: z.number(), dy: z.number() }),
   z.strictObject({ type: z.literal('key'), key: z.string().min(1) }),
   z.strictObject({ type: z.literal('goto'), url: z.string().min(1) }),
   z.strictObject({ type: z.literal('back') }),
   z.strictObject({ type: z.literal('done') }),
-  /** Capture-only: §6 uses hover probing to resolve JS-driven state changes. */
-  z.strictObject({ type: z.literal('hover'), ref: A11yRefSchema }),
 ]);
 
+/** Action types that address an element and therefore require a target. */
+export const ELEMENT_DIRECTED_ACTIONS = ['click', 'type', 'select', 'hover'] as const;
+
 /**
- * How to find the action's target.
+ * Identity of an entity in the inferred data model, e.g. `product:MUG-BLUE`.
  *
- * Both addressings are recorded on purpose. `selector` re-resolves the element
- * during capture-time replay; `ref` is what §10 hands an agent, because
- * "selectors break the moment the agent causes a re-render".
+ * Populated by **infer** (§7.4), never by capture: entity identity does not
+ * exist until the data model has been inferred from `endpoints.json`. In
+ * `capture/` this is always `null`; the M2 SiteModel carries the enriched
+ * version, so the capture artifact stays immutable (§4).
+ */
+export const EntityRefSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]*:[A-Za-z0-9._~:-]+$/, 'expected <entity>:<id>, e.g. product:MUG-BLUE');
+
+/**
+ * How to find the action's target **in a DOM that codegen generated**, which is
+ * the thing that makes this type subtle.
+ *
+ * §9 replays a recorded flow against the *clone*, not against the original. The
+ * clone's DOM is emitted from the SiteModel: its node ids are computed from a
+ * different tree, and its class names and selectors come from Tailwind and
+ * generated components. **`nodeId` and `selector` do not transfer.**
+ *
+ * So the load-bearing fields are `entityRef`, then `role` + `name`. The fields
+ * that do not transfer are quarantined under `diagnostic`, named that way so
+ * nothing resolves against them by reflex — they exist to explain a *failed*
+ * resolution, never to perform one.
+ *
+ * Resolution order matches §10's, so replay and the runtime agree:
+ *   1. `entityRef`      — stable under insertion, reorder and re-render
+ *   2. `role` + `name`  — where no entity backs the element
+ *   3. position         — last resort, and marked as such
  */
 export const ActionTargetSchema = z.strictObject({
-  ref: A11yRefSchema,
-  nodeId: NodeIdSchema,
-  selector: z.string().min(1),
   role: z.string().min(1),
   name: z.string(),
+  entityRef: EntityRefSchema.nullable(),
+  /**
+   * Capture-side facts that do **not** survive codegen. For diagnosing a failed
+   * resolution — reporting which element the recording meant — and for nothing
+   * else.
+   */
+  diagnostic: z.strictObject({
+    nodeId: NodeIdSchema,
+    selector: z.string().min(1),
+    boundingBox: RectSchema,
+  }),
 });
 
 /** §6: "Snapshot DOM hash + URL + a11y tree." */
@@ -131,8 +179,8 @@ export const NetworkCallSchema = z.strictObject({
 
 export const FlowStepSchema = z.strictObject({
   index: z.int().nonnegative(),
-  action: ActionSchema,
-  /** Absent for actions with no element target (`scroll`, `back`, `goto`, `done`). */
+  action: RecordedActionSchema,
+  /** Present exactly for the element-directed actions; enforced below. */
   target: ActionTargetSchema.optional(),
   pre: FlowSnapshotSchema,
   post: FlowSnapshotSchema,
@@ -239,6 +287,30 @@ export const FlowTraceSchema = z
     }
 
     flow.steps.forEach((step, i) => {
+      const directed = (ELEMENT_DIRECTED_ACTIONS as readonly string[]).includes(step.action.type);
+      if (directed && !step.target) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['steps', i, 'target'],
+          message: `a ${step.action.type} action must say which element it addressed`,
+        });
+      }
+      if (!directed && step.target) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['steps', i, 'target'],
+          message: `a ${step.action.type} action addresses no element, so it must carry no target`,
+        });
+      }
+      // §7.4 populates entityRef; a capture that filled it in is a capture that
+      // guessed at a data model it has not inferred yet.
+      if (step.target?.entityRef !== undefined && step.target.entityRef !== null) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['steps', i, 'target', 'entityRef'],
+          message: 'entityRef is populated by infer (§7.4); capture must write null',
+        });
+      }
       if (step.index !== i) {
         ctx.addIssue({
           code: 'custom',
@@ -258,7 +330,8 @@ export const FlowTraceSchema = z
     });
   });
 
-export type Action = z.infer<typeof ActionSchema>;
+export type RecordedAction = z.infer<typeof RecordedActionSchema>;
+export type EntityRef = z.infer<typeof EntityRefSchema>;
 export type ActionTarget = z.infer<typeof ActionTargetSchema>;
 export type FlowSnapshot = z.infer<typeof FlowSnapshotSchema>;
 export type DomDelta = z.infer<typeof DomDeltaSchema>;

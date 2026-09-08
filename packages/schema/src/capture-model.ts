@@ -24,6 +24,7 @@ import { AssetIndexSchema } from './assets.js';
 import { EndpointIndexSchema } from './endpoints.js';
 import { FlowTraceSchema } from './flows.js';
 import { StageReportSchema } from './stage-report.js';
+import { CoverageReportSchema } from './coverage.js';
 
 /**
  * The files under one `routes/<route-id>/` directory.
@@ -125,6 +126,8 @@ export const CaptureModelSchema = z
     flows: z.record(FlowIdSchema, FlowTraceSchema),
     /** Absent while a capture is still in progress. */
     stageReport: StageReportSchema.optional(),
+    /** Input-vs-output contradiction check. Absent while a capture is in progress. */
+    coverage: CoverageReportSchema.optional(),
   })
   .superRefine((model, ctx) => {
     const contexts = new Map(model.manifest.contexts.map((c) => [c.contextId, c]));
@@ -303,6 +306,32 @@ export const CaptureModelSchema = z
             code: 'custom',
             path: ['stageReport', 'gaps'],
             message: `${where} references ${gapId}, which the stage report never defines`,
+          });
+        }
+      }
+    }
+
+    // A failed coverage invariant means extraction silently dropped something the
+    // input contained. That is a failed run, not a warning — otherwise the whole
+    // mechanism is advisory and the next silent drop ships.
+    if (model.coverage) {
+      const broken = model.coverage.invariants.filter((i) => !i.vacuous && !i.holds);
+      if (broken.length > 0 && model.stageReport && model.stageReport.status !== 'failed') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['stageReport', 'status'],
+          message:
+            `coverage invariant ${broken[0]!.id} does not hold (${broken[0]!.description}), ` +
+            `so the stage status must be 'failed', not '${model.stageReport.status}'`,
+        });
+      }
+      const routeIds = new Set(Object.keys(model.routes));
+      for (const routeId of model.coverage.routeIds) {
+        if (!routeIds.has(routeId)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['coverage', 'routeIds'],
+            message: `coverage aggregates route ${routeId}, which was not loaded`,
           });
         }
       }

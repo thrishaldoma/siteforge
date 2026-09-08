@@ -200,15 +200,22 @@
       "index": 0,
       "action": {
         "type": "type",
-        "ref": "a11y_2ca39559193b",
         "text": "2"
       },
       "target": {
-        "ref": "a11y_2ca39559193b",
-        "nodeId": "n_ee781c1c631b76a6",
-        "selector": "#qty",
         "role": "spinbutton",
-        "name": "Quantity"
+        "name": "Quantity",
+        "entityRef": null,
+        "diagnostic": {
+          "nodeId": "n_ee781c1c631b76a6",
+          "selector": "#qty",
+          "boundingBox": {
+            "x": 700,
+            "y": 300,
+            "width": 72,
+            "height": 38
+          }
+        }
       },
       "pre": {
         "url": "https://example.com/product/mug-blue-12oz",
@@ -257,15 +264,22 @@
     {
       "index": 1,
       "action": {
-        "type": "click",
-        "ref": "a11y_0b0e8e5c7861"
+        "type": "click"
       },
       "target": {
-        "ref": "a11y_0b0e8e5c7861",
-        "nodeId": "n_5161342d126e3f94",
-        "selector": ".buy-panel button.btn-primary",
         "role": "button",
-        "name": "Add Blue Enamel Mug, 12oz to cart"
+        "name": "Add Blue Enamel Mug, 12oz to cart",
+        "entityRef": null,
+        "diagnostic": {
+          "nodeId": "n_5161342d126e3f94",
+          "selector": ".buy-panel button.btn-primary",
+          "boundingBox": {
+            "x": 700,
+            "y": 356,
+            "width": 320,
+            "height": 40
+          }
+        }
       },
       "pre": {
         "url": "https://example.com/product/mug-blue-12oz",
@@ -336,15 +350,22 @@
     {
       "index": 2,
       "action": {
-        "type": "click",
-        "ref": "a11y_f9a637b6dcb6"
+        "type": "click"
       },
       "target": {
-        "ref": "a11y_f9a637b6dcb6",
-        "nodeId": "n_0fcd1a657c752962",
-        "selector": "button.cart-button",
         "role": "button",
-        "name": "Cart, 0 items"
+        "name": "Cart, 0 items",
+        "entityRef": null,
+        "diagnostic": {
+          "nodeId": "n_0fcd1a657c752962",
+          "selector": "button.cart-button",
+          "boundingBox": {
+            "x": 1140,
+            "y": 16,
+            "width": 108,
+            "height": 36
+          }
+        }
       },
       "pre": {
         "url": "https://example.com/product/mug-blue-12oz",
