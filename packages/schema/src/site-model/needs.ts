@@ -57,56 +57,211 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
     source: '§8 Frontend',
     quote: 'Tailwind configured from tokens.json. Use tokens, not arbitrary values',
     emits: 'tailwind.config.ts theme extension',
-    reads: ['tokens.colors', 'tokens.spacing', 'tokens.radii', 'tokens.shadows', 'tokens.fontSizes'],
+    reads: [
+      'tokens.colors[].name',
+      'tokens.colors[].snappedFrom[]',
+      'tokens.colors[].usageCount',
+      'tokens.colors[].value',
+      'tokens.fontSizes[].name',
+      'tokens.fontSizes[].snappedFrom[]',
+      'tokens.fontSizes[].usageCount',
+      'tokens.fontSizes[].value',
+      'tokens.radii[].name',
+      'tokens.radii[].snappedFrom[]',
+      'tokens.radii[].usageCount',
+      'tokens.radii[].value',
+      'tokens.shadows[].name',
+      'tokens.shadows[].snappedFrom[]',
+      'tokens.shadows[].usageCount',
+      'tokens.shadows[].value',
+      'tokens.spacing[].name',
+      'tokens.spacing[].snappedFrom[]',
+      'tokens.spacing[].usageCount',
+      'tokens.spacing[].value',
+    ],
   },
   {
     id: 'fonts',
     source: '§8 Frontend',
     quote: 'bundle only self-hostable, permissively licensed fonts … substitute a metric-compatible open alternative and record the swap',
     emits: 'app/fonts.ts and the GAPS entry for each substitution',
-    reads: ['fonts.source', 'fonts.family', 'fonts.assetSha256', 'fonts.licence', 'fonts.substitutedWith', 'fonts.reason', 'fonts.gapId'],
+    reads: [
+      'fonts[].assetSha256',
+      'fonts[].family',
+      'fonts[].gapId',
+      'fonts[].licence',
+      'fonts[].reason',
+      'fonts[].source',
+      'fonts[].substitutedWith',
+    ],
   },
   {
     id: 'assets',
     source: '§8 Frontend',
     quote: 'SVGs inlined as components; raster assets copied into public/ under their content hash',
     emits: 'public/<hash>.<ext> and components/icons/*.tsx',
-    reads: ['assets.emit', 'assets.sha256', 'assets.componentName', 'assets.publicPath', 'assets.originalUrls', 'assets.gapId'],
+    reads: [
+      'assets[].componentName',
+      'assets[].emit',
+      'assets[].gapId',
+      'assets[].originalUrls[]',
+      'assets[].publicPath',
+      'assets[].sha256',
+    ],
   },
   {
     id: 'components',
     source: '§8 Frontend',
     quote: 'One file per component, colocated with its story-like fixture',
     emits: 'components/<Name>.tsx plus its fixture',
-    reads: ['components.componentId', 'components.name', 'components.kind', 'components.props', 'components.root'],
+    reads: [
+      'components[].componentId',
+      'components[].kind',
+      'components[].name',
+      'components[].props[].entity',
+      'components[].props[].name',
+      'components[].props[].required',
+      'components[].props[].type',
+      'components[].root.attributes[].name',
+      'components[].root.attributes[].value.entity',
+      'components[].root.attributes[].value.field',
+      'components[].root.attributes[].value.kind',
+      'components[].root.attributes[].value.prop',
+      'components[].root.attributes[].value.text',
+      'components[].root.children[].componentId',
+      'components[].root.children[].itemProp',
+      'components[].root.children[].kind',
+      'components[].root.children[].over.entity',
+      'components[].root.children[].props[].name',
+      'components[].root.children[].props[].value.entity',
+      'components[].root.children[].props[].value.field',
+      'components[].root.children[].props[].value.kind',
+      'components[].root.children[].props[].value.prop',
+      'components[].root.children[].props[].value.text',
+      'components[].root.children[].value.entity',
+      'components[].root.children[].value.field',
+      'components[].root.children[].value.kind',
+      'components[].root.children[].value.prop',
+      'components[].root.children[].value.text',
+      'components[].root.classes[]',
+      'components[].root.role',
+      'components[].root.stateVariants[].classes[]',
+      'components[].root.stateVariants[].state',
+      'components[].root.tag',
+    ],
   },
   {
     id: 'pages',
     source: '§8 Frontend + §7.3',
     quote: 'Emit a Next.js app … Distinguish layout (shared shell, nav, footer) from page content',
     emits: 'app/<pattern>/page.tsx and app/layout.tsx',
-    reads: ['layouts.layoutId', 'layouts.name', 'layouts.root', 'routes.templateId', 'routes.pathPattern', 'routes.layoutId', 'routes.content', 'routes.dataSources'],
+    reads: [
+      'layouts[].layoutId',
+      'layouts[].name',
+      'layouts[].root.attributes[].name',
+      'layouts[].root.attributes[].value.entity',
+      'layouts[].root.attributes[].value.field',
+      'layouts[].root.attributes[].value.kind',
+      'layouts[].root.attributes[].value.prop',
+      'layouts[].root.attributes[].value.text',
+      'layouts[].root.children[].componentId',
+      'layouts[].root.children[].itemProp',
+      'layouts[].root.children[].kind',
+      'layouts[].root.children[].over.entity',
+      'layouts[].root.children[].props[].name',
+      'layouts[].root.children[].props[].value.entity',
+      'layouts[].root.children[].props[].value.field',
+      'layouts[].root.children[].props[].value.kind',
+      'layouts[].root.children[].props[].value.prop',
+      'layouts[].root.children[].props[].value.text',
+      'layouts[].root.children[].value.entity',
+      'layouts[].root.children[].value.field',
+      'layouts[].root.children[].value.kind',
+      'layouts[].root.children[].value.prop',
+      'layouts[].root.children[].value.text',
+      'layouts[].root.classes[]',
+      'layouts[].root.entityAnchor.entity',
+      'layouts[].root.entityAnchor.keyField',
+      'layouts[].root.role',
+      'layouts[].root.stateVariants[].classes[]',
+      'layouts[].root.stateVariants[].state',
+      'layouts[].root.tag',
+      'routes[].content.componentId',
+      'routes[].content.element.attributes[].name',
+      'routes[].content.element.attributes[].value.entity',
+      'routes[].content.element.attributes[].value.field',
+      'routes[].content.element.attributes[].value.kind',
+      'routes[].content.element.attributes[].value.prop',
+      'routes[].content.element.attributes[].value.text',
+      'routes[].content.element.classes[]',
+      'routes[].content.element.entityAnchor.entity',
+      'routes[].content.element.entityAnchor.keyField',
+      'routes[].content.element.role',
+      'routes[].content.element.stateVariants[].classes[]',
+      'routes[].content.element.stateVariants[].state',
+      'routes[].content.element.tag',
+      'routes[].content.itemProp',
+      'routes[].content.kind',
+      'routes[].content.over.entity',
+      'routes[].content.props[].name',
+      'routes[].content.props[].value.entity',
+      'routes[].content.props[].value.field',
+      'routes[].content.props[].value.kind',
+      'routes[].content.props[].value.prop',
+      'routes[].content.props[].value.text',
+      'routes[].content.value.entity',
+      'routes[].content.value.field',
+      'routes[].content.value.kind',
+      'routes[].content.value.prop',
+      'routes[].content.value.text',
+      'routes[].dataSources[]',
+      'routes[].layoutId',
+      'routes[].pathPattern',
+      'routes[].templateId',
+    ],
   },
   {
     id: 'auth-redirect',
     source: '§6 Authenticated capture',
     quote: 'the clone must reproduce the redirect-to-login behavior',
     emits: 'the middleware that gates a route for an anonymous visitor',
-    reads: ['routes.requiresAuth', 'routes.unauthenticatedBehavior'],
+    reads: [
+      'routes[].requiresAuth',
+      'routes[].unauthenticatedBehavior.kind',
+      'routes[].unauthenticatedBehavior.status',
+      'routes[].unauthenticatedBehavior.to',
+    ],
   },
   {
     id: 'store-tables',
     source: '§8 Mock backend',
     quote: 'In-memory store implementing snapshot(): State and restore(s: State): void',
     emits: 'the store: one table per entity, with its key',
-    reads: ['entities.name', 'entities.key', 'entities.fields', 'entities.relations'],
+    reads: [
+      'entities[].fields[].name',
+      'entities[].fields[].optional',
+      'entities[].fields[].type',
+      'entities[].key.field',
+      'entities[].key.kind',
+      'entities[].name',
+      'entities[].relations[].evidence',
+      'entities[].relations[].field',
+      'entities[].relations[].observedOverlap.distinctValues',
+      'entities[].relations[].observedOverlap.matched',
+      'entities[].relations[].references.entity',
+      'entities[].relations[].references.field',
+    ],
   },
   {
     id: 'seed',
     source: '§8 Mock backend',
     quote: 'Seeded from seeds/<seed>.json, generated from real captured responses after scrubbing',
     emits: 'seeds/<seed>.json',
-    reads: ['entities.seed'],
+    reads: [
+      'entities[].seed.derivedFrom[]',
+      'entities[].seed.distinctRecords',
+      'entities[].seed.rows[]',
+    ],
   },
   {
     id: 'handlers',
@@ -114,9 +269,95 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
     quote: 'Implement every endpoint in endpoints.json. Mutations actually mutate the store',
     emits: 'one Fastify route handler per operation',
     reads: [
-      'operations.operationId', 'operations.method', 'operations.pathPattern',
-      'operations.pathParams', 'operations.queryParams', 'operations.request',
-      'operations.responses', 'operations.effect',
+      'operations[].effect.credentialFields[].field',
+      'operations[].effect.credentialFields[].pointer',
+      'operations[].effect.entity',
+      'operations[].effect.filters[].from',
+      'operations[].effect.filters[].matches',
+      'operations[].effect.filters[].name',
+      'operations[].effect.gapId',
+      'operations[].effect.generated[]',
+      'operations[].effect.identityEntity',
+      'operations[].effect.input[].field',
+      'operations[].effect.input[].pointer',
+      'operations[].effect.kind',
+      'operations[].effect.pagination.kind',
+      'operations[].effect.pagination.pageSize',
+      'operations[].effect.pagination.params[]',
+      'operations[].effect.projection[].field',
+      'operations[].effect.projection[].pointer',
+      'operations[].effect.rowsAt',
+      'operations[].effect.select.from',
+      'operations[].effect.select.matches',
+      'operations[].effect.select.name',
+      'operations[].effect.summary',
+      'operations[].method',
+      'operations[].operationId',
+      'operations[].pathParams[].binds.entity',
+      'operations[].pathParams[].binds.field',
+      'operations[].pathParams[].name',
+      'operations[].pathParams[].required',
+      'operations[].pathParams[].type',
+      'operations[].pathPattern',
+      'operations[].queryParams[].binds.entity',
+      'operations[].queryParams[].binds.field',
+      'operations[].queryParams[].name',
+      'operations[].queryParams[].required',
+      'operations[].queryParams[].type',
+      'operations[].request.additionalProperties',
+      'operations[].request.const',
+      'operations[].request.description',
+      'operations[].request.enum[]',
+      'operations[].request.examples[]',
+      'operations[].request.format',
+      'operations[].request.identifier.evidence[]',
+      'operations[].request.identifier.pathParamOf[]',
+      'operations[].request.maxItems',
+      'operations[].request.minItems',
+      'operations[].request.narrowing.distinctRecords',
+      'operations[].request.narrowing.distinctValues',
+      'operations[].request.narrowing.format',
+      'operations[].request.narrowing.gapId',
+      'operations[].request.narrowing.kind',
+      'operations[].request.narrowing.matched',
+      'operations[].request.narrowing.reviewRequired',
+      'operations[].request.narrowing.total',
+      'operations[].request.narrowing.uiConstraint.control',
+      'operations[].request.narrowing.uiConstraint.nodeId',
+      'operations[].request.narrowing.uiConstraint.optionValues[]',
+      'operations[].request.narrowing.uiConstraint.routeId',
+      'operations[].request.nullable',
+      'operations[].request.required[]',
+      'operations[].request.type',
+      'operations[].request.type[]',
+      'operations[].responses[].contentType',
+      'operations[].responses[].schema.additionalProperties',
+      'operations[].responses[].schema.const',
+      'operations[].responses[].schema.description',
+      'operations[].responses[].schema.enum[]',
+      'operations[].responses[].schema.examples[]',
+      'operations[].responses[].schema.format',
+      'operations[].responses[].schema.identifier.evidence[]',
+      'operations[].responses[].schema.identifier.pathParamOf[]',
+      'operations[].responses[].schema.maxItems',
+      'operations[].responses[].schema.minItems',
+      'operations[].responses[].schema.narrowing.distinctRecords',
+      'operations[].responses[].schema.narrowing.distinctValues',
+      'operations[].responses[].schema.narrowing.format',
+      'operations[].responses[].schema.narrowing.gapId',
+      'operations[].responses[].schema.narrowing.kind',
+      'operations[].responses[].schema.narrowing.matched',
+      'operations[].responses[].schema.narrowing.reviewRequired',
+      'operations[].responses[].schema.narrowing.total',
+      'operations[].responses[].schema.narrowing.uiConstraint.control',
+      'operations[].responses[].schema.narrowing.uiConstraint.nodeId',
+      'operations[].responses[].schema.narrowing.uiConstraint.optionValues[]',
+      'operations[].responses[].schema.narrowing.uiConstraint.routeId',
+      'operations[].responses[].schema.nullable',
+      'operations[].responses[].schema.required[]',
+      'operations[].responses[].schema.type',
+      'operations[].responses[].schema.type[]',
+      'operations[].responses[].status',
     ],
   },
   {
@@ -124,56 +365,102 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
     source: '§8 Mock backend',
     quote: 'Auth is a real (if trivially simple) session check, because agents must be able to fail at logging in',
     emits: "the session middleware, via resolveAuthForCodegen(requiresAuth)",
-    reads: ['operations.requiresAuth', 'operations.authEvidence'],
+    reads: [
+      'operations[].authEvidence[].absentFrom',
+      'operations[].authEvidence[].contextId',
+      'operations[].authEvidence[].header',
+      'operations[].authEvidence[].kind',
+      'operations[].authEvidence[].observedCount',
+      'operations[].authEvidence[].presentIn',
+      'operations[].authEvidence[].status',
+      'operations[].authEvidence[].to',
+      'operations[].requiresAuth',
+    ],
   },
   {
     id: 'synthesized-endpoints',
     source: '§8 Mock backend + §7.6',
     quote: 'Where infer bound a skipped control to a URL, implement it fully against the store; the gap records that it was synthesized',
     emits: 'a handler with a synthesized response shape, and its gap',
-    reads: ['operations.discovery'],
+    reads: [
+      'operations[].discovery.controlId',
+      'operations[].discovery.evidence',
+      'operations[].discovery.gapId',
+      'operations[].discovery.kind',
+    ],
   },
   {
     id: 'determinism-ids',
     source: '§8 Determinism harness',
     quote: 'IDs from a seeded counter, never crypto.randomUUID()',
     emits: 'lib/determinism.ts and the store id allocator',
-    reads: ['entities.fields'],
+    reads: [
+      'entities[].fields[].generatedBy',
+    ],
   },
   {
     id: 'entity-anchors',
     source: '§10 Action space',
     quote: 'data-sf-entity="product:MUG-BLUE", emitted by codegen from the mock backend’s own ids',
     emits: 'the data-sf-entity attribute on rendered entity subtrees',
-    reads: ['components.root.entityAnchor'],
+    reads: [
+      'components[].root.entityAnchor.entity',
+      'components[].root.entityAnchor.keyField',
+    ],
   },
   {
     id: 'behaviour-wiring',
     source: '§7.7 + §8',
     quote: 'Convert flows/ transitions into declarative specs: {trigger, precondition, effect}',
     emits: 'the client handler behind each control',
-    reads: ['behaviours.behaviourId', 'behaviours.trigger', 'behaviours.precondition', 'behaviours.effect'],
+    reads: [
+      'behaviours[].behaviourId',
+      'behaviours[].effect.componentId',
+      'behaviours[].effect.entity',
+      'behaviours[].effect.fields[].name',
+      'behaviours[].effect.fields[].pointer',
+      'behaviours[].effect.gapId',
+      'behaviours[].effect.kind',
+      'behaviours[].effect.operationId',
+      'behaviours[].effect.state',
+      'behaviours[].effect.summary',
+      'behaviours[].effect.toTemplate',
+      'behaviours[].precondition',
+      'behaviours[].trigger.accessibleName',
+      'behaviours[].trigger.componentId',
+      'behaviours[].trigger.onTemplate',
+      'behaviours[].trigger.role',
+    ],
   },
   {
     id: 'visual-gate',
     source: '§9 Visual gate',
     quote: 'Render clone route at the captured viewport, screenshot, compare',
     emits: 'the per-route comparison list',
-    reads: ['routes.instances', 'sourceCapture.siteId', 'sourceCapture.contentHash'],
+    reads: [
+      'routes[].instances[]',
+      'sourceCapture.contentHash',
+      'sourceCapture.siteId',
+    ],
   },
   {
     id: 'behavioral-gate',
     source: '§9 Behavioral gate',
     quote: 'Replay every flows/*.trace.json against the clone … Assert the same network calls fired',
     emits: 'the replay plan',
-    reads: ['behaviours.derivedFrom', 'behaviours.networkCalls'],
+    reads: [
+      'behaviours[].derivedFrom.flowId',
+      'behaviours[].networkCalls[]',
+    ],
   },
   {
     id: 'site-identity',
     source: '§4 Stage contract',
     quote: 'each stage reads and writes files on disk only',
     emits: 'envs/<site-id>/',
-    reads: ['siteId'],
+    reads: [
+      'siteId',
+    ],
   },
 ];
 
@@ -184,16 +471,118 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
  * category had no path here, the model would have to grow one.
  */
 export const SCORED_FIELD_PATHS: Readonly<Record<GradeCategoryId, readonly ModelPath[]>> = {
-  'endpoint-identity': ['operations.method', 'operations.pathPattern'],
-  'path-param-arity': ['operations.pathParams'],
-  'path-param-naming': ['operations.pathParams'],
-  'request-field-presence': ['operations.request'],
-  'response-field-presence': ['operations.responses'],
-  'field-type': ['operations.responses', 'entities.fields'],
-  narrowing: ['entities.fields'],
-  identifier: ['entities.fields', 'entities.relations'],
-  'synthesized-endpoint': ['operations.discovery'],
-  auth: ['operations.requiresAuth', 'operations.authEvidence'],
+  'endpoint-identity': [
+    'operations[].method',
+    'operations[].pathPattern',
+  ],
+  'path-param-arity': [
+    'operations[].pathParams[].name',
+  ],
+  'path-param-naming': [
+    'operations[].pathParams[].name',
+  ],
+  'request-field-presence': [
+    'operations[].request.additionalProperties',
+    'operations[].request.const',
+    'operations[].request.description',
+    'operations[].request.enum[]',
+    'operations[].request.examples[]',
+    'operations[].request.format',
+    'operations[].request.identifier.evidence[]',
+    'operations[].request.identifier.pathParamOf[]',
+    'operations[].request.maxItems',
+    'operations[].request.minItems',
+    'operations[].request.narrowing.distinctRecords',
+    'operations[].request.narrowing.distinctValues',
+    'operations[].request.narrowing.format',
+    'operations[].request.narrowing.gapId',
+    'operations[].request.narrowing.kind',
+    'operations[].request.narrowing.matched',
+    'operations[].request.narrowing.reviewRequired',
+    'operations[].request.narrowing.total',
+    'operations[].request.narrowing.uiConstraint.control',
+    'operations[].request.narrowing.uiConstraint.nodeId',
+    'operations[].request.narrowing.uiConstraint.optionValues[]',
+    'operations[].request.narrowing.uiConstraint.routeId',
+    'operations[].request.nullable',
+    'operations[].request.required[]',
+    'operations[].request.type',
+    'operations[].request.type[]',
+  ],
+  'response-field-presence': [
+    'operations[].responses[].contentType',
+    'operations[].responses[].schema.additionalProperties',
+    'operations[].responses[].schema.const',
+    'operations[].responses[].schema.description',
+    'operations[].responses[].schema.enum[]',
+    'operations[].responses[].schema.examples[]',
+    'operations[].responses[].schema.format',
+    'operations[].responses[].schema.identifier.evidence[]',
+    'operations[].responses[].schema.identifier.pathParamOf[]',
+    'operations[].responses[].schema.maxItems',
+    'operations[].responses[].schema.minItems',
+    'operations[].responses[].schema.narrowing.distinctRecords',
+    'operations[].responses[].schema.narrowing.distinctValues',
+    'operations[].responses[].schema.narrowing.format',
+    'operations[].responses[].schema.narrowing.gapId',
+    'operations[].responses[].schema.narrowing.kind',
+    'operations[].responses[].schema.narrowing.matched',
+    'operations[].responses[].schema.narrowing.reviewRequired',
+    'operations[].responses[].schema.narrowing.total',
+    'operations[].responses[].schema.narrowing.uiConstraint.control',
+    'operations[].responses[].schema.narrowing.uiConstraint.nodeId',
+    'operations[].responses[].schema.narrowing.uiConstraint.optionValues[]',
+    'operations[].responses[].schema.narrowing.uiConstraint.routeId',
+    'operations[].responses[].schema.nullable',
+    'operations[].responses[].schema.required[]',
+    'operations[].responses[].schema.type',
+    'operations[].responses[].schema.type[]',
+    'operations[].responses[].status',
+  ],
+  'field-type': [
+    'entities[].fields[].type',
+    'operations[].responses[].schema.type',
+  ],
+  narrowing: [
+    'entities[].fields[].narrowing.distinctRecords',
+    'entities[].fields[].narrowing.distinctValues',
+    'entities[].fields[].narrowing.format',
+    'entities[].fields[].narrowing.gapId',
+    'entities[].fields[].narrowing.kind',
+    'entities[].fields[].narrowing.matched',
+    'entities[].fields[].narrowing.reviewRequired',
+    'entities[].fields[].narrowing.total',
+    'entities[].fields[].narrowing.uiConstraint.control',
+    'entities[].fields[].narrowing.uiConstraint.nodeId',
+    'entities[].fields[].narrowing.uiConstraint.optionValues[]',
+    'entities[].fields[].narrowing.uiConstraint.routeId',
+  ],
+  identifier: [
+    'entities[].fields[].pathParamOf[]',
+    'entities[].relations[].evidence',
+    'entities[].relations[].field',
+    'entities[].relations[].observedOverlap.distinctValues',
+    'entities[].relations[].observedOverlap.matched',
+    'entities[].relations[].references.entity',
+    'entities[].relations[].references.field',
+  ],
+  'synthesized-endpoint': [
+    'operations[].discovery.controlId',
+    'operations[].discovery.evidence',
+    'operations[].discovery.gapId',
+    'operations[].discovery.kind',
+  ],
+  auth: [
+    'operations[].authEvidence[].absentFrom',
+    'operations[].authEvidence[].contextId',
+    'operations[].authEvidence[].header',
+    'operations[].authEvidence[].kind',
+    'operations[].authEvidence[].observedCount',
+    'operations[].authEvidence[].presentIn',
+    'operations[].authEvidence[].status',
+    'operations[].authEvidence[].to',
+    'operations[].requiresAuth',
+  ],
 };
 
 /**
@@ -205,13 +594,13 @@ export const SCORED_FIELD_PATHS: Readonly<Record<GradeCategoryId, readonly Model
  * section someone did not want to justify.
  */
 export const UNCLAIMED_BY_DESIGN: readonly ModelPath[] = [
-  'modelVersion',
   'artifact',
-  'scrubbed',
-  'provenance.recordedAt',
+  'modelVersion',
   'provenance.durationMs',
-  'provenance.runId',
   'provenance.externalDigests',
+  'provenance.recordedAt',
+  'provenance.runId',
+  'scrubbed',
 ];
 
 /**
@@ -231,7 +620,7 @@ export const UNCLAIMED_BY_DESIGN: readonly ModelPath[] = [
  * attached — and a story is all `enforcedBy` would be if it stayed prose.
  */
 export interface EvidenceClaim {
-  readonly path: ModelPath;
+  readonly paths: readonly ModelPath[];
   readonly justifies: ModelPath;
   /** File under `site-model/` whose refinement reads it. Checked, not trusted. */
   readonly file: string;
@@ -241,18 +630,215 @@ export interface EvidenceClaim {
 
 export const EVIDENCE_REQUIRED: readonly EvidenceClaim[] = [
   {
-    path: 'components.evidence',
-    justifies: 'components.kind',
+    paths: [
+      'components[].evidence.distinctRoutes',
+      'components[].evidence.occurrences',
+      'components[].evidence.varyingLeaves',
+    ],
+    justifies: 'components[].kind',
     file: 'presentation.ts',
     schema: 'ComponentSchema',
     why: '§7.2 extracts a component from a subtree seen at least 3 times',
   },
   {
-    path: 'components.derivedFrom',
-    justifies: 'components.evidence',
+    paths: [
+      'components[].derivedFrom.routeIds[]',
+    ],
+    justifies: 'components[].evidence.distinctRoutes',
     file: 'presentation.ts',
     schema: 'ComponentSchema',
     why: 'a component cannot claim more distinct routes than it names',
+  },
+];
+
+/**
+ * Leaves more than one claimant reads, declared.
+ *
+ * Silent co-claiming is how `field-type` and `narrowing` both came to read
+ * `entities.fields` while the gate reported clean: two claims covering the same
+ * ground, neither of them wrong, and nothing anywhere saying they overlapped. A
+ * declared share is fine — a scored category and a codegen need genuinely read
+ * the same field for different reasons. An **undeclared** one fails.
+ *
+ * The `by` set must match exactly. A third claimant appearing on a shared leaf
+ * is a new fact about the model, and it has to be written down rather than
+ * absorbed by an entry that already looked close enough.
+ */
+export interface SharedClaim {
+  readonly by: readonly string[];
+  readonly paths: readonly ModelPath[];
+  readonly why: string;
+}
+
+export const SHARED_CLAIMS: readonly SharedClaim[] = [
+  {
+    by: [
+      'need:store-tables',
+      'scored:field-type',
+    ],
+    paths: [
+      'entities[].fields[].type',
+    ],
+    why:
+      'codegen types the store column from it; the grader scores whether the type is right. One field, two questions.',
+  },
+  {
+    by: [
+      'need:store-tables',
+      'scored:identifier',
+    ],
+    paths: [
+      'entities[].relations[].evidence',
+      'entities[].relations[].field',
+      'entities[].relations[].observedOverlap.distinctValues',
+      'entities[].relations[].observedOverlap.matched',
+      'entities[].relations[].references.entity',
+      'entities[].relations[].references.field',
+    ],
+    why:
+      'a foreign key is both the join the store needs and the identifier claim being scored — §7.4 reads it off observed value overlap, and both readers depend on that.',
+  },
+  {
+    by: [
+      'need:session-check',
+      'scored:auth',
+    ],
+    paths: [
+      'operations[].authEvidence[].absentFrom',
+      'operations[].authEvidence[].contextId',
+      'operations[].authEvidence[].header',
+      'operations[].authEvidence[].kind',
+      'operations[].authEvidence[].observedCount',
+      'operations[].authEvidence[].presentIn',
+      'operations[].authEvidence[].status',
+      'operations[].authEvidence[].to',
+      'operations[].requiresAuth',
+    ],
+    why:
+      'codegen gates a route from the verdict; the grader scores the verdict and the evidence underneath it. 0014 is the reason the evidence is shared and not just the verdict.',
+  },
+  {
+    by: [
+      'need:synthesized-endpoints',
+      'scored:synthesized-endpoint',
+    ],
+    paths: [
+      'operations[].discovery.controlId',
+      'operations[].discovery.evidence',
+      'operations[].discovery.gapId',
+      'operations[].discovery.kind',
+    ],
+    why:
+      'codegen implements a bound endpoint against the store; the grader scores whether the URL was real. Same field, and the highest-hallucination-risk claim in the model.',
+  },
+  {
+    by: [
+      'need:handlers',
+      'scored:endpoint-identity',
+    ],
+    paths: [
+      'operations[].method',
+      'operations[].pathPattern',
+    ],
+    why:
+      'codegen routes on (method, path pattern) and 0015 §2 matches on the same pair. If they ever read different fields, a graded endpoint is not the endpoint that shipped.',
+  },
+  {
+    by: [
+      'need:handlers',
+      'scored:path-param-arity',
+      'scored:path-param-naming',
+    ],
+    paths: [
+      'operations[].pathParams[].name',
+    ],
+    why:
+      'one list, three readers: codegen routes on it, one metric counts the entries, the other compares the names. These two metrics cover identical leaves and do different work — which is exactly the case an undeclared share would have hidden, and the case this table exists to make visible.',
+  },
+  {
+    by: [
+      'need:handlers',
+      'scored:request-field-presence',
+    ],
+    paths: [
+      'operations[].request.additionalProperties',
+      'operations[].request.const',
+      'operations[].request.description',
+      'operations[].request.enum[]',
+      'operations[].request.examples[]',
+      'operations[].request.format',
+      'operations[].request.identifier.evidence[]',
+      'operations[].request.identifier.pathParamOf[]',
+      'operations[].request.maxItems',
+      'operations[].request.minItems',
+      'operations[].request.narrowing.distinctRecords',
+      'operations[].request.narrowing.distinctValues',
+      'operations[].request.narrowing.format',
+      'operations[].request.narrowing.gapId',
+      'operations[].request.narrowing.kind',
+      'operations[].request.narrowing.matched',
+      'operations[].request.narrowing.reviewRequired',
+      'operations[].request.narrowing.total',
+      'operations[].request.narrowing.uiConstraint.control',
+      'operations[].request.narrowing.uiConstraint.nodeId',
+      'operations[].request.narrowing.uiConstraint.optionValues[]',
+      'operations[].request.narrowing.uiConstraint.routeId',
+      'operations[].request.nullable',
+      'operations[].request.required[]',
+      'operations[].request.type',
+      'operations[].request.type[]',
+    ],
+    why:
+      'codegen validates the request body against it; the grader scores which fields infer claimed were in it.',
+  },
+  {
+    by: [
+      'need:handlers',
+      'scored:response-field-presence',
+    ],
+    paths: [
+      'operations[].responses[].contentType',
+      'operations[].responses[].schema.additionalProperties',
+      'operations[].responses[].schema.const',
+      'operations[].responses[].schema.description',
+      'operations[].responses[].schema.enum[]',
+      'operations[].responses[].schema.examples[]',
+      'operations[].responses[].schema.format',
+      'operations[].responses[].schema.identifier.evidence[]',
+      'operations[].responses[].schema.identifier.pathParamOf[]',
+      'operations[].responses[].schema.maxItems',
+      'operations[].responses[].schema.minItems',
+      'operations[].responses[].schema.narrowing.distinctRecords',
+      'operations[].responses[].schema.narrowing.distinctValues',
+      'operations[].responses[].schema.narrowing.format',
+      'operations[].responses[].schema.narrowing.gapId',
+      'operations[].responses[].schema.narrowing.kind',
+      'operations[].responses[].schema.narrowing.matched',
+      'operations[].responses[].schema.narrowing.reviewRequired',
+      'operations[].responses[].schema.narrowing.total',
+      'operations[].responses[].schema.narrowing.uiConstraint.control',
+      'operations[].responses[].schema.narrowing.uiConstraint.nodeId',
+      'operations[].responses[].schema.narrowing.uiConstraint.optionValues[]',
+      'operations[].responses[].schema.narrowing.uiConstraint.routeId',
+      'operations[].responses[].schema.nullable',
+      'operations[].responses[].schema.required[]',
+      'operations[].responses[].schema.type[]',
+      'operations[].responses[].status',
+    ],
+    why:
+      'codegen shapes the response from it; the grader scores which fields infer claimed the endpoint returns.',
+  },
+  {
+    by: [
+      'need:handlers',
+      'scored:field-type',
+      'scored:response-field-presence',
+    ],
+    paths: [
+      'operations[].responses[].schema.type',
+    ],
+    why:
+      'the response schema\'s own type node: codegen builds the payload from it, one metric asks whether the field is there and the other whether its type is right.',
   },
 ];
 
@@ -261,18 +847,29 @@ export const EVIDENCE_REQUIRED: readonly EvidenceClaim[] = [
 const segments = (path: ModelPath): string[] => path.split('.').filter((s) => s.length > 0);
 
 /**
- * Does a claim cover a leaf?
+ * A claim must **terminate at a schema leaf**, and reach through collections
+ * element-wise: `entities[].fields[].type`, never `entities.fields`.
  *
- * By segment, never by string prefix: `routes.templateId` must not be covered
- * by a claim on `routes.template`. The identifier rule (§13) applies to a
- * model path exactly as it does to a URL — a grammar with a delimiter, and a
- * `startsWith` cannot see it.
+ * The earlier rule counted segments, which is the same proxy-for-structure
+ * mistake as `endsWith` on a path: two segments is not a statement about the
+ * schema, it just usually corresponded to one. `entities.fields` has two
+ * segments and covers twelve leaves.
  */
-export function claimCovers(claim: ModelPath, leaf: ModelPath): boolean {
-  const c = segments(claim);
-  const l = segments(leaf);
-  if (c.length > l.length) return false;
-  return c.every((segment, i) => segment === l[i]);
+export const isLeafClaim = (claim: ModelPath, leaves: ReadonlySet<string>): boolean =>
+  leaves.has(claim);
+
+/** A path that names a real interior node but stops short of a leaf. */
+export function isInteriorPath(claim: ModelPath, leaves: Iterable<string>): boolean {
+  const prefix = `${claim}.`;
+  for (const leaf of leaves) {
+    if (leaf === claim) return false;
+    if (leaf.slice(0, prefix.length) === prefix) return true;
+    // A collection reached without saying so: `entities.fields` against
+    // `entities[].fields[].type`. Worth telling apart from a typo, because the
+    // fix is different — add the `[]`, not the field name.
+    if (leaf.replace(/\[\]/g, '').slice(0, prefix.length) === prefix) return true;
+  }
+  return false;
 }
 
 type ZodLike = { _zod?: { def?: Record<string, unknown> } };
@@ -280,10 +877,13 @@ type ZodLike = { _zod?: { def?: Record<string, unknown> } };
 /**
  * Every leaf path in a zod schema.
  *
- * Array elements do not add a segment: `operations.effect.kind` rather than
- * `operations[].effect.kind`, because a claim is about the field, not about the
- * cardinality. Union branches contribute their leaves at the same path, which
- * is why `operations.effect.entity` appears once for six branches that have it.
+ * **Array elements add a `[]` segment.** `operations[].effect.kind`, never
+ * `operations.effect.kind`: a claim has to say it is reaching through a
+ * collection, because "the field, not the cardinality" was a convenience that
+ * let a claim name a container and mean everything inside it.
+ *
+ * Union branches contribute their leaves at the same path, which is why
+ * `operations[].effect.entity` appears once for the six branches that have it.
  */
 export function schemaLeafPaths(schema: unknown, prefix = '', seen = new Set<unknown>()): string[] {
   const def = (schema as ZodLike)?._zod?.def;
@@ -302,7 +902,7 @@ export function schemaLeafPaths(schema: unknown, prefix = '', seen = new Set<unk
         recurse(value, prefix === '' ? key : `${prefix}.${key}`));
     }
     case 'array':
-      return recurse(def['element'], prefix);
+      return recurse(def['element'], `${prefix}[]`);
     case 'optional':
     case 'nullable':
     case 'readonly':
@@ -326,39 +926,87 @@ export interface ModelCoverageReport {
   readonly leaves: readonly string[];
   /** Leaves no need and no scored category asks for. */
   readonly unclaimed: readonly string[];
-  /** Claims that name a path the model does not have. */
+  /** Claims that name a path the model does not have at all. */
   readonly unresolved: ReadonlyArray<{ by: string; path: ModelPath }>;
   /**
-   * Claims coarse enough to cover a whole top-level section.
+   * Claims that stop at an interior node instead of a leaf.
    *
-   * `reads: ['components']` passes the backward check for every field anyone
-   * ever adds under `components`, which is the realistic way this gate rots:
-   * not a bogus section, a legitimate section quietly accreting fields nobody
-   * consumes. A claim must therefore be a leaf itself, or name a field within a
-   * section. The interior of a field it names is covered — enumerating every
-   * leaf of a recursive element tree would be unmaintainable, and a rule nobody
-   * can maintain is one that gets deleted.
+   * `reads: ['components']`, or `entities.fields` for `entities[].fields[].type`
+   * — both cover every leaf underneath, which is how a section quietly accretes
+   * fields nobody consumes.
    */
-  readonly tooCoarse: ReadonlyArray<{ by: string; path: ModelPath }>;
+  readonly notALeaf: ReadonlyArray<{ by: string; path: ModelPath }>;
+  /** Leaves read by more than one claimant with no entry in `SHARED_CLAIMS`. */
+  readonly undeclaredShares: ReadonlyArray<{ path: ModelPath; by: readonly string[] }>;
+  /** Declared shares that no longer describe a real overlap. */
+  readonly staleShares: ReadonlyArray<{ path: ModelPath; declared: readonly string[]; actual: readonly string[] }>;
 }
 
-/** The bidirectional gate. Both directions, one pass. */
-export function assessModelCoverage(schema: unknown): ModelCoverageReport {
-  const leaves = [...new Set(schemaLeafPaths(schema))].sort();
-  const claims: Array<{ by: string; path: ModelPath }> = [
+/** One reader of one path. */
+export interface Claim {
+  readonly by: string;
+  readonly path: ModelPath;
+}
+
+/**
+ * The gate, over inputs rather than over the module's own tables.
+ *
+ * Split out so the checks can be exercised on synthetic claim sets. A gate that
+ * can only be run against the one input it passes on is a gate nobody can prove
+ * fires — which is the whole of this repo's history with invariants.
+ */
+export function assessClaims(
+  leaves: readonly string[],
+  claims: readonly Claim[],
+  shares: readonly SharedClaim[],
+): ModelCoverageReport {
+  const leafSet = new Set(leaves);
+  const notALeaf = claims.filter((c) => !leafSet.has(c.path) && isInteriorPath(c.path, leaves));
+  const unresolved = claims.filter((c) => !leafSet.has(c.path) && !isInteriorPath(c.path, leaves));
+
+  const claimants = new Map<string, string[]>();
+  for (const claim of claims) {
+    if (!leafSet.has(claim.path)) continue;
+    claimants.set(claim.path, [...(claimants.get(claim.path) ?? []), claim.by]);
+  }
+  const unclaimed = leaves.filter((leaf) => !claimants.has(leaf));
+
+  const declared = new Map<string, readonly string[]>();
+  for (const share of shares) {
+    for (const path of share.paths) declared.set(path, [...share.by].sort());
+  }
+  const same = (a: readonly string[], b: readonly string[]): boolean =>
+    a.length === b.length && a.every((x, i) => x === b[i]);
+
+  const undeclaredShares: Array<{ path: ModelPath; by: readonly string[] }> = [];
+  for (const [path, by] of claimants) {
+    if (by.length < 2) continue;
+    const sorted = [...by].sort();
+    if (!same(declared.get(path) ?? [], sorted)) undeclaredShares.push({ path, by: sorted });
+  }
+  const staleShares = [...declared]
+    .map(([path, by]) => ({ path, declared: by, actual: [...(claimants.get(path) ?? [])].sort() }))
+    .filter((entry) => !same(entry.declared, entry.actual));
+
+  return { leaves: [...leaves], unclaimed, unresolved, notALeaf, undeclaredShares, staleShares };
+}
+
+/** Every claim the repo makes on the model, from the three claimant tables. */
+export function modelClaims(): Claim[] {
+  return [
     ...CODEGEN_NEEDS.flatMap((need) => need.reads.map((path) => ({ by: `need:${need.id}`, path }))),
     ...GRADE_CATEGORIES.flatMap((category) =>
       (SCORED_FIELD_PATHS[category] ?? []).map((path) => ({ by: `scored:${category}`, path }))),
     ...UNCLAIMED_BY_DESIGN.map((path) => ({ by: 'envelope', path })),
-    ...EVIDENCE_REQUIRED.map((claim) => ({ by: `evidence:${claim.justifies}`, path: claim.path })),
+    ...EVIDENCE_REQUIRED.flatMap((claim) =>
+      claim.paths.map((path) => ({ by: `evidence:${claim.justifies}`, path }))),
   ];
-  const unresolved = claims.filter((claim) => !leaves.some((leaf) => claimCovers(claim.path, leaf)));
-  const unclaimed = leaves.filter((leaf) => !claims.some((claim) => claimCovers(claim.path, leaf)));
-  const leafSet = new Set(leaves);
-  const tooCoarse = claims.filter(
-    (claim) => segments(claim.path).length < 2 && !leafSet.has(claim.path),
-  );
-  return { leaves, unclaimed, unresolved, tooCoarse };
+}
+
+/** The gate: both directions, plus specificity, plus declared overlap. */
+export function assessModelCoverage(schema: unknown): ModelCoverageReport {
+  const leaves = [...new Set(schemaLeafPaths(schema))].sort();
+  return assessClaims(leaves, modelClaims(), SHARED_CLAIMS);
 }
 
 export type { GradeCategoryId };

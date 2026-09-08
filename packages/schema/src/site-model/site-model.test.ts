@@ -18,10 +18,13 @@ import {
   EVIDENCE_REQUIRED,
   GRADE_CATEGORIES,
   SCORED_FIELD_PATHS,
+  SHARED_CLAIMS,
   SITE_MODEL_VERSION,
   SiteModelSchema,
+  assessClaims,
   assessModelCoverage,
-  claimCovers,
+  isInteriorPath,
+  modelClaims,
   schemaLeafPaths,
 } from '../index.js';
 
@@ -33,7 +36,9 @@ describe('the model is claimed in both directions', () => {
   it('resolves every claim, leaves nothing unclaimed, and names no whole section', () => {
     expect(coverage.unresolved, 'a consumer reads a path the model does not have').toEqual([]);
     expect(coverage.unclaimed, 'the model carries a field no consumer asked for').toEqual([]);
-    expect(coverage.tooCoarse, 'a claim covers a whole section').toEqual([]);
+    expect(coverage.notALeaf, 'a claim stops at an interior node instead of a leaf').toEqual([]);
+    expect(coverage.undeclaredShares, 'two claimants read one leaf without saying so').toEqual([]);
+    expect(coverage.staleShares, 'a declared share no longer describes a real overlap').toEqual([]);
     // A floor, so a walker that silently stopped enumerating cannot report
     // perfect coverage of nothing.
     expect(coverage.leaves.length).toBeGreaterThan(100);
@@ -55,7 +60,7 @@ describe('the model is claimed in both directions', () => {
     });
     const result = assessModelCoverage(renamed);
     expect(result.unclaimed.sort()).toEqual([
-      'dom.nodeId', 'dom.tag', 'styles.declarations', 'styles.styleId',
+      'dom[].nodeId', 'dom[].tag', 'styles[].declarations', 'styles[].styleId',
     ]);
   });
 
@@ -71,14 +76,14 @@ describe('the model is claimed in both directions', () => {
         cacheHint: z.string(),
       })),
     });
-    expect(assessModelCoverage(withExtra).unclaimed).toEqual(['operations.cacheHint']);
+    expect(assessModelCoverage(withExtra).unclaimed).toEqual(['operations[].cacheHint']);
   });
 
   it('rejects a claim on a path the model does not have', () => {
     const shrunk = z.strictObject({ siteId: z.string() });
     const result = assessModelCoverage(shrunk);
     expect(result.unresolved.length).toBeGreaterThan(10);
-    expect(result.unresolved.map((u) => u.path)).toContain('operations.effect');
+    expect(result.unresolved.map((u) => u.path)).toContain('operations[].effect.kind');
   });
 
   /**
@@ -152,11 +157,90 @@ describe('the committed fixture is a model derived from a real capture', () => {
   });
 });
 
-describe('a model path is compared by segment (§13)', () => {
-  it('does not let a claim cover a longer sibling name', () => {
-    expect(claimCovers('routes.template', 'routes.templateId')).toBe(false);
-    expect(claimCovers('routes.templateId', 'routes.templateId')).toBe(true);
-    expect(claimCovers('routes', 'routes.templateId')).toBe(true);
+describe('a claim terminates at a leaf, and says so structurally', () => {
+  const leaves = ['entities[].fields[].type', 'entities[].fields[].name', 'routes[].templateId'];
+
+  it('tells a container apart from a leaf, rather than counting segments', () => {
+    // The old rule asked how many segments a claim had. Two segments is not a
+    // statement about the schema — `entities.fields` has two and covers twelve
+    // leaves. The same proxy-for-structure mistake as `endsWith` on a path.
+    expect(isInteriorPath('entities[].fields[]', leaves)).toBe(true);
+    expect(isInteriorPath('entities[].fields[].type', leaves)).toBe(false);
+  });
+
+  it('sees a collection reached without saying so', () => {
+    // `entities.fields` against `entities[].fields[].type`: a real container,
+    // named without its `[]`. Worth telling apart from a typo, because the fix
+    // is to add the brackets, not to correct the field name.
+    expect(isInteriorPath('entities.fields', leaves)).toBe(true);
+    expect(isInteriorPath('entities.fieldz', leaves)).toBe(false);
+  });
+
+  it('reports an interior claim as notALeaf and a fictional one as unresolved', () => {
+    const report = assessClaims(leaves, [
+      { by: 'need:x', path: 'entities[].fields[]' },
+      { by: 'need:x', path: 'entities[].fields[].nope' },
+      { by: 'need:x', path: 'entities[].fields[].type' },
+      { by: 'need:x', path: 'entities[].fields[].name' },
+      { by: 'need:x', path: 'routes[].templateId' },
+    ], []);
+    expect(report.notALeaf.map((c) => c.path)).toEqual(['entities[].fields[]']);
+    expect(report.unresolved.map((c) => c.path)).toEqual(['entities[].fields[].nope']);
+    expect(report.unclaimed).toEqual([]);
+  });
+});
+
+describe('two claimants on one leaf declare themselves', () => {
+  const leaves = ['entities[].fields[].type'];
+  const twice = [
+    { by: 'need:store-tables', path: 'entities[].fields[].type' },
+    { by: 'scored:field-type', path: 'entities[].fields[].type' },
+  ];
+
+  it('fails an undeclared overlap — the shape that let field-type and narrowing sit', () => {
+    const report = assessClaims(leaves, twice, []);
+    expect(report.undeclaredShares).toEqual([
+      { path: 'entities[].fields[].type', by: ['need:store-tables', 'scored:field-type'] },
+    ]);
+  });
+
+  /** The control: the same overlap, declared, must pass. A share is legitimate. */
+  it('passes the same overlap once it is written down', () => {
+    const report = assessClaims(leaves, twice, [
+      { by: ['need:store-tables', 'scored:field-type'], paths: leaves, why: 'two questions about one field' },
+    ]);
+    expect(report.undeclaredShares).toEqual([]);
+    expect(report.staleShares).toEqual([]);
+  });
+
+  it('fails a third claimant absorbed into an existing declaration', () => {
+    // The `by` set must match exactly. A share entry that already looked close
+    // enough is how a new fact about the model gets absorbed rather than noted.
+    const report = assessClaims(leaves, [...twice, { by: 'need:seed', path: leaves[0]! }], [
+      { by: ['need:store-tables', 'scored:field-type'], paths: leaves, why: 'two questions about one field' },
+    ]);
+    expect(report.undeclaredShares.map((s) => s.by)).toEqual([
+      ['need:seed', 'need:store-tables', 'scored:field-type'],
+    ]);
+  });
+
+  it('fails a declaration that no longer describes an overlap', () => {
+    const report = assessClaims(leaves, [twice[0]!], [
+      { by: ['need:store-tables', 'scored:field-type'], paths: leaves, why: 'stale' },
+    ]);
+    expect(report.staleShares).toHaveLength(1);
+  });
+
+  it('every declared share is real, and every share is declared', () => {
+    // Against the repo's own tables, both directions at once.
+    const report = assessModelCoverage(SiteModelSchema);
+    expect(report.undeclaredShares).toEqual([]);
+    expect(report.staleShares).toEqual([]);
+    expect(SHARED_CLAIMS.length).toBeGreaterThan(0);
+    for (const share of SHARED_CLAIMS) {
+      expect(share.by.length).toBeGreaterThan(1);
+      expect(share.why.length, `${share.by.join('+')} has no reason`).toBeGreaterThan(30);
+    }
   });
 });
 
@@ -167,7 +251,7 @@ describe('the frozen scored-field list constrains the model, not the reverse', (
       const paths = SCORED_FIELD_PATHS[category];
       expect(paths.length, `${category} is scored but reads nothing`).toBeGreaterThan(0);
       for (const path of paths) {
-        expect(leaves.some((leaf) => claimCovers(path, leaf)), `${category} reads ${path}`).toBe(true);
+        expect(leaves.includes(path), `${category} reads ${path}, which is not a leaf`).toBe(true);
       }
     }
   });
@@ -203,11 +287,16 @@ describe('every need traces to the operating manual', () => {
     expect(EVIDENCE_REQUIRED.length).toBeGreaterThan(0);
     for (const claim of EVIDENCE_REQUIRED) {
       const source = readFileSync(join(HERE, claim.file), 'utf8');
-      expect(source, `${claim.path}: ${claim.file} has no ${claim.schema}`).toContain(claim.schema);
+      expect(source, `${claim.file} has no ${claim.schema}`).toContain(claim.schema);
       const body = source.slice(source.indexOf(`export const ${claim.schema}`));
-      const refinement = body.slice(body.indexOf('.superRefine('));
-      const field = claim.path.split('.').pop()!;
-      expect(refinement.slice(0, 2000), `${claim.schema} never reads ${field}`).toContain(`.${field}`);
+      const refinement = body.slice(body.indexOf('.superRefine('), body.indexOf('.superRefine(') + 2000);
+      expect(claim.paths.length).toBeGreaterThan(0);
+      for (const path of claim.paths) {
+        // Strip the collection marker: the leaf is `…routeIds[]`, the code
+        // that reads it says `.routeIds.length`.
+        const field = path.split('.').pop()!.replace('[]', '');
+        expect(refinement, `${claim.schema} never reads ${field}`).toContain(`.${field}`);
+      }
       expect(claim.why.length).toBeGreaterThan(20);
     }
   });
