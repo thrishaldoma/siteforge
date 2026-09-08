@@ -13,7 +13,8 @@
     "typecheck": "tsc --build --force && pnpm -r --parallel typecheck:tests",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fixtures": "pnpm --filter @siteforge/schema build && node packages/schema/scripts/build-fixtures.mjs"
+    "fixtures": "pnpm --filter @siteforge/schema build && node packages/schema/scripts/build-fixtures.mjs",
+    "rung2": "node packages/capture/scripts/rung2.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
