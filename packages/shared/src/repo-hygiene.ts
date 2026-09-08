@@ -16,7 +16,7 @@
 
 /** One thing wrong, phrased as the sentence the operator has to act on. */
 export interface HygieneFinding {
-  readonly rule: 'unanchored-pattern' | 'package-untracked' | 'package-ignored';
+  readonly rule: 'unanchored-pattern' | 'package-untracked' | 'package-ignored' | 'binary-source';
   readonly subject: string;
   readonly message: string;
 }
@@ -87,4 +87,33 @@ export function assessTrackedPackages(entries: readonly PackageTracking[]): Hygi
     }
   }
   return findings;
+}
+
+/**
+ * A source file git will treat as binary.
+ *
+ * A single NUL byte is enough, and the consequences are not cosmetic: `git diff`
+ * prints "Binary files differ" instead of the change, so a review sees nothing —
+ * and `git diff > sabotage/x.patch` produces a patch that carries no hunks and
+ * can never be applied. A gate whose sabotage cannot be *authored* is the
+ * vacuity mode one step earlier than the ones §13 already names.
+ *
+ * Found the day it happened: a stray NUL inside a template literal in
+ * `grade.ts`, which compiled, tested and committed perfectly happily. Nothing
+ * would have said so until someone tried to read the diff.
+ *
+ * Takes the bytes, so a file nobody has committed can be tested.
+ */
+export function assessSourceBytes(file: string, bytes: Uint8Array): HygieneFinding[] {
+  const at = bytes.indexOf(0);
+  if (at === -1) return [];
+  let line = 1;
+  for (let i = 0; i < at; i += 1) if (bytes[i] === 0x0a) line += 1;
+  return [
+    {
+      rule: 'binary-source',
+      subject: `${file}:${line}`,
+      message: `${file} contains a NUL byte at line ${line}, so git treats it as binary: its diffs are unreadable in review and no sabotage patch can be generated against it.`,
+    },
+  ];
 }

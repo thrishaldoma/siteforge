@@ -31,12 +31,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { workspacePackageDirs } from './scan-walker.js';
 import {
   assessGitignoreAnchoring,
+  assessSourceBytes,
   assessTrackedPackages,
   type PackageTracking,
 } from './repo-hygiene.js';
+import { REPO_SOURCE_EXPECTATION, walkFiles, workspacePackageDirs } from './scan-walker.js';
 
 const REPO = (() => {
   let dir = dirname(fileURLToPath(import.meta.url));
@@ -104,11 +105,18 @@ describe('the rules, driven by inputs that break them', () => {
     expect(findings.map((f) => f.rule)).toEqual(['package-ignored']);
   });
 
+  it('finds a NUL byte, and says which line it is on', () => {
+    const findings = assessSourceBytes('x.ts', Buffer.from('const a = 1;\nconst b = `x\0y`;\n'));
+    expect(findings.map((f) => f.rule)).toEqual(['binary-source']);
+    expect(findings[0]?.subject).toBe('x.ts:2');
+  });
+
   it('says nothing about a healthy repository', () => {
     expect(assessGitignoreAnchoring('/dist\n**/node_modules\n')).toEqual([]);
     expect(
       assessTrackedPackages([{ package: 'packages/cli', trackedFiles: 3, manifestIgnoredBy: '' }]),
     ).toEqual([]);
+    expect(assessSourceBytes('x.ts', Buffer.from('const a = `x y`;\n'))).toEqual([]);
   });
 });
 
@@ -135,6 +143,21 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
     const text = readFileSync(join(REPO, '.gitignore'), 'utf8');
     expect(text.split('\n').filter((l) => l.trim() && !l.startsWith('#')).length).toBeGreaterThan(0);
     expect(assessGitignoreAnchoring(text).map((f) => f.message)).toEqual([]);
+  });
+
+  it('no source file is binary to git', () => {
+    // A NUL in a template literal in `grade.ts` compiled, tested and committed
+    // without complaint, and made every future diff of that file unreadable.
+    const { files, relative } = walkFiles({
+      root: REPO,
+      within: ['packages', 'scripts'],
+      profile: 'source',
+      expect: REPO_SOURCE_EXPECTATION,
+    });
+    const findings = files.flatMap((file, i) =>
+      assessSourceBytes(relative[i]!, readFileSync(file)),
+    );
+    expect(findings.map((f) => f.message)).toEqual([]);
   });
 
   it('still ignores the artifact directories it is there to ignore', () => {
