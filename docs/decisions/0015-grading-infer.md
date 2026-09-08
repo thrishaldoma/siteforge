@@ -39,6 +39,25 @@ before anything else:
 Steps 1–2 are the part that must not wait. They are what stops the metric being
 shaped around what infer happens to emit.
 
+**The scored-field list is fixed at step 2 and does not move for step 3.** If
+defining SiteModel makes a scored field awkward to represent, *SiteModel*
+changes. The list's whole value as a second derivation force depends on being
+independent of the model it constrains; a list that bends around SiteModel is a
+list derived from SiteModel, and derives nothing.
+
+That is a claim about a sequence, and a sequence is only real if something
+outside anyone's memory holds it:
+
+- the contract module is committed, with its digest, **before
+  `site-model.ts` stops being a placeholder** — so the freeze predates the thing
+  it constrains rather than being asserted about it afterwards;
+- the contract module **must not import the model layer**, and a test asserts
+  its import graph is free of `site-model.js`. An import is how "independent"
+  quietly stops being true;
+- it lives in `packages/schema`, not in `packages/verify` (§9), because §14 puts
+  the inter-stage contract there and because the infer stage report has to be
+  able to recompute against it (§7.1).
+
 ---
 
 ## 1. Ground truth
@@ -46,11 +65,22 @@ shaped around what infer happens to emit.
 **A self-hosted Gitea, graded against its own published OpenAPI spec.**
 
 Gitea serves a machine-readable description of its API: the Swagger UI at
-`/api/swagger`, and the spec document itself as JSON (`/swagger.v1.json` at the
-time of writing — the loader must fetch it, assert it parses, and fail loudly if
-the path has moved rather than falling back to anything). It gives us endpoints,
-methods, path and query parameters, declared auth, response status codes, and
-field types, all written by people who were not us.
+`/api/swagger`, and the spec document itself as JSON at `/swagger.v1.json`. It
+gives us endpoints, methods, path and query parameters, response status codes,
+and field types, all written by people who were not us. Declared auth it does
+*not* give us, which is §4 and was found by fetching rather than by reading.
+
+**Measured, against the pinned image rather than against anyone's deployment**
+(the 200 from `gitea.com` that first suggested this path is evidence about
+somebody's server, and substituting it for the container's own answer is the
+same substitution that disqualifies the rung-3 app):
+
+| | |
+|---|---|
+| image | `gitea/gitea@sha256:87a67ee0…adc43bef` (tag 1.27.3 at pull time) |
+| spec | `GET /swagger.v1.json` → 200, 870 698 bytes, parses as Swagger 2.0 |
+| surface | 308 paths, 482 operations, 222 definitions, `basePath: /api/v1` |
+| path-param arity | 58 paths with none, then 59 / 78 / 90 / 23 with one to four |
 
 **Not the rung-3 CRUD app.** We wrote that server. Grading against it measures
 whether infer agrees with the model already in our heads, which is precisely the
@@ -77,6 +107,37 @@ production sites we do not own. This runs a local container.
 - The full capture-then-grade run against a live Gitea is the **milestone gate**,
   run on demand. It is far too heavy for `verify:clean`, and saying so here
   prevents someone quietly making the fast suite depend on Docker.
+
+### Snapshot staleness
+
+A committed snapshot is a cache, and an unchecked cache drifts into testing a
+spec no server serves. So the milestone gate **begins** by booting a container
+at the pinned digest, re-fetching the spec, and diffing it against the
+committed snapshot. **Disagreement fails the gate.** The fix is a commit that
+updates the snapshot and shows the diff in review — never a flag, never a
+tolerance.
+
+Two details, because a staleness gate that fails for the wrong reason is worse
+than not having one: it gets muted, and then it is a gate nobody is checking.
+
+- **The container's launch is pinned in the same committed script that fetches
+  it** — image digest, published port, and the full environment. Half of what a
+  Swagger document says about itself is a function of how the server was
+  started, so a launch that varies produces a diff that means "the port moved"
+  and reads as "the spec changed".
+- **The volatile-field list is derived from measurement, not from judgement.**
+  A general "ignore fields that vary between runs" clause is the vacuous
+  spelling of this gate — it is exactly wide enough to hide the change the gate
+  exists to catch, and it cannot be told from the honest version by reading it.
+
+  **Measured: the list is empty.** Two containers at the same digest, launched
+  on different ports with different `ROOT_URL`s, served **byte-identical**
+  documents — 15 768 leaves, zero differing, same sha256. The document declares
+  no `host`, its `basePath` is the constant `/api/v1`, and `info.version` is
+  fixed by the digest. So the staleness gate is a **sha256 comparison of the
+  whole document**, with no normalisation and no exemptions, and a test asserts
+  the exemption list is empty — adding the first entry means deleting an
+  assertion, in a diff someone reads.
 
 ### The graded universe
 
@@ -110,6 +171,27 @@ indistinguishable from tuning:**
   threshold.
 - An entry may only be added on evidence that **the spec** is wrong. "Infer
   disagrees" is not evidence.
+- **Every entry names the scored category it excludes a field from** (§3's
+  table), and the budget is per-category as well as global: **no category may
+  consume more than half the 5% cap** without the list being re-examined before
+  another entry lands there.
+
+  The global cap cannot see the shape that matters. Five percent spent evenly
+  across ten categories reads identically to five percent spent entirely on
+  `narrowing`, and only one of those is a stale spec. A document drifting from
+  its server drifts in ways uncorrelated with which claims infer finds hard; a
+  divergence list that piles up exactly where infer is weakest is not describing
+  the spec, it is describing infer, one entry at a time. Each entry is
+  individually justified in that scenario, which is precisely why the check has
+  to be on the distribution rather than on the entries.
+
+  Stated now, before the first run, for the same reason the rest of this
+  section is: exclusions produced in response to a bad score cannot be
+  distinguished from tuning afterwards, however good each justification reads.
+- The per-category rule is **proven to fire against a fixture list**. The real
+  list is empty, and an assertion over an empty list is the vacuous check this
+  repo has now found five times — it would pass for years and then be wrong on
+  the first day it mattered.
 
 ---
 
@@ -195,6 +277,60 @@ counterpart when the spec marks the field optional. Everything else is a miss.
 Since 0014, `resolveAuthForCodegen` fails closed: `unknown` resolves to
 required, reads included. That changes what a good score means, and a naive
 accuracy number would now actively mislead.
+
+### The spec cannot supply the truth side, and that is a measurement
+
+Gitea's document declares **one global `security` block** — seven schemes, any
+of which authenticates — and **not one of its 482 operations overrides it**. No
+operation carries `security: []`. `GET /api/v1/version` and `GET /api/v1/user`
+are structurally identical in the document; against the pinned container the
+first answers **200** to an anonymous caller and the second **401**. Of the 50
+zero-parameter GETs, **13 answer 200 anonymously** while the document says every
+one of them needs a token.
+
+Grading `requiresAuth` against *declared* auth therefore fails three ways, and
+each is a different lesson:
+
+1. The over-gate denominator — endpoints where truth is `not-required` — is
+   **zero**. §6 says a zero denominator is `vacuous: true` and the gate fails.
+   Permanently, for a reason that has nothing to do with infer.
+2. Forced through anyway, it scores infer **wrong for being right**: an endpoint
+   correctly resolved `not-required` on an observed anonymous 200 counts as an
+   under-gate — the one failure this design says must be zero.
+3. The known-divergence list would absorb the difference at 26% of a single
+   category, five times the entire 5% cap. Amendment 1's per-category rule fires
+   on its first contact with real data, which is the argument for having written
+   it before the run rather than after.
+
+**So the auth truth side is measured, not declared.**
+`packages/verify/fixtures/gitea/anon-probe.json` records, for every endpoint in
+the graded universe, the status a fresh container at the pinned digest returns
+to an uncredentialed request. Committed beside the spec snapshot, pinned by the
+same digest, covered by the same staleness gate, and each entry carries the
+observed status — the evidence travels with the claim, as `NarrowingRecord`
+does.
+
+Three properties keep that honest:
+
+- **It is a different code path from capture's.** §6's anonymous re-issue runs
+  inside the crawler; the sweep is a flat script that reads the spec's path list
+  and issues requests. §13's rule about an invariant's observed side applies to a
+  grader's truth side identically — share the extractor's code and a bug moves
+  both sides, so the score goes quiet instead of red.
+- **The classification fails closed by category** (§13). 200 → `not-required`.
+  401/403 → `required`. **404 → `required`, never "absent"**: Gitea answers 404
+  rather than 403 for resources it will not confirm exist to an anonymous
+  caller, so reading 404 as "this endpoint is not real" would delete a gated
+  endpoint from the truth set and convert a correct inference into a
+  hallucination — a wrong answer in a second category, caused by a default in
+  this one. Anything else is `indeterminate`: excluded from the auth category
+  and **counted in the report**, never silently defaulted.
+- **This grades something narrower than it looks, and the report says which.**
+  Truth is the pinned server's behaviour and infer's evidence comes from capture
+  observing that same server, so the auth category measures whether the chain
+  from observation to verdict is faithful — not whether infer discovered
+  anything about auth from nothing. That chain is exactly what broke in 0014, so
+  it is worth measuring; the claim in the report just has to be the smaller one.
 
 **A degenerate infer that marks every endpoint `required` never under-gates.**
 It would score perfectly on the metric that matters most. So auth is not scored
@@ -321,8 +457,13 @@ well — the same circularity that disqualifies the rung-3 app as ground truth.
   with a `METRICS_VERSION`. A test asserts a digest of that table matches a
   committed constant, so changing a threshold requires updating the digest in
   the same commit. It cannot be done quietly; it shows up in review.
-- Changing anything in that table after infer's first commit requires a decision
-  note stating what was measured and why.
+- **The freeze starts before `SiteModel`, not before infer.** Changing anything
+  in that table after `site-model.ts` stops being a placeholder requires a
+  decision note stating what was measured and why. Dating the freeze to infer's
+  first commit would leave the whole of M2's model design free to reshape the
+  metric, which is the larger half of the risk: a scored field quietly dropped
+  because it was inconvenient to represent never becomes a bad score, it becomes
+  no score.
 - The **known-correct model** — a hand-authored SiteModel transcribed from the
   Gitea spec — is the mutation baseline. It must parse against SiteModel's
   schema, including narrowing evidence, so it is a *legal* model and not a
@@ -331,6 +472,28 @@ well — the same circularity that disqualifies the rung-3 app as ground truth.
 - **Its near-1.0 score is not evidence the grader works.** It was derived from
   the ground truth; scoring it well is circular. Only the mutation deltas in §8
   are evidence.
+
+### 7.1 What is being measured is reported before how it did
+
+Infer's **first** stage report — the one written before any grade has ever run —
+carries the contract: `METRICS_VERSION`, the contract digest, and the scored
+category ids in the contract's own order. No scores; there are none yet.
+
+The reason is the same as the reason the contract is written first. A category
+list that first becomes visible attached to a score is read as a score, and a
+category quietly absent from the table is invisible in exactly the case that
+matters — nobody notices the metric that was never reported. Separating the two
+means the list can be reviewed as a list.
+
+It is a **reference, not a copy.** Turn 2's ruling on `manifest.counts.gaps`
+applies verbatim: a derived value duplicated across two artifacts drifts, and
+the fix is that one side computes it and the other references it. So the
+category ids in the stage report are recomputed against the contract module by
+the schema — a report naming a category the contract does not have, or missing
+one it does, does not parse. That is why the contract lives in
+`packages/schema`: the recompute needs both in one place, and a pointer alone
+(version and digest, no names) would not satisfy the ask, which is to *see* what
+is measured.
 
 ---
 
@@ -370,6 +533,12 @@ The last three are the ones that catch a bad grader rather than a bad model.
   row here while measuring nothing. It has to hold one score still.
 - The two **empty** cases pin §6.
 
+That first point is no longer local to this document. §13 now carries it as a
+standing rule for **every** mutation harness in the repo, and the existing ones
+were audited against it — see decision 0016. A harness of all-drops is the
+mirror image of the vacuous invariant: both pass without discriminating, and
+neither is visible by reading it.
+
 Two completeness assertions, in the style this repo already applies to
 `COVERAGE_INVARIANTS`, `SECRET_RULES` and the rung tables:
 
@@ -385,8 +554,18 @@ The harness runs against the committed snapshot, in milliseconds, and belongs in
 
 ## 9. Where it lives
 
-`packages/verify/src/grade/`. §4's package table is unchanged — verify owns
-gates, and this is a gate.
+The **grader** is `packages/verify/src/grade/`. §4's package table is unchanged
+— verify owns gates, and this is a gate.
+
+The **contract** — the category table, denominators, thresholds and
+`METRICS_VERSION` — is `packages/schema/src/grade-contract.ts`. Two reasons, both
+load-bearing rather than tidiness: §7.1's stage report has to be validated
+against it by the schema, and §0's freeze wants it as far as possible from the
+code that consumes it. It imports nothing from `site-model.js`, and a test says
+so.
+
+The **ground-truth loader** is `packages/verify/src/grade/truth/`, reading the
+snapshot committed under `packages/verify/fixtures/gitea/`.
 
 It reads `capture/`, a SiteModel, and a committed truth snapshot. It touches
 **none** of the visual, behavioral or determinism machinery in §9, and it must
@@ -397,9 +576,22 @@ ground truth, because that is training against the test set.
 
 ## Open
 
-- Gitea's spec path (`/swagger.v1.json`) is stated from documentation, not from
-  a fetch. The loader verifies it at snapshot time and fails loudly; the first
-  implementation turn confirms it.
+- ~~Gitea's spec path is stated from documentation, not from a fetch.~~
+  Confirmed by fetch against the pinned digest; see §1. What it turned up was
+  larger than the path: the document has no per-endpoint auth at all, which
+  rewrote §4's truth side.
+- The anonymous sweep covers the 50 zero-parameter GETs today. Parameterised
+  endpoints need a **deterministically seeded** container — a fixed user, repo
+  and issue created through the API before the sweep — and that seeding script
+  is part of the milestone gate, not of `verify:clean`. Until it exists the auth
+  category's denominators are the zero-parameter slice, and the report says so
+  rather than implying whole-surface coverage.
+- Two documented paths (`/signing-key.gpg`, `/signing-key.pub`) answer 404 on an
+  unconfigured instance. Under the rule above they classify `required`, which is
+  safe for the auth category but leaves an open question for
+  `endpoint-identity`: whether a documented path the server does not serve is a
+  spec divergence or an instance-configuration difference. It needs the seeded
+  container to tell apart, so it waits for the same script.
 - The known-correct model is hand-authored, so its cost scales with the endpoint
   count. Start with one Gitea resource family (repos and issues) rather than the
   whole surface, and record how much of the spec the baseline covers — a
