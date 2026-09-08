@@ -192,7 +192,7 @@ const SABOTAGES = [
   {
     id: 'sitemodel-unclaimed-field',
     bug: 'a field lands in SiteModel that no codegen need and no scored category asks for',
-    reachable: 'a convenience field added to a section that is already claimed — the realistic way the model drifts back towards a renamed CaptureModel, one legitimate-looking addition at a time',
+    reachable: 'an OPTIONAL convenience field added to a section that is already claimed. Optional matters: a required one breaks the fixture parse first, and the harness rejected the first version of this patch for failing on the wrong reason — which is also why optional is the realistic shape, since it is the addition that costs nothing to make',
     gate: ['pnpm', '-s', 'test', '--project', 'schema'],
     expect: 'the model carries a field no consumer asked for',
   },
