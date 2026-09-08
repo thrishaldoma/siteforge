@@ -161,32 +161,42 @@ settled right up until the fetch.
 | observed behaviour | the recorded sweep against the pinned digest | `auth` |
 | not yet grounded | — | `identifier` (§9's `notDerived`) |
 
-**Response schemas are the next one to bite, and this decides them now.** §5
-makes the response schema the mock backend's data model, so what matters is what
-the server *returns* — a behavioural claim by the argument above. But infer's
-own claim is a generalisation from a handful of observed responses, and the
-document is the API authors' generalisation about the same behaviour: it is a
-declaration *about* behaviour, made by the people who wrote it, and it is
-complete where a crawl is a sample. Grading against the sample would score
-transcription; grading against the document scores generalisation, which is the
-thing §7 asks infer to do.
+The test each row has to pass is **independence**, not proximity: a truth source
+that is downstream of infer's own input cannot score inference. That is what
+picks the column, and it is why the declaration wins for response shape below
+even though the behaviour is what ships.
 
-So response fields are graded against the **declaration**, deliberately, with
-the disagreement handled rather than assumed away:
+**Response schemas are the next one to bite, and the rule decides them rather
+than exempting them.** §5 makes the response schema the mock backend's data
+model, so the thing that matters is what the server returns — which sounds like
+the behavioural column, and therefore like observation.
 
-- where the document and the server differ, that is the known-divergence
-  mechanism working as designed, and
-- if they differ *systematically*, the per-category cap surfaces it — more than
-  half the 5% budget landing in `response-field-presence` is the signal that
-  this modality choice was the wrong one, not a list to keep extending.
+It is not, and the reason is one the auth case did not have:
 
-The cap was written for a different reason and catches this too, which is the
-argument for having it before the first run rather than after.
+**Observed responses are infer's own input.** §7 derives the response schema by
+generalising over the bodies capture recorded. Grading that schema against those
+same bodies asks whether infer copied its input correctly — it cannot be wrong
+about a field it read, and it cannot be scored on the generalisation, which is
+the entire judgement §7 asks for. A truth side that is the system's own input is
+not an oracle; it is a mirror, and it will read near-perfect no matter how badly
+infer generalises.
 
-An observed response sweep against the seeded container would give a second
-truth for the same category, and the disagreement between the two would itself
-be a measurement worth having. It waits on the same seeding script as the
-parameterised auth sweep.
+The document is the only **independent** source for this claim. It is a
+declaration written by people who were not us, about the same behaviour, and it
+is complete where a crawl is a sample of three responses.
+
+So this is the modality rule applied, not suspended: *only an independent source
+can ground a score*, and for response shape the independent source is the
+declaration. Auth had an independent behavioural source available — the server
+answers a request nobody in this pipeline generalised from — and it was used.
+Here there is none, and pretending capture's own bodies are one would be the
+generated-fixture mistake in a new place.
+
+An observed response sweep against the seeded container would be a *second*
+truth for this category. Useful — the disagreement between a document and its
+server is worth measuring — but it is not a substitute for the declaration, and
+it is not more authoritative for being closer to the metal. It waits on the same
+seeding script as the parameterised auth sweep.
 
 ### The graded universe
 

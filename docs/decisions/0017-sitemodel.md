@@ -38,15 +38,24 @@ judgement call.
 
 Two properties keep it from rotting:
 
-- **A claim must name a field, never a section.** `reads: ['components']` covers
-  every field anyone ever adds under `components`, which is the realistic
-  failure — not a bogus section, a legitimate one quietly accreting. The
-  interior of a *named field* is covered, because enumerating every leaf of a
-  recursive element tree is unmaintainable and an unmaintainable rule gets
-  deleted.
-- **A claim is matched by segment**, so `routes.template` does not cover
-  `routes.templateId`. The identifier rule (§13) applies to a model path exactly
-  as it does to a URL.
+- **A claim must terminate at a schema leaf**, reaching through collections
+  element-wise: `entities[].fields[].type`, never `entities.fields`. The first
+  version of this rule counted segments, which is the same proxy-for-structure
+  mistake as `endsWith` on a path — two segments is not a statement about the
+  schema, and `entities.fields` has two and covers twelve leaves. The check now
+  asks whether the path *is* a leaf.
+
+  It costs 377 explicit claims across 298 leaves, and that is the price of the
+  property: adding a field to the model requires naming a consumer for it.
+- **Two claimants on one leaf declare themselves.** A scored category and a
+  codegen need genuinely read the same field for different reasons, and that is
+  fine — written down. Silent co-claiming is not: `field-type` and `narrowing`
+  both read `entities.fields` for a while and the gate reported clean, because
+  nothing anywhere said they overlapped. `SHARED_CLAIMS` names the exact
+  claimant set per leaf; an undeclared overlap fails, a stale declaration fails,
+  and a third claimant absorbed into an entry that already looked close enough
+  fails. The honest case is the path-parameter pair — arity and naming cover
+  identical leaves and ask different questions of them.
 
 Both directions are tested against schemas built to fail them, and the negative
 case holds a reordered model still.
@@ -186,11 +195,12 @@ Schema rules worth naming, each of them a §13 rule applied here:
 - **`stateVariants` is always empty in the fixture.** The capture has six CSSOM
   state rules; mapping them onto component nodes needs the nodeId join the
   builder does not do yet.
-- **The `tooCoarse` rule has a blind spot at depth 2, and it is occupied.**
-  `field-type` and `narrowing` both claim `entities.fields`, which is true and
-  which covers every leaf under it — the exact failure `tooCoarse` was written
-  to catch, passing because the rule triggers on segment count rather than on
-  whether a claim discriminates. Nothing computes a wrong number yet, because
-  the grader does not exist. But this is a live hole in the gate, not a
-  deferral: the rule should ask whether two claims that cover identical leaf
-  sets are both doing work, and it does not.
+- **A request-only field has no seed value, and M3 has to answer for it.**
+  `Account.password` is a column the store needs and the response never
+  returned, so the generated store has a password column with nothing in it —
+  and §10's auth tasks cannot run against a login nobody can perform. Codegen
+  synthesizes a credential per seeded identity, marks it synthesized in the
+  model's gap record rather than passing it off as observed, and surfaces it in
+  the env's task setup so an agent can be *given* the login it is asked to use.
+  This is an M3 requirement, not an infer one: infer's job is to record that the
+  column exists and has no observed value, which it does.
