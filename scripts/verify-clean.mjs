@@ -79,6 +79,10 @@ try {
   run('pnpm lint', 'pnpm', ['-s', 'lint'], clone);
   run('pnpm test', 'pnpm', ['-s', 'test'], clone);
   run('fixtures regenerate', 'node', ['packages/schema/scripts/build-fixtures.mjs'], clone);
+  // The grade gate and its mutation harness, against the committed Gitea
+  // snapshot. Offline and in milliseconds — the live capture-then-grade run
+  // needs Docker and is the milestone gate, deliberately not this.
+  run('grade baseline + mutations', 'node', ['packages/verify/scripts/grade-baseline.mjs'], clone);
   // Distinct ports: a rung server left running locally must not make the clone
   // look green by answering for it.
   run('rung 2', 'pnpm', ['-s', 'rung2'], clone, { RUNG2_PORT: '8888', RUNG2_CDN_PORT: '8892' });

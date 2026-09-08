@@ -147,8 +147,15 @@ export function pathParameterNames(path: string): string[] {
 
 type Json = Record<string, unknown>;
 
-/** How deep a response shape is enumerated. Gitea nests repo→owner→… */
-const MAX_FIELD_DEPTH = 4;
+/**
+ * How deep a response shape is enumerated. Gitea nests repo→owner→…
+ *
+ * Exported because the model-side walker in `../fields.ts` must use the same
+ * number. The depth is not a property of either walker — it is the boundary of
+ * what the two sides can be compared over, and two cut-offs would charge infer
+ * for fields this side declined to enumerate.
+ */
+export const MAX_FIELD_DEPTH = 4;
 
 const asObject = (value: unknown): Json | null =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Json) : null;
