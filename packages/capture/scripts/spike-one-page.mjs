@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
 import { scrubHarFile } from './capture-lib.mjs';
+import { formatFindings, scanCaptureTree } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 import * as S from '../../schema/dist/index.js';
 
@@ -991,6 +992,21 @@ for (const f of failures) {
 }
 const gatesFailed = failures.length + brokenInvariants;
 
+/**
+ * §3.4, enforced. Every file under `capture/` is scanned before the run may
+ * pass, and a hit fails it — not a warning, not a gitignore. The prose version
+ * of this rule was satisfied in exactly one direction for two rungs while
+ * `network/*.har` held a live session cookie.
+ */
+const secrets = scanCaptureTree(OUT);
+if (secrets.length > 0) {
+  console.log(`\n  ✗ SECRET SCAN — ${secrets.length} credential(s) reached an artifact (§3.4):`);
+  console.log(formatFindings(secrets));
+  for (const f of secrets) finding('credential-in-artifact', `${f.file}: ${f.detail}`);
+} else {
+  console.log('  secrets: clean (§3.4)');
+}
+
 console.log('');
 if (findings.length === 0) {
   console.log('✓ no findings: the schema accepted a real page unchanged.');
@@ -999,4 +1015,6 @@ if (findings.length === 0) {
   for (const f of findings) console.log(`  [${f.severity}] ${f.what}`);
 }
 writeFileSync(join(OUT, 'spike-findings.json'), `${JSON.stringify(findings, null, 2)}\n`);
-process.exit(failed > 0 || gatesFailed > 0 ? 1 : 0);
+
+
+process.exit(failed > 0 || secrets.length > 0 || gatesFailed > 0 ? 1 : 0);

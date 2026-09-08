@@ -21,6 +21,7 @@ import * as S from '../../schema/dist/index.js';
 import { assertPermitted, scrub, scrubDeep, scrubHarFile, sha256 } from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
+import { formatFindings, scanCaptureTree } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -95,8 +96,25 @@ const observations = [];
  * why every flow recorded zero network calls and only GET was ever seen.
  */
 const pendingResponses = [];
-const settleResponses = async () => {
-  await Promise.allSettled(pendingResponses.splice(0));
+/**
+ * Bounded on purpose.
+ *
+ * A response handler awaits `response.text()` and `request.allHeaders()`, both
+ * of which round-trip to the browser. When a context closes underneath one, the
+ * promise can stay pending — and an unbounded `allSettled` then waits forever.
+ * Dropping an observation is a loss the coverage invariants would report; a
+ * hung crawl reports nothing at all, so the timeout is the safer failure.
+ */
+const settleResponses = async (ms = 4000) => {
+  const pending = pendingResponses.splice(0);
+  if (pending.length === 0) return;
+  let timer;
+  const expired = new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), ms); });
+  const outcome = await Promise.race([Promise.allSettled(pending).then(() => 'settled'), expired]);
+  clearTimeout(timer);
+  if (outcome === 'timeout') {
+    finding('response-settle-timeout', `${pending.length} response read(s) did not settle in ${ms}ms`);
+  }
 };
 const attachApiRecorder = (page, routeIdRef, { anonymousProbe = false } = {}) => {
   page.on('response', (response) => {
@@ -231,7 +249,156 @@ for (const context of CONTEXTS) {
 /* ------------------------------------------ §6 behavior probing → flows/ */
 
 /** §6: skip destructive actions by heuristic unless --allow-destructive. */
-const DESTRUCTIVE_TERMS = ['delete', 'remove', 'cancel subscription', 'deactivate', 'sign out'];
+/**
+ * Fire one control and record what happened.
+ *
+ * Extracted so the session-destructive pass can reuse it verbatim against a
+ * disposable context. Two callers, one probe: a second copy would drift, and the
+ * whole point of firing logout is that it is an *ordinary* observation.
+ */
+async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomText, destructive = false }) {
+  let ran = false;
+  // §6: each probe runs in a fresh page context, so probes cannot contaminate
+  // each other's preconditions.
+  const page = await ctx.newPage();
+  attachApiRecorder(page, { current: routeId });
+  try {
+    await page.goto(`${ORIGIN}${record.plan.path}`, { waitUntil: 'networkidle', timeout: 10_000 });
+    const locator = page.getByRole(candidate.a11y.role, { name: candidate.a11y.name, exact: true }).first();
+    if (!(await locator.count())) { await page.close(); return false; }
+
+    const snap = async () => page.evaluate(() => ({
+      url: location.href,
+      html: document.documentElement.outerHTML,
+      classes: [...document.querySelectorAll('*')].map((e) => e.className).join('|'),
+      attrs: [...document.querySelectorAll('*')]
+        .map((e) => [...e.attributes].map((a) => `${a.name}=${a.value}`).join(',')).join('|'),
+      focused: document.activeElement?.getAttribute('aria-label') ?? null,
+    }));
+
+    await settleResponses();
+    const before = await snap();
+    const netBefore = observations.length;
+    await locator.click({ timeout: 2000 });
+    // §6: "Wait for network idle or 2s." networkidle alone is not enough --
+    // when the page is already idle it resolves before the click's fetch has
+    // even been issued, and the page then closes underneath the request.
+    await page.waitForTimeout(400);
+    await page.waitForLoadState('networkidle', { timeout: 1500 }).catch(() => {});
+    await settleResponses();
+    const after = await snap();
+    const networkCalls = observations.slice(netBefore);
+
+    const changed = before.html !== after.html;
+    const preHash = S.shortHash(before.html);
+    const postHash = S.shortHash(after.html);
+    const snapshot = (s, h) => ({
+      url: s.url, routeId, domHash: h, a11yHash: S.shortHash(s.attrs), focusedRef: null,
+    });
+
+    ran = true;
+    flows.set(flowId, {
+      ...envelope('flow-trace'),
+      flowId, siteId: SITE_ID, kind: 'probe',
+      name: `Click ${label}`,
+      startRouteId: routeId,
+      discoveredBy: candidate.interaction.discoveredBy[0],
+      initialA11yTree: buildA11yTree(record.captured),
+      steps: [{
+        index: 0,
+        action: { type: 'click' },
+        target: {
+          role: candidate.a11y.role, name: candidate.a11y.name, entityRef: null,
+          diagnostic: {
+            nodeId: candidate.nodeId,
+            selector: candidate.interaction.selector,
+            boundingBox: candidate.boundingBox,
+          },
+        },
+        pre: snapshot(before, preHash),
+        post: snapshot(after, postHash),
+        domDelta: { addedNodeIds: [], removedNodeIds: [], attributeChanges: [], textChanges: [], styleChanges: [] },
+        a11yDelta: { added: [], removed: [], changed: [] },
+        networkCalls: networkCalls.map((o) => ({
+          endpointId: null, method: o.method, url: scrub(o.url),
+          pathPattern: new URL(o.url).pathname, status: o.status,
+          isMutation: !['GET', 'HEAD', 'OPTIONS'].includes(o.method),
+        })),
+        urlChanged: before.url !== after.url,
+        waitStrategy: 'network-idle',
+      }],
+      outcome: 'completed', destructive, gapIds: [],
+    });
+
+    // A change no extracted CSSOM rule mentions is JS-driven, which is exactly
+    // the case §6 reserves probing for.
+    if (changed && before.classes !== after.classes) {
+      const newClasses = after.classes.split('|').join(' ').split(/\s+/)
+        .filter((c) => c && !before.classes.includes(c));
+      const unexplained = newClasses.filter((c) => !cssomText.includes(c));
+      if (unexplained.length) {
+        const list = probedStates.get(routeId) ?? [];
+        list.push({
+          source: 'probed', nodeId: candidate.nodeId, trigger: 'click',
+          reason: 'absent-from-cssom',
+          styleChanges: [], attributeChanges: [],
+          classChanges: { added: [...new Set(unexplained)], removed: [] },
+          subtreeChanged: true,
+        });
+        probedStates.set(routeId, list);
+      }
+    }
+  } catch (err) {
+    // A candidate that cannot be driven is not a probe — a timeout here is
+    // ordinary. A *programming* error is not, and this catch swallowed one:
+    // a stray `probed += 1` left behind by an extraction threw ReferenceError
+    // after the flow was recorded, so every probe looked successful while the
+    // state-detection below silently never ran. statesProbed went 1 → 0 and the
+    // only reason it was caught is that a rung gate asserts it.
+    if (err instanceof ReferenceError || err instanceof TypeError) {
+      finding('probe-internal-error', `${label}: ${err.message}`);
+      console.log(`      ✗ probe raised ${err.constructor.name}: ${err.message}`);
+    }
+  }
+  await settleResponses();
+  await page.close();
+  return ran;
+}
+
+/**
+ * §6's heuristic, split by **who absorbs the harm** (decision 0011).
+ *
+ * The old single list put "Sign out" and "Delete account" in the same bucket,
+ * which was wrong in both directions at once: it left `POST /api/auth/logout`
+ * uncaptured while §10's auth tasks depend on it, and it would have filed a core
+ * auth flow in GAPS.md as unreliable.
+ */
+const TARGET_DESTRUCTIVE_TERMS = ['delete', 'remove', 'cancel subscription', 'deactivate', 'close account'];
+const SESSION_DESTRUCTIVE_TERMS = ['sign out', 'log out', 'logout', 'switch account', 'revoke'];
+
+/** Controls the operator declines to fire even with --allow-destructive. */
+const NEVER_FIRE = ['delete account'];
+
+/**
+ * Classify a candidate. Order matters: "sign out" would match no target term,
+ * but "delete account" must not be read as a session action just because
+ * signing out is a side effect of it.
+ */
+function classifyControl(candidate) {
+  const name = candidate.a11y.name.toLowerCase();
+  const href = candidate.interaction?.href ?? candidate.attributes?.href ?? '';
+  if (href && /^(mailto:|tel:)/i.test(href)) {
+    return { hazard: 'out-of-scope', outOfScopeTarget: href.split(':')[0] + ':' };
+  }
+  if (href && /^https?:\/\//i.test(href) && !href.startsWith(ORIGIN)) {
+    return { hazard: 'out-of-scope', outOfScopeTarget: new URL(href).origin };
+  }
+  const target = TARGET_DESTRUCTIVE_TERMS.find((t) => name.includes(t));
+  if (target) return { hazard: 'target-destructive', matchedTerm: target };
+  const session = SESSION_DESTRUCTIVE_TERMS.find((t) => name.includes(t));
+  if (session) return { hazard: 'session-destructive', matchedTerm: session };
+  return { hazard: null };
+}
 
 /**
  * Controls §6 discovered and refused to fire (decision 0010).
@@ -242,6 +409,25 @@ const DESTRUCTIVE_TERMS = ['delete', 'remove', 'cancel subscription', 'deactivat
  * captured source, and that is why no endpoint entry is created here.
  */
 const skippedControls = [];
+
+/** §6's flag. We own both rung targets, so delete flows can yield real observations. */
+const ALLOW_DESTRUCTIVE = process.argv.includes('--allow-destructive');
+
+/**
+ * Session-destructive controls, deferred to a pass of their own.
+ *
+ * They must be fired — logout is an ordinary endpoint §8 has to implement and
+ * §10's auth tasks depend on — but firing one from the crawl's own context ends
+ * the crawl. See the pass below for why a *fresh* session, not a cloned one.
+ */
+const sessionDestructive = [];
+
+/**
+ * Target-destructive controls the operator allowed, deferred for the same
+ * reason: they mutate shared state, so anything probed after them is probed
+ * against a store they emptied.
+ */
+const deferredDestructive = [];
 const gapId = (label) => `gap_${S.shortHash(label).slice(0, 12)}`;
 const gaps = [];
 const flows = new Map();
@@ -278,28 +464,64 @@ if (authRoute) {
   for (const candidate of candidates) {
     if (probed >= MAX_PROBES) break;
     const label = `${candidate.a11y.role} "${candidate.a11y.name}"`;
-    const term = DESTRUCTIVE_TERMS.find((t) => candidate.a11y.name.toLowerCase().includes(t));
+    const { hazard, matchedTerm, outOfScopeTarget } = classifyControl(candidate);
     const flowId = `probe-${S.shortHash(label).slice(0, 10)}`;
 
-    if (term) {
-      const id = gapId(`destructive:${label}`);
+    // Session-destructive: fire it, but not from this context — logout deletes
+    // the server-side session, and cloning storageState clones the *cookie*,
+    // not the session. Deferred to a pass that gets its own login (0011 §2).
+    if (hazard === 'session-destructive') {
+      sessionDestructive.push({ routeId, record, candidate, flowId, label, cssomText, matchedTerm, destructive: true });
+      continue;
+    }
+
+    const declined = hazard === 'target-destructive'
+      && (!ALLOW_DESTRUCTIVE || NEVER_FIRE.includes(candidate.a11y.name.toLowerCase()));
+
+    // Allowed and destructive: fire it, but last. A fresh *page* context does
+    // not undo a mutation — "Delete all todos" empties the store for every
+    // probe that follows, and §6's "probes cannot contaminate each other's
+    // preconditions" is about the browser, not the server. Firing it inline
+    // took statesProbed from 1 to 0 the first time this ran.
+    if (hazard === 'target-destructive' && !declined) {
+      deferredDestructive.push({ routeId, record, candidate, flowId, label, cssomText, destructive: true });
+      continue;
+    }
+
+    if (declined || hazard === 'out-of-scope') {
+      const cause = hazard === 'out-of-scope' ? 'out-of-scope' : 'target-destructive';
+      const id = gapId(`${cause}:${label}`);
       gaps.push({
-        gapId: id, stage: 'capture', category: 'destructive-action-skipped', severity: 'degraded',
+        gapId: id, stage: 'capture',
+        category: cause === 'out-of-scope' ? 'out-of-scope-control' : 'destructive-action-skipped',
+        severity: cause === 'out-of-scope' ? 'info' : 'degraded',
         subject: { routeId, nodeId: candidate.nodeId, flowId },
-        summary: `${label} was not probed (destructive heuristic matched "${term}").`,
-        detail: `§6 skips destructive actions unless --allow-destructive. The control was discovered via ${candidate.interaction.discoveredBy.join(' + ')}, but never activated, so its transition is unknown.`,
-        stub: { kind: 'omitted', detail: 'Control renders and is focusable; its effect is not reproduced.' },
+        summary: cause === 'out-of-scope'
+          ? `${label} leaves the site (${outOfScopeTarget}); not exercised.`
+          : `${label} was not fired (target-destructive, matched "${matchedTerm}").`,
+        detail: cause === 'out-of-scope'
+          ? `The control targets ${outOfScopeTarget}, which is not ours to exercise. §6 crawls same-origin only; the clone renders the control and it goes nowhere. No endpoint is created either way.`
+          : `Irreversible against the target, so §6 never activates it${ALLOW_DESTRUCTIVE ? ' — and it stays declined even under --allow-destructive, by explicit designation' : ' without --allow-destructive'}. Discovered via ${candidate.interaction.discoveredBy.join(' + ')}; its transition is unknown. Recorded as a skipped control so §7.6 can bind it to a URL from the source.`,
+        stub: cause === 'out-of-scope'
+          ? { kind: 'none' }
+          : { kind: 'omitted', detail: 'Control renders and is focusable; infer binds it and codegen implements it against the mock store.' },
       });
       flows.set(flowId, {
         ...envelope('flow-trace'),
         flowId, siteId: SITE_ID, kind: 'probe',
         name: `${candidate.a11y.name} (not run)`,
-        description: 'Discovered as an interaction candidate and skipped by §6’s destructive heuristic.',
+        description: cause === 'out-of-scope'
+          ? 'Discovered as an interaction candidate; targets another origin.'
+          : 'Discovered as an interaction candidate and declined as target-destructive.',
         startRouteId: routeId,
         discoveredBy: candidate.interaction.discoveredBy[0],
         initialA11yTree: buildA11yTree(record.captured),
-        steps: [], outcome: 'skipped', destructive: true,
-        skipReason: { cause: 'destructive-heuristic', matchedTerm: term, gapId: id },
+        steps: [], outcome: 'skipped', destructive: cause === 'target-destructive',
+        skipReason: {
+          cause: cause === 'out-of-scope' ? 'precondition-unmet' : 'destructive-heuristic',
+          ...(cause === 'target-destructive' ? { matchedTerm } : {}),
+          gapId: id,
+        },
         gapIds: [id],
       });
       // The structured half (decision 0010). A skipped flow is forced to
@@ -310,105 +532,14 @@ if (authRoute) {
         controlId: `ctl_${sha256(`${routeId}:${candidate.nodeId}`).slice(0, 12)}`,
         routeId, nodeId: candidate.nodeId,
         role: candidate.a11y.role, name: candidate.a11y.name,
-        cause: 'destructive-heuristic', matchedTerm: term,
+        cause,
+        ...(cause === 'target-destructive' ? { matchedTerm } : { outOfScopeTarget }),
         gapId: id, flowId,
       });
       continue;
     }
 
-    // §6: each probe runs in a fresh page context, so probes cannot contaminate
-    // each other's preconditions.
-    const page = await probeCtx.newPage();
-    attachApiRecorder(page, probeIdRef);
-    try {
-      await page.goto(`${ORIGIN}${record.plan.path}`, { waitUntil: 'networkidle' });
-      const locator = page.getByRole(candidate.a11y.role, { name: candidate.a11y.name, exact: true }).first();
-      if (!(await locator.count())) { await page.close(); continue; }
-
-      const snap = async () => page.evaluate(() => ({
-        url: location.href,
-        html: document.documentElement.outerHTML,
-        classes: [...document.querySelectorAll('*')].map((e) => e.className).join('|'),
-        attrs: [...document.querySelectorAll('*')]
-          .map((e) => [...e.attributes].map((a) => `${a.name}=${a.value}`).join(',')).join('|'),
-        focused: document.activeElement?.getAttribute('aria-label') ?? null,
-      }));
-
-      await settleResponses();
-      const before = await snap();
-      const netBefore = observations.length;
-      await locator.click({ timeout: 2000 });
-      // §6: "Wait for network idle or 2s." networkidle alone is not enough --
-      // when the page is already idle it resolves before the click's fetch has
-      // even been issued, and the page then closes underneath the request.
-      await page.waitForTimeout(400);
-      await page.waitForLoadState('networkidle', { timeout: 1500 }).catch(() => {});
-      await settleResponses();
-      const after = await snap();
-      const networkCalls = observations.slice(netBefore);
-
-      const changed = before.html !== after.html;
-      const preHash = S.shortHash(before.html);
-      const postHash = S.shortHash(after.html);
-      const snapshot = (s, h) => ({
-        url: s.url, routeId, domHash: h, a11yHash: S.shortHash(s.attrs), focusedRef: null,
-      });
-
-      flows.set(flowId, {
-        ...envelope('flow-trace'),
-        flowId, siteId: SITE_ID, kind: 'probe',
-        name: `Click ${label}`,
-        startRouteId: routeId,
-        discoveredBy: candidate.interaction.discoveredBy[0],
-        initialA11yTree: buildA11yTree(record.captured),
-        steps: [{
-          index: 0,
-          action: { type: 'click' },
-          target: {
-            role: candidate.a11y.role, name: candidate.a11y.name, entityRef: null,
-            diagnostic: {
-              nodeId: candidate.nodeId,
-              selector: candidate.interaction.selector,
-              boundingBox: candidate.boundingBox,
-            },
-          },
-          pre: snapshot(before, preHash),
-          post: snapshot(after, postHash),
-          domDelta: { addedNodeIds: [], removedNodeIds: [], attributeChanges: [], textChanges: [], styleChanges: [] },
-          a11yDelta: { added: [], removed: [], changed: [] },
-          networkCalls: networkCalls.map((o) => ({
-            endpointId: null, method: o.method, url: scrub(o.url),
-            pathPattern: new URL(o.url).pathname, status: o.status,
-            isMutation: !['GET', 'HEAD', 'OPTIONS'].includes(o.method),
-          })),
-          urlChanged: before.url !== after.url,
-          waitStrategy: 'network-idle',
-        }],
-        outcome: 'completed', destructive: false, gapIds: [],
-      });
-      probed += 1;
-
-      // A change no extracted CSSOM rule mentions is JS-driven, which is exactly
-      // the case §6 reserves probing for.
-      if (changed && before.classes !== after.classes) {
-        const newClasses = after.classes.split('|').join(' ').split(/\s+/)
-          .filter((c) => c && !before.classes.includes(c));
-        const unexplained = newClasses.filter((c) => !cssomText.includes(c));
-        if (unexplained.length) {
-          const list = probedStates.get(routeId) ?? [];
-          list.push({
-            source: 'probed', nodeId: candidate.nodeId, trigger: 'click',
-            reason: 'absent-from-cssom',
-            styleChanges: [], attributeChanges: [],
-            classChanges: { added: [...new Set(unexplained)], removed: [] },
-            subtreeChanged: true,
-          });
-          probedStates.set(routeId, list);
-        }
-      }
-    } catch { /* a candidate that cannot be driven is not a probe */ }
-    await settleResponses();
-    await page.close();
+    if (await runProbe({ ctx: probeCtx, routeId, record, candidate, flowId, label, cssomText })) probed += 1;
   }
   await probeCtx.close();
   const skipped = [...flows.values()].filter((f) => f.outcome === 'skipped').length;
@@ -429,6 +560,79 @@ function buildA11yTree(captured) {
 /* ------------------------------------------------- assemble and validate */
 
 await settleResponses();
+
+/**
+ * Session-destructive controls: fired, each on a session of its own.
+ *
+ * The harm these do is to us, not to the target — logging out is not vandalism,
+ * and `POST /api/auth/logout` is an ordinary endpoint §8 must implement for real
+ * while §10's auth tasks depend on it working. Skipping them left a core auth
+ * flow uncaptured and would have filed it in GAPS.md as unreliable.
+ *
+ * **A disposable *context* is not enough.** `storageState` carries the cookie;
+ * the session lives in a map on the server, and logout deletes it. Cloning the
+ * crawl's storage state into a throwaway context and clicking "Sign out" ends
+ * the crawl's session too — the browser context is disposable, the session is
+ * shared. So each probe gets its own login, and only that session dies.
+ *
+ * Where a target offers no non-interactive re-auth (§6's headful `--auth` path),
+ * this pass has to run last instead, and the crawl ends with a dead session.
+ * Here it is scripted, so it does not.
+ */
+/**
+ * Allowed destructive probes, last of all.
+ *
+ * Order is the whole point: these mutate the store, so every probe that runs
+ * after one is measuring a different application. They come after the ordinary
+ * probes for exactly the reason the session pass comes after everything.
+ */
+if (deferredDestructive.length) {
+  const ctx = await browser.newContext({
+    viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
+    userAgent: UA, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce', storageState,
+  });
+  let fired = 0;
+  for (const item of deferredDestructive) {
+    if (await runProbe({ ctx, ...item })) fired += 1;
+  }
+  await ctx.close();
+  await settleResponses();
+  console.log(`  destructive: fired ${fired} of ${deferredDestructive.length} allowed control(s), after all other probing`);
+}
+
+if (sessionDestructive.length) {
+  for (const item of sessionDestructive) {
+    const ownState = await acquireStorageState();
+    const ctx = await browser.newContext({
+      viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
+      userAgent: UA, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce',
+      storageState: ownState,
+    });
+    const ran = await runProbe({ ctx, ...item });
+    await ctx.close();
+    if (!ran) {
+      // It could not be driven. That is `precondition-unmet` — an honest and
+      // different claim from "we declined to fire it", which is why the schema
+      // has no `session-destructive` skip cause to reach for here.
+      const id = gapId(`session-probe-failed:${item.label}`);
+      gaps.push({
+        gapId: id, stage: 'capture', category: 'destructive-action-skipped', severity: 'degraded',
+        subject: { routeId: item.routeId, nodeId: item.candidate.nodeId },
+        summary: `${item.label} is session-destructive but could not be driven.`,
+        detail: 'Fired on a session of its own so the crawl would survive it, and the click did not resolve. Recorded as precondition-unmet rather than as a decision to skip: nothing here was declined.',
+        stub: { kind: 'omitted', detail: 'Control renders; its effect is not reproduced.' },
+      });
+      skippedControls.push({
+        controlId: `ctl_${sha256(`${item.routeId}:${item.candidate.nodeId}`).slice(0, 12)}`,
+        routeId: item.routeId, nodeId: item.candidate.nodeId,
+        role: item.candidate.a11y.role, name: item.candidate.a11y.name,
+        cause: 'precondition-unmet', gapId: id, flowId: null,
+      });
+    }
+  }
+  await settleResponses();
+  console.log(`  session-destructive: fired ${sessionDestructive.length} control(s), each on its own session`);
+}
 
 /**
  * §6 records "which routes require which" auth. That is only inferable for an
@@ -701,7 +905,8 @@ const manifest = write('manifest.json', S.CaptureManifestSchema, {
   },
   crawl: {
     budget: { maxInstancesPerPattern: 3, maxRoutesPerContext: 40, maxRoutesTotal: 100, maxDepth: 3 },
-    sameOriginOnly: true, allowDestructive: false, destructiveTerms: DESTRUCTIVE_TERMS,
+    sameOriginOnly: true, allowDestructive: ALLOW_DESTRUCTIVE,
+    destructiveTerms: [...TARGET_DESTRUCTIVE_TERMS, ...SESSION_DESTRUCTIVE_TERMS],
   },
   toolVersions: { siteforge: '0.1.0-rung3', playwright: '1.63.0', browser: 'chromium-headless-shell' },
   patterns: [...new Set([...routes.values()].map((r) => r.plan.urlPattern))].map((urlPattern) => ({
@@ -772,6 +977,21 @@ console.log(`  flows: ${flows.size} (${[...flows.values()].filter((f) => f.outco
 for (const f of failures) finding('rung-gate', `rung 3 expects ${f.key} non-empty, got ${f.actual}`);
 for (const s2 of surprises) finding('rung-declaration-stale', `${s2} is declared known-empty at rung 3 but produced output`);
 
+/**
+ * §3.4, enforced. Every file under `capture/` is scanned before the run is
+ * allowed to pass, and a hit fails it — not a warning, not a gitignore. The
+ * prose version of this rule was satisfied in exactly one direction for two
+ * rungs while `network/*.har` held a live session cookie.
+ */
+const secrets = scanCaptureTree(OUT);
+if (secrets.length > 0) {
+  console.log(`\n  ✗ SECRET SCAN — ${secrets.length} credential(s) reached an artifact (§3.4):`);
+  console.log(formatFindings(secrets));
+  for (const f of secrets) finding('credential-in-artifact', `${f.file}: ${f.detail}`);
+} else {
+  console.log('  secrets: clean (§3.4)');
+}
+
 console.log('');
 if (findings.length === 0 && !broken.length) {
   console.log('✓ rung 3 green: endpoints, flows and probed states all validated against a real app.');
@@ -780,4 +1000,5 @@ if (findings.length === 0 && !broken.length) {
   for (const b of broken) console.log(`  [silent-drop] ${b.id}: ${b.description}`);
   for (const f of findings) console.log(`  [${f.severity}] ${f.what}`);
 }
-process.exit(failed > 0 || failures.length > 0 || broken.length > 0 ? 1 : 0);
+
+process.exit(failed > 0 || secrets.length > 0 || failures.length > 0 || broken.length > 0 ? 1 : 0);

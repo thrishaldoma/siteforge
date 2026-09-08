@@ -26,7 +26,7 @@ import { createServer } from 'node:http';
 
 /* --------------------------------------------------------------- the store */
 
-const USER = { id: 'usr_1', email: 'operator@localhost', password: 'rung-three', displayName: 'Operator' };
+const USER = { id: 'usr_1', email: 'operator@localhost', password: 'pw-8Qv3n2Lx-rung3', displayName: 'Operator' };
 
 const LISTS = [
   { id: 'lst_1', name: 'Today', colour: 'blue' },
@@ -49,7 +49,11 @@ const reset = () => {
 };
 
 const sessions = new Map();
-const sid = () => `sess_${(sessions.size + 1).toString(16).padStart(8, '0')}`;
+// Monotonic, not `sessions.size + 1`: session-destructive probing deletes
+// sessions on purpose now, and a size-derived id reissues a live one after the
+// first logout.
+let nextSession = 1;
+const sid = () => `sess_${(nextSession++).toString(16).padStart(8, '0')}`;
 
 /* -------------------------------------------------------------------- html */
 
@@ -106,6 +110,16 @@ const APP = `<!doctype html>
   <form id="new"><input type="text" id="title" placeholder="New todo" aria-label="New todo">
     <button class="btn" type="submit">Add</button></form>
   <p><button class="btn" id="delete-all" type="button">Delete all todos</button></p>
+  <!--
+    The designated target-destructive control (decision 0011). Unlike "Delete all
+    todos" it is never fired, even under --allow-destructive, so the synthesized
+    path — a control bound to a URL by infer, with responses: [] — keeps its
+    coverage against a real crawl instead of only against a fixture.
+  -->
+  <p><button class="btn btn-danger" id="delete-account" type="button">Delete account</button></p>
+  <!-- out-of-scope: another origin. Not destructive, just not ours to exercise. -->
+  <p><a id="docs" href="https://example.net/help">Help (external)</a>
+     <a id="contact" href="mailto:support@example.net">Email support</a></p>
 </main>
 <script>
 const listEl = document.getElementById('list');
@@ -171,6 +185,13 @@ document.getElementById('logout').addEventListener('click', async () => {
   await fetch('/api/auth/logout', { method: 'POST' });
   location.href = '/login';
 });
+// Never fired by capture. The fetch literal is here because binding it to a URL
+// is exactly what §7.6 does by reading the source — the endpoint is reachable to
+// infer and to a human, and to nothing else.
+document.getElementById('delete-account').addEventListener('click', async () => {
+  await fetch('/api/account', { method: 'DELETE' });
+  location.href = '/login';
+});
 load();
 </script>
 </body></html>`;
@@ -211,7 +232,11 @@ const readBody = (req) => new Promise((resolve) => {
 const sessionOf = (req) => {
   const raw = req.headers.cookie ?? '';
   const m = raw.match(/(?:^|;\s*)sid=([^;]+)/);
-  return m ? sessions.get(m[1]) : undefined;
+  if (!m) return undefined;
+  const value = sessions.get(m[1]);
+  // The id travels with the session so a handler can end *this* one — which
+  // session-destructive probing exercises for real now.
+  return value ? { id: m[1], ...value } : undefined;
 };
 
 const port = Number(process.argv[2] ?? 8789);
@@ -256,6 +281,11 @@ createServer(async (req, res) => {
     return json(res, 401, { error: 'invalid_credentials' });
   }
   if (path === '/api/auth/logout' && method === 'POST') {
+    // Actually ends the session. It used to return 204 without touching the
+    // session map, which made "session-destructive" a hazard the fixture could
+    // not actually inflict — and a probe that cannot break anything proves
+    // nothing about the mechanism that protects against it.
+    if (session) sessions.delete(session.id);
     return json(res, 204, {});
   }
   if (path.startsWith('/api/')) {
@@ -279,6 +309,13 @@ createServer(async (req, res) => {
   }
   if (path === '/api/todos' && method === 'DELETE') {
     todos = [];
+    return json(res, 204, {});
+  }
+  // Implemented so the app is honest, and never called: capture must not fire
+  // the control, so no observation of this can ever exist in a capture artifact.
+  if (path === '/api/account' && method === 'DELETE') {
+    todos = [];
+    sessions.delete(session.id);
     return json(res, 204, {});
   }
   const one = path.match(/^\/api\/todos\/([A-Za-z0-9_]+)$/);

@@ -1,3 +1,6 @@
+import { deriveEndpointId } from '../../schema/dist/index.js';
+import { classifyStringField, dedupeByIdentity } from '../../shared/dist/index.js';
+
 /**
  * §5: "Response schemas, not just responses. For each endpoint, infer a JSON
  * Schema across all observed responses. That schema becomes the mock backend's
@@ -41,163 +44,15 @@ const typeOf = (v) => {
 /* ------------------------------------------------ the narrowing contract (§7) */
 
 /**
- * Enum inference, rewritten after rung 3 produced this from 23 observations of
- * four todo records:
+ * The rules themselves live in `@siteforge/shared`, not here.
  *
- *     title: enum ["Read the CSSOM instead of hovering", …]
- *     id:    enum ["td_1", "td_2", "td_3", "td_4"]
- *
- * §5 makes this schema the mock backend's data model, so codegen would have
- * emitted a store where a todo's title can only be one of four literals. That is
- * §7's hallucinated-model failure arriving through a heuristic rather than
- * through a missing endpoint, and it is silent: every trajectory touching the
- * field is corrupted and nothing reports an error.
- *
- * The root cause was sample size, not enum logic. n was 4, wearing n=23's
- * clothes. Three rules follow, and the first is the general one:
- *
- *  1. **Deduplicate by entity identity before any frequency heuristic** — not
- *     only for enums. A list endpoint polled six times is not six times the
- *     evidence.
- *  2. **An enum needs evidence of a CLOSED domain.** Low cardinality is not that.
- *  3. **Default to `string`.** Narrowing must be justified; widening is free.
+ * §5 puts response schemas in the capture tree, so inference runs at capture
+ * today — but §7.4 derives the data model from these same schemas, and `infer`
+ * will want exactly this logic when it exists. Two implementations of "is this
+ * field an enum" would drift and then disagree about the same field, which is
+ * §13's schema drift wearing a different hat. One implementation, imported by
+ * both stages; see `shared/src/narrowing.ts` for why each rule is what it is.
  */
-
-/** Keys that identify a record, so repeated observations of it collapse to one. */
-const IDENTITY_KEYS = ['id', '_id', 'uuid', 'guid', 'slug', 'key', 'sku', 'code'];
-
-const identityOf = (obj) => {
-  for (const k of IDENTITY_KEYS) {
-    const v = obj[k];
-    if (typeof v === 'string' || typeof v === 'number') return `${k}:${v}`;
-  }
-  return null;
-};
-
-/**
- * Collapse repeated observations of the same record.
- *
- * By identity where a record has one, by deep value otherwise — two identical
- * responses are one piece of evidence either way. Everything downstream counts
- * what this returns, never the raw observation list.
- */
-export function dedupeByIdentity(values) {
-  const seen = new Set();
-  const out = [];
-  for (const v of values) {
-    if (!v || typeof v !== 'object' || Array.isArray(v)) {
-      out.push(v);
-      continue;
-    }
-    const key = identityOf(v) ?? `~${JSON.stringify(v)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(v);
-  }
-  return out;
-}
-
-/** A value that could belong to a closed domain: slug-like, no whitespace, short. */
-const ENUM_TOKEN = /^[A-Za-z][A-Za-z0-9_-]{0,23}$/;
-/** Below this many distinct records, low cardinality is a thin sample. */
-export const ENUM_MIN_DISTINCT_RECORDS = 20;
-/** Above this value-to-record ratio the values track the records: it is data. */
-export const ENUM_MAX_VALUE_RATIO = 0.3;
-/** At or above this, the field is unique per record — free text or a key. */
-const UNIQUENESS_EXCLUDES_ENUM = 0.9;
-const IDENTIFIER_NAME = /^(?:id|uuid|guid|slug|key|token|ref|href|url|.*Id|.*_id)$/i;
-
-/**
- * Decide what a string field is, and record why.
- *
- * Returns `{ enumValues, narrowing, identifier }`, any of which may be null.
- * Hard exclusions are checked first and neither kind of evidence overrides them.
- */
-export function classifyStringField({
-  key, distinct, recordCount, uiConstraints, pathParamValues, mintGap,
-}) {
-  const ratio = recordCount > 0 ? distinct.length / recordCount : 1;
-
-  // ---- hard exclusion: these values are somebody's path parameter.
-  //
-  // Matched by VALUE, not by name. `normalizePath` collapses every id segment to
-  // the literal `:id`, so a name comparison would test against a constant.
-  // Overlap also catches `listId` pointing at `/api/lists/:id`, which no name
-  // rule would — and that is exactly the foreign key §7.4 needs.
-  const overlap = distinct.filter((v) => pathParamValues?.has(v));
-  if (overlap.length > 0) {
-    const pathParamOf = [...new Set(overlap.flatMap((v) => [...pathParamValues.get(v)]))].sort();
-    return {
-      enumValues: null,
-      narrowing: null,
-      identifier: { pathParamOf, evidence: ['path-param-value-overlap'] },
-    };
-  }
-
-  // ---- hard exclusion: near-unique per record. Free text or an identifier.
-  if (recordCount > 1 && ratio >= UNIQUENESS_EXCLUDES_ENUM) {
-    const named = Boolean(key) && IDENTIFIER_NAME.test(key);
-    return {
-      enumValues: null,
-      narrowing: null,
-      identifier: named
-        ? { pathParamOf: [], evidence: ['identifier-name', 'unique-per-record'] }
-        : null,
-    };
-  }
-
-  // ---- hard exclusion: sentence-like values are never a domain.
-  if (!distinct.every((v) => ENUM_TOKEN.test(v))) {
-    return { enumValues: null, narrowing: null, identifier: null };
-  }
-
-  // ---- primary evidence: the UI constrains the field.
-  //
-  // Ground truth, and the only kind that is. A <select> with four options means
-  // the API cannot receive a fifth, however thin the sampling was. A field is an
-  // enum because the DOM constrains it, not because we did not look at enough
-  // rows — and we captured the UI that drives this API, so use it.
-  const constraint = key ? uiConstraints?.get(key.toLowerCase()) : undefined;
-  if (constraint && distinct.every((v) => constraint.optionValues.includes(v))) {
-    return {
-      enumValues: [...constraint.optionValues],
-      narrowing: {
-        kind: 'enum',
-        distinctRecords: recordCount,
-        distinctValues: distinct.length,
-        uiConstraint: constraint,
-        reviewRequired: true,
-        gapId: mintGap({ field: key, basis: 'ui-constraint', values: constraint.optionValues }),
-      },
-      identifier: null,
-    };
-  }
-
-  // ---- corroboration: cardinality stayed flat while records accumulated.
-  //
-  // Read statically, because one capture yields a final count rather than a
-  // trajectory — which is what the floor and the ratio encode.
-  if (
-    distinct.length >= 2 &&
-    recordCount >= ENUM_MIN_DISTINCT_RECORDS &&
-    distinct.length <= recordCount * ENUM_MAX_VALUE_RATIO
-  ) {
-    return {
-      enumValues: [...distinct],
-      narrowing: {
-        kind: 'enum',
-        distinctRecords: recordCount,
-        distinctValues: distinct.length,
-        uiConstraint: null,
-        reviewRequired: true,
-        gapId: mintGap({ field: key, basis: 'corroborated-cardinality', values: distinct }),
-      },
-      identifier: null,
-    };
-  }
-
-  return { enumValues: null, narrowing: null, identifier: null };
-}
 
 /**
  * Infer a JSON Schema over a set of observed values.
@@ -288,10 +143,14 @@ export function inferSchema(values, ctx = {}) {
   return { type: kind, ...(nullable ? { nullable: true } : {}) };
 }
 
-/** Slug for an endpoint id: `get-api-todos-id`. */
-export const endpointId = (method, pattern) =>
-  `${method.toLowerCase()}${pattern.replace(/[/:]+/g, '-').replace(/-+$/, '').toLowerCase()}`
-    .replace(/-{2,}/g, '-');
+/**
+ * Slug for an endpoint id.
+ *
+ * Re-exported from the schema rather than reimplemented: the schema recomputes
+ * this field and rejects a mismatch (decision 0011), so a second copy here would
+ * either be dead weight or a way to emit ids that do not parse.
+ */
+export const endpointId = deriveEndpointId;
 
 /**
  * The verdict a set of observations supports. Mirrors the schema's

@@ -1,29 +1,38 @@
-# Capture artifacts are sensitive (CLAUDE.md §3.4): they may contain
-# response bodies, storage state, and user content. Never commit them.
+# Every pattern here is explicitly anchored. An unanchored pattern matches a
+# directory of that name at ANY depth, and a bare `capture/` silently swallowed
+# the whole `packages/capture/` source package: every "capture:" commit up to
+# 819121b held schema and docs changes only, and the crawler existed nowhere but
+# a working tree. `repo-hygiene.test.ts` asserts no workspace package is ignored.
 #
-# Root-anchored. An unanchored `capture/` matches a directory of that name at
-# ANY depth — which silently swallowed the whole `packages/capture/` source
-# package: every "capture:" commit up to 819121b contained schema and docs
-# changes only, and the crawler existed nowhere but a working tree.
+#   /x/   root-relative, this one directory
+#   **/x/ deliberately at any depth
+#
+# The `**/` cases are the deviation from "anchor everything with a leading
+# slash": pnpm puts `node_modules` and `dist` in every package, so root-anchoring
+# them would stop ignoring build output everywhere but the root. Written as `**/`
+# so the any-depth match is a decision on the page rather than an accident.
+
+# Capture artifacts are sensitive (CLAUDE.md §3.4): they may hold response
+# bodies, storage state, and user content. Never commit them. The scrubber and
+# the §3.4 secret gate are what keep credentials out of them; this keeps them
+# out of history.
 /capture/
-# The schema fixtures are a capture tree on purpose, and no longer need an
-# exception now that the pattern is anchored — kept as a tripwire in case it
-# is ever un-anchored again.
+# The schema fixtures are a capture tree on purpose. Redundant now that the
+# pattern above is anchored — kept as a tripwire if it is ever un-anchored.
 !/packages/schema/fixtures/capture/
 **/auth/storage-state.json
 
 # Generated environments
-envs/*/
-!envs/.gitkeep
+/envs/*/
+!/envs/.gitkeep
 
 # LLM call cache (CLAUDE.md §13)
-.siteforge-cache/
+/.siteforge-cache/
 
-
-node_modules/
-dist/
-*.tsbuildinfo
-.DS_Store
-.env
-.env.*
-!.env.example
+**/node_modules/
+**/dist/
+**/*.tsbuildinfo
+**/.DS_Store
+/.env
+/.env.*
+!/.env.example

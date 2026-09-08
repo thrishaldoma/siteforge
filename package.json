@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "fixtures": "pnpm --filter @siteforge/schema build && node packages/schema/scripts/build-fixtures.mjs",
     "rung2": "node packages/capture/scripts/rung2.mjs",
-    "rung3": "node packages/capture/scripts/rung3-run.mjs"
+    "rung3": "node packages/capture/scripts/rung3-run.mjs",
+    "verify:clean": "node scripts/verify-clean.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
