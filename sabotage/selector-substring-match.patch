@@ -1,0 +1,14 @@
+diff --git a/packages/capture/scripts/capture-lib.mjs b/packages/capture/scripts/capture-lib.mjs
+index e06cfe6..03b5173 100644
+--- a/packages/capture/scripts/capture-lib.mjs
++++ b/packages/capture/scripts/capture-lib.mjs
+@@ -56,7 +56,8 @@ export function selectorClassNames(selectorTexts) {
+   for (const text of selectorTexts) {
+     try {
+       selectorParser((sel) => {
+-        sel.walkClasses((node) => names.add(node.value));
++        sel.walkClasses(() => {});
++        names.add(text);
+       }).processSync(text, { lossless: false });
+     } catch {
+       // operational: postcss throws on selectors real stylesheets contain.

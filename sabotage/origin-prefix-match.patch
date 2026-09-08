@@ -1,0 +1,14 @@
+diff --git a/packages/shared/src/crawl-scope.ts b/packages/shared/src/crawl-scope.ts
+index c218093..fe3e665 100644
+--- a/packages/shared/src/crawl-scope.ts
++++ b/packages/shared/src/crawl-scope.ts
+@@ -68,8 +68,7 @@ export const originOf = (url: string): string | null => {
+  * every real target. Parse and compare the component.
+  */
+ export function sameOrigin(url: string, origin: string): boolean {
+-  const parsed = originOf(url);
+-  return parsed !== null && parsed === origin;
++  return url.startsWith(origin);
+ }
+ 
+ /**

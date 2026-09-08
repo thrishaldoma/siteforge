@@ -1,0 +1,13 @@
+diff --git a/packages/shared/src/scan-walker.ts b/packages/shared/src/scan-walker.ts
+index 5e9e18a..be32fce 100644
+--- a/packages/shared/src/scan-walker.ts
++++ b/packages/shared/src/scan-walker.ts
+@@ -45,7 +45,7 @@ export const SOURCE_EXTENSIONS = ['.ts', '.mts', '.cts', '.mjs', '.cjs', '.js']
+  * `src/fixtures/*.ts` containing real code, a name match silently hides it.
+  */
+ export const SOURCE_IGNORE = [
+-  '**/node_modules',
++  'node_modules',
+   '**/dist',
+   '/.git',
+   '/packages/schema/fixtures/**',
