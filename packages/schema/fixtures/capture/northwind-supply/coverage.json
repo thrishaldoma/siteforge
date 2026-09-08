@@ -27,7 +27,7 @@
     "documentHeightRatio": 2.625,
     "axInteractiveRoles": 50,
     "subresourceRequests": 8,
-    "harCredentialedRequests": 9
+    "harCredentialedRequests": 5
   },
   "extracted": {
     "styleTableEntries": 195,

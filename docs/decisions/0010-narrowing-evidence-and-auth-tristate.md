@@ -246,6 +246,22 @@ touched the credential path. That is luck, not process.
   properly disaggregated version would compare per-endpoint, which needs coverage
   data `coverage.json` does not carry yet. The equality assertion is the strongest
   form the current shape allows; noted rather than overclaimed.
+- **`SkipCause` conflates two different reasons, and only one is bindable.**
+  Rung 3 skips "Delete all todos" and "Sign out", both as
+  `destructive-heuristic`, and both land in `skipped-controls.json`. They are not
+  the same kind of thing. The first is destructive to the *target's data*, which
+  is what §6's heuristic is for, and binding it to a synthesized endpoint is
+  exactly right. The second is destructive to the *crawl* — clicking it ends the
+  session — so the skip is self-protection, and `POST /api/auth/logout` is an
+  ordinary endpoint §8 must implement as a real session operation. Binding it as
+  *synthesized* and *review-required* would put a core auth flow in `GAPS.md` as
+  unreliable, when §10's auth tasks depend on it working.
+
+  The destructive heuristic and the "worth binding" question are different
+  filters, and the ruling drew only one of them. Cheaper to name now than to
+  discover at M2 when infer tries to bind a logout button. Needs a ruling: most
+  likely a second cause (`session-destructive`) that infer does not bind, and
+  which §6 could in principle probe last or in a throwaway context.
 - **No gate scans artifacts for credentials.** §3.4 is enforced by the scrubber
   and by review, not by a check that fails the run. §5 above is the argument for
   adding one.

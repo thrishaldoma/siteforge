@@ -960,8 +960,14 @@ const observed = {
   axInteractiveRoles: capturedRoutes.reduce(
     (n, r) => n + findAll(r.root, (x) => x.interaction !== undefined).length, 0),
   subresourceRequests: FILES.length,
-  // Every API request in this capture rode a session cookie except the anonymous probes.
-  harCredentialedRequests: 9,
+  // Derived, like every other count here. Hand-writing it would let the one
+  // number the auth invariant depends on drift from what the fixture contains —
+  // the exact property the invariant exists to prevent. (In a real capture this
+  // comes from raw header names on the wire, independent of the inferencer; a
+  // synthetic fixture has no wire, so it is read back off the descriptors.)
+  harCredentialedRequests: ENDPOINTS
+    .filter((e) => e.params.headers.some((h) => h.name === 'cookie'))
+    .reduce((n, e) => n + e.observedCount, 0),
 };
 const extracted = {
   styleTableEntries: capturedRoutes.reduce((n, r) => n + r.table.length, 0),
