@@ -18,7 +18,8 @@
     "rung2": "node packages/capture/scripts/rung2.mjs",
     "rung3": "node packages/capture/scripts/rung3-run.mjs",
     "verify:clean": "node scripts/verify-clean.mjs",
-    "sabotage": "node scripts/sabotage.mjs"
+    "sabotage": "node scripts/sabotage.mjs",
+    "gitea:snapshot": "node packages/verify/scripts/gitea-snapshot.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
