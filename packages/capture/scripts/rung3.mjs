@@ -27,7 +27,7 @@ import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
 import {
   allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, operationalKind,
-  isUnder, originOf, rethrowIfDefect, sameOrigin,
+  assetKind, isUnder, originOf, pathSegments, rethrowIfDefect, sameOrigin,
   scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
@@ -154,7 +154,7 @@ const attachApiRecorder = (page, routeIdRef, { anonymousProbe = false } = {}) =>
       if (!isUnder(url, { origin: ORIGIN, pathPrefix: '/api' })) return;
       const contentType = (response.headers()['content-type'] ?? '').split(';')[0].trim();
       let body;
-      if (contentType.includes('json')) {
+      if (assetKind(contentType) === 'json') {
         // operational: a 204 has no body; a non-JSON body is not ours to parse
         try { body = JSON.parse(await response.text()); } catch { /* empty 204 */ }
       }
@@ -847,7 +847,10 @@ function write(relPath, schema, value) {
 const anonymousOutcomes = new Map();
 for (const [, record] of routes) {
   if (record.context.auth.mode !== 'anonymous') continue;
-  const redirectedToLogin = record.finalUrl.includes('/login') && !record.plan.path.includes('/login');
+  // Segment comparison: `/login` must not be satisfied by `/not-login` or by a
+  // query string that happens to contain the word.
+  const onLogin = (u) => pathSegments(new URL(u, ORIGIN).pathname)[0] === 'login';
+  const redirectedToLogin = onLogin(record.finalUrl) && !onLogin(record.plan.path);
   anonymousOutcomes.set(record.plan.urlPattern, {
     redirectedToLogin,
     ok: !redirectedToLogin && record.status >= 200 && record.status < 300,
@@ -925,8 +928,9 @@ for (const [url, a] of allAssets) {
   assetEntries[url] = {
     assetId: a.sha256, originalUrl: url, localPath: `assets/files/${a.sha256}.${ext}`,
     sha256: a.sha256, mime: a.mime, bytes: a.bytes,
-    kind: a.mime.includes('css') ? 'stylesheet' : a.mime.includes('html') ? 'document'
-      : a.mime.startsWith('image/') ? 'image' : a.mime.includes('javascript') ? 'script' : 'other',
+    // Parsed type/subtype, one table. `includes('css')` matched
+    // `application/x-not-css` and a `charset=x-csserror` parameter alike.
+    kind: assetKind(a.mime),
     status: a.status, sameOrigin: a.sameOrigin, fromCache: false, referencedBy: [],
   };
 }

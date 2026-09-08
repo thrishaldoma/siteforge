@@ -319,7 +319,10 @@ createServer(async (req, res) => {
     if (session) sessions.delete(session.id);
     return json(res, 204, {});
   }
-  if (path.startsWith('/api/')) {
+  // Segments, not a prefix: '/api-docs' is not under '/api'. The fixture has
+  // to get this right too — a target whose own router is sloppy teaches the
+  // crawler the wrong shape.
+  if (path.split('/').filter(Boolean)[0] === 'api') {
     if (!session) return json(res, 401, { error: 'unauthenticated' });
   }
   if (path === '/api/lists' && method === 'GET') return json(res, 200, { items: LISTS });

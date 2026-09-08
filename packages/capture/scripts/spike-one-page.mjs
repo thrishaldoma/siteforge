@@ -18,8 +18,8 @@ import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
 import { boundaryGaps, installEscapeGuards, installOriginGuard, scrubHarFile } from './capture-lib.mjs';
 import {
-  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, originOf,
-  sameOrigin, scanCaptureTree,
+  allowedOrigins as deriveAllowedOrigins, assetKind, decideNavigation, formatFindings,
+  hostMatchesAllowEntry, isAbsoluteUrl, originOf, sameOrigin, scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 import * as S from '../../schema/dist/index.js';
@@ -93,7 +93,7 @@ function assertPermitted(url) {
   const entries = readFileSync(join(REPO, 'allowlist.txt'), 'utf8')
     .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
   const match = entries.find((e) =>
-    e.startsWith('.') ? host === e.slice(1) || host.endsWith(e) : host === e);
+    hostMatchesAllowEntry(host, e));
   if (!match) {
     console.error(`✗ ${host} is not in allowlist.txt and --i-have-permission was not passed (§3.1).`);
     process.exit(1);
@@ -654,7 +654,7 @@ const styles = {
     return {
       family: f.family,
       sources: (urls.length ? urls : ['(inline)']).map((u) => {
-        const abs = u.startsWith('http') ? u : new URL(u, extracted.url).href;
+        const abs = isAbsoluteUrl(u) ? u : new URL(u, extracted.url).href;
         const asset = assetsByUrl.get(abs);
         return { ...(asset ? { assetId: asset.sha256 } : {}), originalUrl: abs, format: 'truetype' };
       }),
@@ -730,12 +730,9 @@ for (const [url, a] of assetsByUrl) {
     assetId: a.sha256, originalUrl: url,
     localPath: `assets/files/${a.sha256}.${ext}`,
     sha256: a.sha256, mime: a.mime, bytes: a.bytes,
-    kind: a.mime.startsWith('image/') ? 'image'
-      : a.mime.startsWith('font/') ? 'font'
-      : a.mime.includes('css') ? 'stylesheet'
-      : a.mime.includes('javascript') ? 'script'
-      : a.mime.includes('html') ? 'document'
-      : a.mime.includes('json') ? 'json' : 'other',
+    // One parsed table, shared with rung 3. Written twice as an ordered
+    // `includes` chain, the two spellings had already drifted apart.
+    kind: assetKind(a.mime),
     status: a.status, sameOrigin: a.sameOrigin, fromCache: a.fromCache,
     referencedBy: [],
   };

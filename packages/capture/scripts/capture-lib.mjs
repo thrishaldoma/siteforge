@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import selectorParser from 'postcss-selector-parser';
+import { hasScheme, hostMatchesAllowEntry } from '../../shared/dist/index.js';
 import * as S from '../../schema/dist/index.js';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -119,7 +120,7 @@ export function assertPermitted(url) {
   const entries = readFileSync(join(REPO, 'allowlist.txt'), 'utf8')
     .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
   const match = entries.find((e) =>
-    e.startsWith('.') ? host === e.slice(1) || host.endsWith(e) : host === e);
+    hostMatchesAllowEntry(host, e));
   if (!match) {
     console.error(`✗ ${host} is not in allowlist.txt and --i-have-permission was not passed (§3.1).`);
     process.exit(1);
@@ -494,7 +495,7 @@ export async function installOriginGuard(context, { allowedOrigins, onBlocked, d
  * `chrome-error://chromewebdata/` ended up in a gap describing which origin we
  * had been protected from.
  */
-const isErrorPage = (url) => url.startsWith('chrome-error://') || url === 'about:blank';
+const isErrorPage = (url) => hasScheme(url, 'chrome-error') || url === 'about:blank';
 
 export function installEscapeGuards(page, { onBlocked }) {
   page.on('popup', async (popup) => {

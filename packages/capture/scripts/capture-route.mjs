@@ -7,6 +7,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as S from '../../schema/dist/index.js';
+import { isAbsoluteUrl } from '../../shared/dist/index.js';
 import {
   COLLECT_CSSOM, EXTRACT, INTERACTIVE_ROLES, MATCH_SELECTORS, SCROLL_PROBE, STAMP, UNSTAMP,
   analyseSelector, scrub, scrubDeep, sha256,
@@ -198,7 +199,7 @@ export async function captureRoute({ page, cdp, routeId, url, viewport, routeDir
       return {
         family: f.family,
         sources: (urls.length ? urls : ['(inline)']).map((u) => ({
-          originalUrl: u.startsWith('http') ? u : new URL(u, extracted.url).href,
+          originalUrl: isAbsoluteUrl(u) ? u : new URL(u, extracted.url).href,
           format: 'woff2',
         })),
         ...(f.weight ? { weight: f.weight } : {}),
