@@ -220,10 +220,15 @@ it is until then, failing visibly, which is what §13 asks for.
 - The baseline is 15 of 482 operations. Widening it is transcription work with a
   linear cost and no cleverness in it; the categories are all exercised, so the
   next increment buys calibration confidence rather than coverage of the grader.
-- `path-param-arity` has no mutation that leaves `endpoint-identity` still,
-  because dropping a hole genuinely changes the shape. A row that moved arity
-  *without* moving identity would need a spec pair differing only in arity on the
-  same literal segments; there may not be one in Gitea.
+- ~~`path-param-arity` has no mutation that leaves `endpoint-identity` still.~~
+  Resolved, and it is structural rather than a gap in the search. Identity
+  matches on the positional shape and a parameter hole is *part* of that shape,
+  so an arity error is by construction also a shape miss: the two metrics cannot
+  be isolated by any perturbation, on any spec. The `path-param-dropped` row now
+  **declares** both, which is 0016's coupled-pair ruling — forcing exactly-one
+  would have produced a false claim. (The denominator itself is not thin: 64 of
+  Gitea's 413 skeleton groups contain endpoints of differing arity, so there is
+  no shortage of real confusions for the category to catch.)
 - The `identifier` truth side, and the parameterised auth sweep, both still wait
   on the deterministically-seeded container from 0015's open list.
 - `narrowing.recall` is now 1.000 on a slice with one enum and eleven formats.

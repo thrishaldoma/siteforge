@@ -359,9 +359,16 @@ export const MUTATIONS: readonly Mutation[] = [
     change: 'model the labels list as /api/v1/repos/:repo/labels — one hole instead of two',
     reachable:
       'a URL normaliser that collapsed two adjacent id segments into one, which is what every path-pattern inferencer risks on `/owner/repo`',
-    mustMove: [{ metric: 'path-param-arity.accuracy', direction: 'down', minimum: 0.05 }],
-    // Not endpoint-identity: the shape genuinely changed, so a miss there is
-    // correct and this row makes no claim about it.
+    mustMove: [
+      { metric: 'path-param-arity.accuracy', direction: 'down', minimum: 0.05 },
+      // **Declared as a coupled pair**, not omitted. An arity error is by
+      // construction also a shape miss — identity matches on the positional
+      // shape, and a hole is part of it — so these two cannot be isolated by any
+      // perturbation, on any spec. That is a property of the denominators rather
+      // than of Gitea. 0016's ruling applies: coupled metrics genuinely move
+      // together, and forcing exactly-one here would produce a false claim.
+      { metric: 'endpoint-identity.precision', direction: 'down', minimum: 0.05 },
+    ],
     mustHold: ['path-param-naming.accuracy'],
     apply: (input) => {
       const model = cloneModel(input.model);
