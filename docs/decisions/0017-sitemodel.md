@@ -57,6 +57,13 @@ Two properties keep it from rotting:
   fails. The honest case is the path-parameter pair — arity and naming cover
   identical leaves and ask different questions of them.
 
+  Its control patch is worth copying rather than the other two. §13 asks a
+  control to be a change the gate could plausibly have keyed on and should not,
+  and `sitemodel-declared-share` is the first one here that is not a refactor:
+  it genuinely changes behaviour — a new reader on a leaf — and the gate must
+  permit it *because it was written down*. The two older controls only
+  approximate that, by preserving meaning exactly.
+
 Both directions are tested against schemas built to fail them, and the negative
 case holds a reordered model still.
 
