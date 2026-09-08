@@ -1064,6 +1064,10 @@ for (const key of spec.expectNonEmpty) {
   const ok = rungCounts[key] > 0;
   console.log(`    ${ok ? '✓' : '✗'} ${key.padEnd(22)} ${rungCounts[key] ?? 0}`);
 }
+for (const [key, want] of Object.entries(spec.expectExactly ?? {})) {
+  const got = rungCounts[key] ?? 0;
+  console.log(`    ${got === want ? '✓' : '✗'} ${key.padEnd(22)} ${got}  (exactly ${want})`);
+}
 for (const key of spec.knownEmpty) {
   console.log(`    · ${key.padEnd(22)} ${rungCounts[key] ?? 0}  (known-empty at this rung)`);
 }

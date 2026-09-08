@@ -22,6 +22,7 @@ const allPassing = (rung) => {
   const counts = {};
   for (const key of RUNGS[rung].expectNonEmpty) counts[key] = 1;
   for (const key of RUNGS[rung].knownEmpty) counts[key] = 0;
+  for (const [key, want] of Object.entries(RUNGS[rung].expectExactly ?? {})) counts[key] = want;
   return counts;
 };
 
@@ -50,6 +51,20 @@ describe('the rung gates fail when the thing they measure is missing', () => {
         expect(failures.map((f) => f.key)).toEqual([key]);
       });
 
+      // An exact gate has two failure directions, and non-emptiness sees only
+      // one of them. The drop that shipped was 3 -> 2: still non-zero.
+      it.each(Object.keys(RUNGS[rung].expectExactly ?? {}))('fails when %s is one short', (key) => {
+        const want = RUNGS[rung].expectExactly[key];
+        const { failures } = checkRung(rung, { ...allPassing(rung), [key]: want - 1 });
+        expect(failures.map((f) => f.key)).toEqual([key]);
+      });
+
+      it.each(Object.keys(RUNGS[rung].expectExactly ?? {}))('fails when %s is one over', (key) => {
+        const want = RUNGS[rung].expectExactly[key];
+        const { failures } = checkRung(rung, { ...allPassing(rung), [key]: want + 1 });
+        expect(failures.map((f) => f.key)).toEqual([key]);
+      });
+
       it.each(RUNGS[rung].knownEmpty)('reports %s as a surprise rather than failing', (key) => {
         const { failures, surprises } = checkRung(rung, { ...allPassing(rung), [key]: 1 });
         expect(failures).toEqual([]);
@@ -64,6 +79,13 @@ describe('the rung gates fail when the thing they measure is missing', () => {
     // blocked nothing would do the reverse. Neither can pass rung 2.
     expect(RUNGS[2].expectNonEmpty).toContain('foreignAssets');
     expect(RUNGS[2].expectNonEmpty).toContain('blockedOffOriginNavigations');
+  });
+
+  it('gates statesProbed exactly, because the drop it must catch is 3 to 2', () => {
+    // Non-emptiness held at 2 while a state was being silently dropped every
+    // run. §13 prefers equality wherever the data allows one.
+    expect(RUNGS[3].expectExactly?.statesProbed).toBe(3);
+    expect(RUNGS[3].expectNonEmpty).not.toContain('statesProbed');
   });
 
   it('rung 3 declares foreignAssets known-empty rather than omitting it', () => {

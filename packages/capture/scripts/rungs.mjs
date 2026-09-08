@@ -54,12 +54,22 @@ export const RUNGS = {
       'styleTableEntries',
       'assets',
       'statesCssomPseudo',
-      'statesProbed',
+      // statesProbed is gated exactly, below — a non-emptiness check here would
+      // just restate the weaker half of it.
       'endpoints',
       'interactionCandidates',
       'a11yNodes',
       'blockedOffOriginNavigations',
     ],
+    /*
+     * Equality where the data allows it (§13). Non-emptiness could not see the
+     * silent drop that shipped: `cssomText.includes(c)` treated a new class
+     * `flag` as explained by the attribute name `data-flagged`, so the fixture's
+     * Flag control produced no probed state and the count sat at 2 — non-zero,
+     * and wrong. An exact count is brittle by design: change the fixture and
+     * you must update the declaration, which is the point.
+     */
+    expectExactly: { statesProbed: 3 },
     // The crud app is single-origin by design; rung 2 owns the foreign-asset
     // measurement. Declared rather than omitted so the count is still printed.
     knownEmpty: ['foreignAssets', 'cancelledDownloads'],
@@ -76,6 +86,11 @@ export function checkRung(rung, extracted) {
   }
   // A category declared known-empty that starts producing output is good news,
   // and the declaration should be updated -- so it is reported, not failed.
+  for (const [key, want] of Object.entries(spec.expectExactly ?? {})) {
+    if (extracted[key] !== want) {
+      failures.push({ key, expected: `exactly ${want}`, actual: extracted[key] ?? 0 });
+    }
+  }
   const surprises = spec.knownEmpty.filter((key) => extracted[key] > 0);
   return { spec, failures, surprises };
 }
