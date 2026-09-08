@@ -102,7 +102,7 @@ const PATCHES = join(REPO, 'sabotage');
  * control is the exit code, and the pairing is what makes it a control rather
  * than a no-op.
  */
-const SABOTAGES = [
+export const SABOTAGES = [
   {
     id: 'secret-gate-path-suffix',
     bug: "§3.4's exemption matches any path ending in auth/storage-state.json",
@@ -233,9 +233,68 @@ const SABOTAGES = [
   },
 ];
 
-const isControl = (s) => s.kind === 'control';
+export const isControl = (s) => s.kind === 'control';
 const DEFECTS = SABOTAGES.filter((s) => !isControl(s));
 const CONTROLS = SABOTAGES.filter(isControl);
+
+/**
+ * Is the table itself well formed? One message per problem, never a throw.
+ *
+ * Every one of these checks used to sit inline in `main()`, where the only
+ * table it could ever see was the real one — which passes. A gate reachable
+ * only through the input it passes on is a gate nobody can prove fires, and
+ * that is the root these four checks share with the vacuous invariant and the
+ * unreachable patch they exist to prevent. Here the table and the directory
+ * listing arrive as parameters, so a test can hand it a table with no controls
+ * and watch it object.
+ *
+ * `patchIds` is the sorted list of `sabotage/*.patch` basenames.
+ */
+export function assessSabotageTable(entries, patchIds) {
+  const problems = [];
+  const defects = entries.filter((e) => !isControl(e));
+  const controls = entries.filter(isControl);
+
+  // The completeness assertion this repo applies to every rule table: a patch
+  // on disk with no entry here would never run, and an entry with no patch
+  // would be a claim about a file that does not exist.
+  const declared = entries.map((e) => e.id).slice().sort();
+  const onDisk = patchIds.slice().sort();
+  if (JSON.stringify(onDisk) !== JSON.stringify(declared)) {
+    problems.push(
+      `sabotage/ and the table disagree.\n  on disk:  ${onDisk.join(', ')}\n  declared: ${declared.join(', ')}`,
+    );
+  }
+  if (defects.length === 0) {
+    problems.push('no sabotages declared — a harness that runs nothing reports success.');
+  }
+  // §13: a table made only of drops passes while proving nothing about
+  // isolation. At least one control, and each control has to name a defect that
+  // exists — an unpaired control is a patch nobody can say what it isolates.
+  if (controls.length === 0) {
+    problems.push(
+      'no controls declared. A harness of defects alone cannot tell a gate that\n' +
+      'discriminates from one that fails on any edit at all — see §13.',
+    );
+  }
+  // §13: every entry states why a real run or a real edit reaches the state it
+  // produces. A gate behaving correctly on unreachable input proves nothing
+  // about reachable input, and reads exactly like a gate that works.
+  const unreachable = entries.filter((e) => !e.reachable || e.reachable.length < 20);
+  if (unreachable.length > 0) {
+    problems.push(
+      `${unreachable.map((e) => e.id).join(', ')}: no reachability note.\n` +
+      'Say why a real run or a real edit arrives at this state — see §13.',
+    );
+  }
+  const defectIds = new Set(defects.map((e) => e.id));
+  for (const control of controls) {
+    if (!defectIds.has(control.controlFor)) {
+      problems.push(`control ${control.id} names ${control.controlFor}, which is not a declared defect.`);
+    }
+  }
+  return problems;
+}
 
 const git = (...args) => execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8' });
 
@@ -264,44 +323,13 @@ function main() {
   }
 
   const onDisk = existsSync(PATCHES)
-    ? readdirSync(PATCHES).filter((f) => f.endsWith('.patch')).map((f) => f.slice(0, -6)).sort()
+    ? readdirSync(PATCHES).filter((f) => f.endsWith('.patch')).map((f) => f.slice(0, -6))
     : [];
-  const declared = SABOTAGES.map((s) => s.id).sort();
-  // The completeness assertion this repo applies to every rule table: a patch
-  // on disk with no entry here would never run, and an entry with no patch
-  // would be a claim about a file that does not exist.
-  if (JSON.stringify(onDisk) !== JSON.stringify(declared)) {
-    console.error(`\nsabotage/ and the table disagree.\n  on disk:  ${onDisk.join(', ')}\n  declared: ${declared.join(', ')}\n`);
+  const problems = assessSabotageTable(SABOTAGES, onDisk);
+  if (problems.length > 0) {
+    for (const problem of problems) console.error(`\n${problem}`);
+    console.error('');
     process.exit(1);
-  }
-  if (DEFECTS.length === 0) {
-    console.error('\nno sabotages declared — a harness that runs nothing reports success.\n');
-    process.exit(1);
-  }
-  // §13: a table made only of drops passes while proving nothing about
-  // isolation. At least one control, and each control has to name a defect that
-  // exists — an unpaired control is a patch nobody can say what it isolates.
-  if (CONTROLS.length === 0) {
-    console.error('\nno controls declared. A harness of defects alone cannot tell a gate that');
-    console.error('discriminates from one that fails on any edit at all — see §13.\n');
-    process.exit(1);
-  }
-  // §13: every entry states why a real run or a real edit reaches the state it
-  // produces. A gate behaving correctly on unreachable input proves nothing
-  // about reachable input, and reads exactly like a gate that works.
-  const unreachable = SABOTAGES.filter((s) => !s.reachable || s.reachable.length < 20);
-  if (unreachable.length > 0) {
-    console.error(`\n${unreachable.map((s) => s.id).join(', ')}: no reachability note.`);
-    console.error('Say why a real run or a real edit arrives at this state — see §13.\n');
-    process.exit(1);
-  }
-
-  const declaredIds = new Set(DEFECTS.map((s) => s.id));
-  for (const control of CONTROLS) {
-    if (!declaredIds.has(control.controlFor)) {
-      console.error(`\ncontrol ${control.id} names ${control.controlFor}, which is not a declared defect.\n`);
-      process.exit(1);
-    }
   }
 
   console.log(
@@ -378,4 +406,6 @@ function main() {
   );
 }
 
-main();
+// Importing this file for `SABOTAGES` or `assessSabotageTable` must not apply
+// patches to the working tree. The linters here already have this shape.
+if (import.meta.url === `file://${process.argv[1]}`) main();

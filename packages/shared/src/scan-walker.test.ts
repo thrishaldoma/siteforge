@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
+  assessScanCoverage,
   CAPTURE_TREE_EXPECTATION,
   REPO_SOURCE_EXPECTATION,
   SOURCE_IGNORE,
@@ -112,6 +113,37 @@ describe('one walker, and the anti-vacuity lives in it', () => {
     it('rejects an unanchored ignore pattern — the bug that hid packages/capture', () => {
       expect(() => assertAnchoredPatterns(['capture'])).toThrow(VacuousScanError);
       expect(() => assertAnchoredPatterns(['**/capture', '/capture'])).not.toThrow();
+    });
+  });
+
+  describe('the expectation, as a rule over a file list', () => {
+    // The three tests above drive it through a real directory tree, which is one
+    // caller and the slow one. The rule itself takes a list of paths, so it can
+    // be shown to object to each shortfall separately — and to report *both*
+    // when both are wrong, which the walk's throw-on-first could never show.
+    const AT = { root: '/repo', profile: 'source' as const };
+
+    it('says nothing when the list satisfies the expectation', () => {
+      expect(assessScanCoverage(['a/x.ts', 'b/y.ts'], { minFiles: 2, mustReach: ['a', 'b'] }, AT)).toEqual([]);
+    });
+
+    it('names a directory the walk never reached', () => {
+      const out = assessScanCoverage(['a/x.ts'], { minFiles: 1, mustReach: ['a', 'scripts'] }, AT);
+      expect(out).toHaveLength(1);
+      expect(out[0]).toContain('never reached scripts/');
+    });
+
+    it('is not satisfied by a prefix match — packages/capture is not packages/capture-lib', () => {
+      // The bug family this whole module exists for: `startsWith` would call
+      // this reached. The pattern is parsed and compared by segment.
+      expect(
+        assessScanCoverage(['packages/capture-lib/x.ts'], { minFiles: 1, mustReach: ['packages/capture'] }, AT),
+      ).toHaveLength(1);
+    });
+
+    it('reports the file floor and every unreached directory together', () => {
+      const out = assessScanCoverage([], { minFiles: 20, mustReach: ['scripts', 'packages'] }, AT);
+      expect(out).toHaveLength(3);
     });
   });
 

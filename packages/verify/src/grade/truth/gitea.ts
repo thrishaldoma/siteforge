@@ -280,7 +280,7 @@ export function classifyAnonymousStatus(status: number | null): TruthAuth {
 
 // ---------------------------------------------------------------------------
 
-interface Snapshot {
+export interface Snapshot {
   readonly spec: Json;
   readonly pin: Json;
   readonly probe: Json;
@@ -313,18 +313,27 @@ function readSnapshot(root: string): Snapshot {
 }
 
 /**
- * Load the truth, or throw.
+ * Build the truth from a snapshot already in memory, or throw.
  *
- * The floors are §6's: a grader whose truth did not load must not report
- * anything, because every number it could produce would be about the empty set.
+ * Separated from the file reading so the floors take their input as a parameter.
+ * They are the part worth exercising and the part hardest to reach: against the
+ * committed snapshot they never fire, so a floor that had been silently
+ * inverted would read exactly like a floor that works. A test hands this a
+ * deliberately thin document and watches each one object.
+ *
+ * The floors **throw**, and that is not an oversight about purity. §6 draws the
+ * line deliberately: *category* vacuity is a scored outcome, because a
+ * denominator nobody exercised is information. A truth that did not load is not
+ * — every number computed from it would be about the empty set, so there is
+ * nothing to report and the run stops.
+ *
  * They are deliberately far below the measured surface (308 paths, 482
  * operations, 13 public / 37 gated zero-parameter GETs) — a floor tight enough
  * to trip on a legitimate refresh gets raised until it never fires, which is
  * how a floor becomes decoration.
  */
-export function loadGiteaTruth(options: { root?: string } = {}): TruthModel {
-  const root = options.root ?? FIXTURES;
-  const { spec, pin, probe, specBytes } = readSnapshot(root);
+export function buildGiteaTruth(snapshot: Snapshot): TruthModel {
+  const { spec, pin, probe, specBytes } = snapshot;
 
   const specSha256 = createHash('sha256').update(specBytes).digest('hex');
   if (pin['specSha256'] !== specSha256) {
@@ -423,4 +432,9 @@ export function loadGiteaTruth(options: { root?: string } = {}): TruthModel {
     // Named here so its category fails as unbuilt rather than as infer's miss.
     notDerived: ['identifier'],
   };
+}
+
+/** The truth, read from the committed snapshot. The wiring, and nothing else. */
+export function loadGiteaTruth(options: { root?: string } = {}): TruthModel {
+  return buildGiteaTruth(readSnapshot(options.root ?? FIXTURES));
 }

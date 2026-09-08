@@ -15,6 +15,12 @@
  * only catches paths somebody thought to list, and not thinking of one is the
  * entire failure mode.
  *
+ * Both rules now take their inputs as parameters (`assessGitignoreAnchoring`,
+ * `assessTrackedPackages`) and this file is **two** callers: the real repository,
+ * and a synthetic input that drives each rule to a finding. Reading git and
+ * reading `.gitignore` here is the wiring; the judgement is somewhere it can be
+ * made to fail.
+ *
  * The slow reproduction gate (`pnpm verify:clean`) covers the same ground from a
  * real clone, but it takes minutes and runs browsers. This runs in the ordinary
  * suite, which is where a check has to be if it is going to fire before a commit
@@ -26,6 +32,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { workspacePackageDirs } from './scan-walker.js';
+import {
+  assessGitignoreAnchoring,
+  assessTrackedPackages,
+  type PackageTracking,
+} from './repo-hygiene.js';
 
 const REPO = (() => {
   let dir = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +46,16 @@ const REPO = (() => {
 
 const git = (...args: string[]): string =>
   execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8' });
+
+/** `check-ignore -v` exits 1 when nothing matches, which is the passing case. */
+const ignoredBy = (path: string): string => {
+  try {
+    return execFileSync('git', ['-C', REPO, 'check-ignore', '-v', path], { encoding: 'utf8' });
+  } catch {
+    // operational: git check-ignore exits 1 when nothing matches; that is the passing case
+    return '';
+  }
+};
 
 /**
  * Directories the workspace globs actually resolve to.
@@ -48,6 +69,49 @@ const workspacePackages = (): string[] =>
 
 const isRepo = existsSync(join(REPO, '.git'));
 
+describe('the rules, driven by inputs that break them', () => {
+  it('finds an unanchored pattern, and only that one', () => {
+    const findings = assessGitignoreAnchoring(
+      ['# a comment', '', '/dist', '**/node_modules', 'capture/', '!/capture/keep'].join('\n'),
+    );
+    expect(findings.map((f) => f.subject)).toEqual(['capture/']);
+    expect(findings[0]?.message).toContain('matches at any depth by accident');
+  });
+
+  it('reads a negation on what follows the bang', () => {
+    // `!capture/keep` is as unanchored as `capture/`: it un-ignores at any depth.
+    expect(assessGitignoreAnchoring('!capture/keep').map((f) => f.subject)).toEqual([
+      '!capture/keep',
+    ]);
+  });
+
+  it('finds a package with no tracked files', () => {
+    const entries: PackageTracking[] = [
+      { package: 'packages/schema', trackedFiles: 40, manifestIgnoredBy: '' },
+      { package: 'packages/capture', trackedFiles: 0, manifestIgnoredBy: '' },
+    ];
+    const findings = assessTrackedPackages(entries);
+    expect(findings.map((f) => f.rule)).toEqual(['package-untracked']);
+    expect(findings[0]?.subject).toBe('packages/capture');
+  });
+
+  it('finds a package whose manifest is ignored even when it has tracked files', () => {
+    // The pair matters: a package can have tracked files from before the pattern
+    // landed, so "has files" alone would report this one clean.
+    const findings = assessTrackedPackages([
+      { package: 'packages/capture', trackedFiles: 12, manifestIgnoredBy: '.gitignore:4:capture/' },
+    ]);
+    expect(findings.map((f) => f.rule)).toEqual(['package-ignored']);
+  });
+
+  it('says nothing about a healthy repository', () => {
+    expect(assessGitignoreAnchoring('/dist\n**/node_modules\n')).toEqual([]);
+    expect(
+      assessTrackedPackages([{ package: 'packages/cli', trackedFiles: 3, manifestIgnoredBy: '' }]),
+    ).toEqual([]);
+  });
+});
+
 describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
   const packages = workspacePackages();
 
@@ -58,43 +122,19 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
     expect(packages).toContain('packages/capture');
   });
 
-  it.each(workspacePackages())('%s has tracked files', (pkg) => {
-    const tracked = git('ls-files', '--', pkg).trim();
-    expect(
-      tracked.length,
-      `${pkg} is a workspace package with no tracked files — it is almost certainly matched by a .gitignore pattern`,
-    ).toBeGreaterThan(0);
-  });
-
-  it.each(workspacePackages())('%s/package.json is not ignored', (pkg) => {
-    // check-ignore exits 1 when nothing matches, which is the passing case.
-    let matched = '';
-    try {
-      matched = execFileSync('git', ['-C', REPO, 'check-ignore', '-v', `${pkg}/package.json`], {
-        encoding: 'utf8',
-      });
-    } catch {
-      // operational: git check-ignore exits 1 when nothing matches; that is the passing case
-      matched = '';
-    }
-    expect(matched, `${pkg}/package.json is ignored by ${matched.trim()}`).toBe('');
+  it('every workspace package is tracked and its manifest is not ignored', () => {
+    const entries: PackageTracking[] = packages.map((pkg) => ({
+      package: pkg,
+      trackedFiles: git('ls-files', '--', pkg).trim().split('\n').filter(Boolean).length,
+      manifestIgnoredBy: ignoredBy(`${pkg}/package.json`),
+    }));
+    expect(assessTrackedPackages(entries).map((f) => f.message)).toEqual([]);
   });
 
   it('ignores every pattern deliberately: root-anchored, or explicitly **/', () => {
-    const lines = readFileSync(join(REPO, '.gitignore'), 'utf8')
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l && !l.startsWith('#'));
-    expect(lines.length).toBeGreaterThan(0);
-    for (const line of lines) {
-      const pattern = line.startsWith('!') ? line.slice(1) : line;
-      expect(
-        // identifier: paths — .gitignore's own anchoring syntax, which is what this
-        // assertion is about; there is no parsed form of a pattern's leading marker.
-        pattern.startsWith('/') || pattern.startsWith('**/'),
-        `"${line}" is unanchored: it matches at any depth by accident. Use /x for root-only or **/x to say you meant any depth.`,
-      ).toBe(true);
-    }
+    const text = readFileSync(join(REPO, '.gitignore'), 'utf8');
+    expect(text.split('\n').filter((l) => l.trim() && !l.startsWith('#')).length).toBeGreaterThan(0);
+    expect(assessGitignoreAnchoring(text).map((f) => f.message)).toEqual([]);
   });
 
   it('still ignores the artifact directories it is there to ignore', () => {

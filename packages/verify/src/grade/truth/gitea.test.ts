@@ -10,6 +10,7 @@
  *     A loader that reacts to every change is as uninformative as one that
  *     reacts to none.
  */
+import { createHash } from 'node:crypto';
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -17,6 +18,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   TruthLoadError,
+  type Snapshot,
+  buildGiteaTruth,
   classifyAnonymousStatus,
   loadGiteaTruth,
   pathParameterNames,
@@ -42,6 +45,17 @@ function snapshotWith(edit: (files: EditableSnapshot) => void): string {
   writeFileSync(join(root, 'pin.json'), JSON.stringify(files.pin));
   writeFileSync(join(root, 'anon-probe.json'), JSON.stringify(files.probe));
   return root;
+}
+
+/** The committed snapshot as a value, for the callers that take one. */
+function readCommittedSnapshot(): Snapshot {
+  const specBytes = readFileSync(join(FIXTURES, 'swagger.v1.json'));
+  return {
+    spec: JSON.parse(specBytes.toString('utf8')),
+    specBytes,
+    pin: JSON.parse(readFileSync(join(FIXTURES, 'pin.json'), 'utf8')),
+    probe: JSON.parse(readFileSync(join(FIXTURES, 'anon-probe.json'), 'utf8')),
+  };
 }
 
 describe('the pinned Gitea snapshot is the ground truth', () => {
@@ -179,6 +193,44 @@ describe('a truth that did not load reports nothing (§6)', () => {
  * a field, and no grader reads it yet, so the field alone is prose in JSON.
  * This is the skipped test.
  */
+/**
+ * The floors, driven directly rather than through a copied directory.
+ *
+ * The tests above reach them by writing a temp tree, which is the IO caller's
+ * path and the slow one. `buildGiteaTruth` takes the snapshot as a parameter, so
+ * a document thin enough to trip the surface floors can be handed straight in —
+ * and those are the floors the committed snapshot can never exercise, because it
+ * is not thin.
+ */
+describe('the floors, on a snapshot small enough to trip them', () => {
+  const spec = { swagger: '2.0', paths: { '/version': { get: { operationId: 'getVersion' } } } };
+  const specBytes = Buffer.from(JSON.stringify(spec));
+  const thin: Snapshot = {
+    spec,
+    specBytes,
+    pin: { specSha256: createHash('sha256').update(specBytes).digest('hex'), basePath: '/api/v1' },
+    probe: { entries: [{ method: 'GET', specPath: '/version', status: 200 }] },
+  };
+
+  it('refuses a document with one operation, naming the measured surface', () => {
+    expect(() => buildGiteaTruth(thin)).toThrow(TruthLoadError);
+    expect(() => buildGiteaTruth(thin)).toThrow(/only 1 operations loaded; the pinned image serves 482/);
+  });
+
+  it('reports every broken floor at once, not the first', () => {
+    // A snapshot this thin breaks the operation count, the path-parameter count,
+    // the definition count and both auth denominators. A loader reporting one of
+    // them sends someone to fix a document that is wrong in five ways.
+    expect(() => buildGiteaTruth(thin)).toThrow(/(?:\n {2}- [^\n]+){5}/);
+  });
+
+  it('loads the real snapshot through the same function the wiring calls', () => {
+    // The rule's other caller. Without this the tests above would pass against a
+    // set of floors no real snapshot could clear.
+    expect(buildGiteaTruth(readCommittedSnapshot()).counts.operations).toBe(482);
+  });
+});
+
 describe('not built yet, and named so the absence is not mistaken for a score', () => {
   it.skip('scores `identifier` against foreign keys derivable from the spec', () => {
     // Needs value-overlap reasoning across endpoints, which the document does

@@ -113,6 +113,40 @@ const PATTERNS_BY_PROFILE = {
 const toPosix = (p: string): string => p.split(sep).join('/');
 
 /**
+ * Does this file list satisfy the expectation? Returns one message per shortfall.
+ *
+ * Separated from the walk so it takes its inputs as parameters: a gate reachable
+ * only through the one input it passes on is a gate nobody can prove fires, and
+ * the walk's input is a real directory tree. `walkFiles` is one caller; a list
+ * of strings in a test is the other, and that one can be made to fail.
+ *
+ * All shortfalls, not the first: §13's rule that counts are disaggregated to the
+ * granularity of the failure. "Never reached scripts/" and "never reached
+ * packages/shared/src" are two different misconfigurations.
+ */
+export function assessScanCoverage(
+  relativePaths: readonly string[],
+  expect: ScanExpectation,
+  describe: { root: string; profile: ScanProfile },
+): string[] {
+  const shortfalls: string[] = [];
+  if (relativePaths.length < expect.minFiles) {
+    shortfalls.push(
+      `walked ${relativePaths.length} file(s) under ${describe.root}, expected at least ${expect.minFiles}. A scan that matches nothing reports success.`,
+    );
+  }
+  for (const prefix of expect.mustReach) {
+    const under = parsePathPattern(`/${prefix}/**`);
+    if (!relativePaths.some((r) => matchPath(r, under))) {
+      shortfalls.push(
+        `the walk never reached ${prefix}/ — it is either missing, ignored, or filtered out by the ${describe.profile} profile.`,
+      );
+    }
+  }
+  return shortfalls;
+}
+
+/**
  * Every file under `root` (optionally restricted to `within`), by profile.
  *
  * Throws `VacuousScanError` unless the result satisfies `expect`.
@@ -155,19 +189,8 @@ export function walkFiles(options: {
   found.sort();
   const rel = found.map((f) => toPosix(relative(root, f)));
 
-  if (found.length < expect.minFiles) {
-    throw new VacuousScanError(
-      `walked ${found.length} file(s) under ${root}, expected at least ${expect.minFiles}. A scan that matches nothing reports success.`,
-    );
-  }
-  for (const prefix of expect.mustReach) {
-    const under = parsePathPattern(`/${prefix}/**`);
-    if (!rel.some((r) => matchPath(r, under))) {
-      throw new VacuousScanError(
-        `the walk never reached ${prefix}/ — it is either missing, ignored, or filtered out by the ${profile} profile.`,
-      );
-    }
-  }
+  const shortfalls = assessScanCoverage(rel, expect, { root, profile });
+  if (shortfalls.length > 0) throw new VacuousScanError(shortfalls.join('\n'));
 
   return { files: found, relative: rel, root, profile };
 }

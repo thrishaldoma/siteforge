@@ -146,6 +146,58 @@ async function sweepAnonymous(spec) {
   return entries;
 }
 
+/**
+ * Is the committed snapshot still what the pinned image serves?
+ *
+ * Everything this returns used to be computed inline in `main()`, downstream of
+ * a Docker boot — so the gate could not run at all without a container, and no
+ * one had ever seen it fail. A gate reachable only through the input it passes
+ * on is a gate nobody can prove fires, and this one could not even be reached.
+ * Now the four inputs arrive as parameters: `main()` supplies the served bytes,
+ * a test supplies a pair that disagrees.
+ *
+ * Returns one finding per disagreement, never a throw and never the first only.
+ * The three are independent: the spec can move while the probe holds, `pin.json`
+ * can be hand-edited while both hold, and each names a different repair.
+ */
+export function assessSnapshot({ servedSpec, committedSpec, committedPin, servedProbe, committedProbe }) {
+  const findings = [];
+  const served = sha256(servedSpec);
+  const committed = sha256(committedSpec);
+
+  if (served !== committed) {
+    findings.push({
+      rule: 'spec-drift',
+      message:
+        'the spec the pinned image serves is not the committed snapshot.\n' +
+        `    committed ${committed}\n` +
+        `    served    ${served}\n` +
+        '  Offline tests are now testing a spec no server serves. Re-run with --write\n' +
+        '  and read the diff; never widen the comparison to make this pass.',
+    });
+  }
+  if (committedPin.specSha256 !== committed) {
+    findings.push({
+      rule: 'pin-disagrees',
+      message: 'pin.json disagrees with the spec file beside it — one of them was hand-edited.',
+    });
+  }
+  // The auth truth side is built from this sweep (§4), so it is as much a part
+  // of the ground truth as the document is, and gets the same comparison.
+  const key = (e) => `${e.method} ${e.specPath}`;
+  const before = new Map((committedProbe.entries ?? []).map((e) => [key(e), e.status]));
+  const drifted = servedProbe.filter((e) => before.get(key(e)) !== e.status);
+  if (drifted.length > 0 || before.size !== servedProbe.length) {
+    findings.push({
+      rule: 'probe-drift',
+      message:
+        `the anonymous sweep moved on ${drifted.length} endpoint(s), and the auth truth side is built from it.` +
+        drifted.slice(0, 10).map((e) => `\n    ${key(e)}: ${before.get(key(e)) ?? '(absent)'} → ${e.status}`).join(''),
+    });
+  }
+  return findings;
+}
+
 const summarise = (spec) => ({
   paths: Object.keys(spec.paths).length,
   operations: Object.values(spec.paths)
@@ -189,39 +241,21 @@ async function main() {
     console.error('✗ no committed snapshot to check. Run with --write.\n');
     process.exit(1);
   }
-  const committedSpec = readFileSync(SPEC_FILE);
-  const committedPin = JSON.parse(readFileSync(PIN_FILE, 'utf8'));
-  let stale = 0;
+  const findings = assessSnapshot({
+    servedSpec: body,
+    committedSpec: readFileSync(SPEC_FILE),
+    committedPin: JSON.parse(readFileSync(PIN_FILE, 'utf8')),
+    servedProbe: probe,
+    committedProbe: existsSync(PROBE_FILE) ? JSON.parse(readFileSync(PROBE_FILE, 'utf8')) : { entries: [] },
+  });
 
-  if (sha256(committedSpec) !== digest) {
-    console.error('✗ the spec the pinned image serves is not the committed snapshot.');
-    console.error(`    committed ${sha256(committedSpec)}`);
-    console.error(`    served    ${digest}`);
-    console.error('  Offline tests are now testing a spec no server serves. Re-run with --write');
-    console.error('  and read the diff; never widen the comparison to make this pass.');
-    stale += 1;
-  }
-  if (committedPin.specSha256 !== sha256(committedSpec)) {
-    console.error('✗ pin.json disagrees with the spec file beside it — one of them was hand-edited.');
-    stale += 1;
-  }
-  const committedProbe = existsSync(PROBE_FILE) ? JSON.parse(readFileSync(PROBE_FILE, 'utf8')) : { entries: [] };
-  const key = (e) => `${e.method} ${e.specPath}`;
-  const before = new Map(committedProbe.entries.map((e) => [key(e), e.status]));
-  const drifted = probe.filter((e) => before.get(key(e)) !== e.status);
-  if (drifted.length > 0 || before.size !== probe.length) {
-    console.error(`✗ the anonymous sweep moved on ${drifted.length} endpoint(s), and the auth truth side is built from it.`);
-    for (const e of drifted.slice(0, 10)) {
-      console.error(`    ${key(e)}: ${before.get(key(e)) ?? '(absent)'} → ${e.status}`);
-    }
-    stale += 1;
-  }
-
-  if (stale > 0) {
+  if (findings.length > 0) {
+    for (const finding of findings) console.error(`✗ ${finding.message}`);
     console.error('');
     process.exit(1);
   }
   console.log('✓ the committed snapshot is what the pinned image serves.\n');
 }
 
-await main();
+// Importing this file for `PIN` or `assessSnapshot` must not boot a container.
+if (import.meta.url === `file://${process.argv[1]}`) await main();
