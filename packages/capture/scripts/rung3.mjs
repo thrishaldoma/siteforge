@@ -26,7 +26,7 @@ import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
 import {
   allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, operationalKind,
-  originOf, rethrowIfDefect,
+  isUnder, originOf, rethrowIfDefect, sameOrigin,
   scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
@@ -150,7 +150,7 @@ const attachApiRecorder = (page, routeIdRef, { anonymousProbe = false } = {}) =>
     pendingResponses.push((async () => {
       const request = response.request();
       const url = response.url();
-      if (!url.startsWith(`${ORIGIN}/api/`)) return;
+      if (!isUnder(url, { origin: ORIGIN, pathPrefix: '/api' })) return;
       const contentType = (response.headers()['content-type'] ?? '').split(';')[0].trim();
       let body;
       if (contentType.includes('json')) {
@@ -231,13 +231,13 @@ for (const context of CONTEXTS) {
   attachApiRecorder(page, routeIdRef);
   page.on('response', async (response) => {
     const url = response.url();
-    if (url.startsWith(`${ORIGIN}/api/`)) return;
+    if (isUnder(url, { origin: ORIGIN, pathPrefix: '/api' })) return;
     try {
       const buf = await response.body();
       const mime = (response.headers()['content-type'] ?? 'application/octet-stream').split(';')[0].trim();
       allAssets.set(url, {
         sha256: sha256(buf), bytes: buf.length, mime, status: response.status(),
-        sameOrigin: new URL(url).origin === ORIGIN,
+        sameOrigin: sameOrigin(url, ORIGIN),
       });
     // operational: a redirect response has no retrievable body
     } catch { /* redirect */ }
@@ -456,7 +456,9 @@ function classifyControl(candidate) {
   if (href && /^(mailto:|tel:)/i.test(href)) {
     return { hazard: 'out-of-scope', outOfScopeTarget: href.split(':')[0] + ':' };
   }
-  if (href && /^https?:\/\//i.test(href) && !href.startsWith(ORIGIN)) {
+  // Parsed, never a prefix test: `${ORIGIN}@evil.example/x` and (on a portless
+  // origin) `${ORIGIN}.evil.net/x` both pass `startsWith` and are foreign.
+  if (href && /^https?:\/\//i.test(href) && !sameOrigin(href, ORIGIN)) {
     return { hazard: 'out-of-scope', outOfScopeTarget: new URL(href).origin };
   }
   const target = TARGET_DESTRUCTIVE_TERMS.find((t) => name.includes(t));

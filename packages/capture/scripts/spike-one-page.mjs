@@ -18,7 +18,8 @@ import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
 import { boundaryGaps, installEscapeGuards, installOriginGuard, scrubHarFile } from './capture-lib.mjs';
 import {
-  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, originOf, scanCaptureTree,
+  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, originOf,
+  sameOrigin, scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 import * as S from '../../schema/dist/index.js';
@@ -400,7 +401,7 @@ page.on('response', async (response) => {
     assetsByUrl.set(url, {
       sha256: sha256(body), bytes: body.length, mime,
       status: response.status(),
-      sameOrigin: new URL(url).origin === new URL(TARGET).origin,
+      sameOrigin: sameOrigin(url, new URL(TARGET).origin),
       fromCache: false,
       arrivedAtScrollStep: scrollStep,
     });
@@ -1043,7 +1044,7 @@ if (declaredCdn) {
     finding('boundary-misconfigured',
       `${declaredCdn} is in allowedOrigins, so its subresources prove nothing about the guard`);
   }
-  if (!foreignAssetUrls.some((u) => u.startsWith(declaredCdn))) {
+  if (!foreignAssetUrls.some((u) => sameOrigin(u, declaredCdn))) {
     finding('boundary-allow-branch-dead',
       `no subresource was recorded from ${declaredCdn}; the guard's allow branch did not run`);
   }
