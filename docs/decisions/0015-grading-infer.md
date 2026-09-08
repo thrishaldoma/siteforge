@@ -339,12 +339,23 @@ denominators**, and they are never combined:
 
 | metric | numerator | denominator | why |
 |---|---|---|---|
-| **under-gate count** | endpoints infer leaves open where the spec says auth is required | endpoints where **truth == required** | the invisible failure |
-| **over-gate rate** | endpoints infer gates where the spec says public | endpoints where **truth == not-required** | the visible, cheap failure |
+| **under-gate count** | endpoints infer leaves open where the truth is required | endpoints the sweep **observed** as required | the invisible failure |
+| **over-gate rate** | endpoints infer gates where the truth is public | endpoints the sweep **observed** as not-required | the visible, cheap failure |
+| **truth coverage** | graded endpoints the sweep observed at all | **all graded endpoints** | reported, not gated — see below |
 | **evidence coverage** | endpoints resolved from recorded evidence rather than the fail-closed default | **all graded endpoints** | what stops the degenerate model scoring well |
 
-Naming the denominator in the table is deliberate. Written as three bare rates,
-the next reader averages them.
+Naming the denominator in the table is deliberate. Written as bare rates, the
+next reader averages them.
+
+**Truth coverage is the fourth number and it is there because of the third
+column.** The first two are over what the sweep observed, and on the pinned
+Gitea that is 50 of 482 operations — an under-gate count of zero over 37
+endpoints is not the same claim as one over 482, and nothing else in the report
+can tell them apart. Evidence coverage is different in kind: whether a verdict
+rests on a recorded observation is a property of the *verdict*, so it needs no
+truth side and genuinely is over the whole graded universe. Three denominators
+that look alike and are not, which is the reason this section names every one of
+them.
 
 The asymmetry, restated from 0014 because the grader has to encode it: a
 wrongly-gated read costs an agent one login step and is **visible** in the
@@ -392,6 +403,7 @@ to one is calibration and to the other is a retreat:
 | `synthesized-endpoint` | precision | ≥ 0.90 | **structural** |
 | `auth` | under-gate count | **= 0** | **structural** |
 | `auth` | over-gate rate | ≤ 0.20 | calibration |
+| `auth` | truth coverage | reported only | — |
 | `auth` | evidence coverage | ≥ 0.70 | calibration |
 
 **Every calibration number here is provisional until the first Gitea run.** You

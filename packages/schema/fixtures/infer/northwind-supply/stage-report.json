@@ -47,7 +47,7 @@
     "stage": "infer",
     "metrics": {
       "metricsVersion": 1,
-      "contractDigest": "357f102a16836bc3eae8a74882e3e85cb6250659f96d3f3e7ed5d64133ec8139",
+      "contractDigest": "532912767657984fdf6197f0e5e0f305b8f2ec973182c566316574d6e8d1957f",
       "categories": [
         "endpoint-identity",
         "path-param-arity",
@@ -77,6 +77,7 @@
         "synthesized-endpoint.precision",
         "auth.under-gate-count",
         "auth.over-gate-rate",
+        "auth.truth-coverage",
         "auth.evidence-coverage"
       ],
       "graded": false

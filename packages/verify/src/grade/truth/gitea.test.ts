@@ -171,6 +171,30 @@ describe('a truth that did not load reports nothing (§6)', () => {
   });
 });
 
+/**
+ * The categories this loader does not yet supply a truth side for.
+ *
+ * §13: a known gap recorded only in prose is not tracked — it is a failing
+ * gate, a skipped test naming it, or it is not tracked at all. `notDerived` is
+ * a field, and no grader reads it yet, so the field alone is prose in JSON.
+ * This is the skipped test.
+ */
+describe('not built yet, and named so the absence is not mistaken for a score', () => {
+  it.skip('scores `identifier` against foreign keys derivable from the spec', () => {
+    // Needs value-overlap reasoning across endpoints, which the document does
+    // not supply on its own. Until then the category has an empty truth side,
+    // which §6 scores vacuous and fails — the correct outcome, but the reason
+    // has to be readable as "unbuilt" rather than as "infer emitted nothing".
+  });
+
+  it.skip('sweeps parameterised endpoints against a deterministically seeded Gitea', () => {
+    // 432 of 482 operations are `unobserved` because they need a fixed user,
+    // repo and issue created through the API first. `auth.truth-coverage`
+    // reports the shortfall as a number so the auth metrics cannot be read as
+    // whole-surface claims.
+  });
+});
+
 describe('the staleness gate compares bytes, and the exemption list is empty', () => {
   it('has no volatile fields, because two containers served identical documents', () => {
     // 0015 amendment 2. Adding the first exemption means deleting this

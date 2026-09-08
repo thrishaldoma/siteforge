@@ -203,7 +203,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     id: 'auth.under-gate-count',
     category: 'auth',
     numerator: 'endpoints infer leaves open where the truth is `required`',
-    denominator: 'endpoints where TRUTH == REQUIRED',
+    denominator: 'endpoints where the truth sweep OBSERVED required — never the whole surface',
     gate: atMost(0, 'structural'),
     why: 'the invisible failure: every §10 auth task reading through it is bypassable and the trajectory reads as success. A count and not a rate, because a rate invites trading a leak against volume',
   },
@@ -211,17 +211,25 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     id: 'auth.over-gate-rate',
     category: 'auth',
     numerator: 'endpoints infer gates where the truth is `not-required`',
-    denominator: 'endpoints where TRUTH == NOT-REQUIRED',
+    denominator: 'endpoints where the truth sweep OBSERVED not-required — never the whole surface',
     gate: atMost(0.2, 'calibration'),
     why: 'the visible, cheap failure — one login step, and failing closed on a genuinely unknown endpoint is correct behaviour rather than an error',
+  },
+  {
+    id: 'auth.truth-coverage',
+    category: 'auth',
+    numerator: 'graded endpoints the truth sweep observed anonymously',
+    denominator: 'ALL GRADED endpoints',
+    gate: null,
+    why: 'the two metrics above are over what the sweep observed, and on the pinned Gitea that is 50 of 482 operations. Reported as a number rather than a footnote: an under-gate count of zero over 37 endpoints is not the same claim as one over 482, and without this the report cannot tell them apart',
   },
   {
     id: 'auth.evidence-coverage',
     category: 'auth',
     numerator: 'endpoints resolved from recorded evidence rather than the fail-closed default',
-    denominator: 'ALL GRADED endpoints',
+    denominator: 'ALL GRADED endpoints — this one needs no truth side, only the model',
     gate: atLeast(0.7, 'calibration'),
-    why: 'what stops the degenerate model scoring well: gating everything gives an under-gate count of zero and evidence coverage near zero',
+    why: 'what stops the degenerate model scoring well: gating everything gives an under-gate count of zero and evidence coverage near zero. Computable from the model alone — whether a verdict rests on a recorded observation is a property of the verdict — so unlike the two above it is genuinely over the whole graded universe',
   },
 ];
 
@@ -252,7 +260,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  '357f102a16836bc3eae8a74882e3e85cb6250659f96d3f3e7ed5d64133ec8139';
+  '532912767657984fdf6197f0e5e0f305b8f2ec973182c566316574d6e8d1957f';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)
