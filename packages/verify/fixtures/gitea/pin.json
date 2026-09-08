@@ -1,0 +1,21 @@
+{
+  "image": "gitea/gitea@sha256:87a67ee09d3ae0d1df5fda5dcda3e2a1f9236a45b0a59025d6e00e46adc43bef",
+  "tagAtPull": "1.27.3",
+  "containerName": "siteforge-gitea-truth",
+  "hostPort": 3801,
+  "containerPort": 3000,
+  "specPath": "/swagger.v1.json",
+  "basePath": "/api/v1",
+  "env": {
+    "GITEA__security__INSTALL_LOCK": "true",
+    "GITEA__database__DB_TYPE": "sqlite3",
+    "GITEA__database__PATH": "/tmp/gitea.db",
+    "GITEA__server__HTTP_PORT": "3000",
+    "GITEA__server__ROOT_URL": "http://localhost:3801/"
+  },
+  "volatileFields": [],
+  "specSha256": "a0baa9a766c22492bd8c45744157c611d3e95cfc0dc73d6f5d14f294cdddce38",
+  "paths": 308,
+  "operations": 482,
+  "definitions": 222
+}

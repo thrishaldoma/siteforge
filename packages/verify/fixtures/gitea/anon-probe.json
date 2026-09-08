@@ -1,0 +1,256 @@
+{
+  "image": "gitea/gitea@sha256:87a67ee09d3ae0d1df5fda5dcda3e2a1f9236a45b0a59025d6e00e46adc43bef",
+  "basePath": "/api/v1",
+  "entries": [
+    {
+      "method": "GET",
+      "specPath": "/admin/actions/jobs",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/actions/runners",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/actions/runs",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/cron",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/emails",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/emails/search",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/hooks",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/orgs",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/unadopted",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/admin/users",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/gitignore/templates",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/label/templates",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/licenses",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/notifications",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/notifications/new",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/orgs",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/repos/issues/search",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/repos/search",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/settings/api",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/settings/attachment",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/settings/repository",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/settings/ui",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/signing-key.gpg",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "specPath": "/signing-key.pub",
+      "status": 404
+    },
+    {
+      "method": "GET",
+      "specPath": "/token",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/topics/search",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/user",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/actions/jobs",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/actions/runners",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/actions/runs",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/actions/variables",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/applications/oauth2",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/blocks",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/emails",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/followers",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/following",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/gpg_key_token",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/gpg_keys",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/hooks",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/keys",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/orgs",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/repos",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/settings",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/starred",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/stopwatches",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/subscriptions",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/teams",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/times",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/users/search",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/version",
+      "status": 200
+    }
+  ]
+}
