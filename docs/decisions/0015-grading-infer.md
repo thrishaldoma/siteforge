@@ -303,9 +303,13 @@ each is a different lesson:
    it before the run rather than after.
 
 **So the auth truth side is measured, not declared.**
-`packages/verify/fixtures/gitea/anon-probe.json` records, for every endpoint in
-the graded universe, the status a fresh container at the pinned digest returns
-to an uncredentialed request. Committed beside the spec snapshot, pinned by the
+`packages/verify/fixtures/gitea/anon-probe.json` records the status a fresh
+container at the pinned digest returns to an uncredentialed request — today for
+the 50 zero-parameter GETs, because a parameterised path needs a
+deterministically seeded instance and that script is milestone-gate work. The
+other 432 operations are `unobserved`, which is a fourth value and not a
+missing one; `auth.truth-coverage` reports the shortfall so the auth numbers
+cannot be read as whole-surface claims. Committed beside the spec snapshot, pinned by the
 same digest, covered by the same staleness gate, and each entry carries the
 observed status — the evidence travels with the claim, as `NarrowingRecord`
 does.
