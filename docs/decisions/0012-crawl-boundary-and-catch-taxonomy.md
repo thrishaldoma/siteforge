@@ -178,12 +178,32 @@ unlikely.
 
 ---
 
+## Addendum: the open item was wrong, and that is the finding
+
+This document originally listed, as open, that one page in the route-capture
+path lacked `installEscapeGuards`. Auditing it found the opposite: all six
+`newPage()` call sites — four in rung 3, one in the spike, one in the
+origin-guard test — were already guarded. The note was stale, and nothing in
+the repository could tell me so.
+
+That is the same failure as the rule it describes. A page-level guard attached
+by remembering is a property that holds until someone adds a `newPage()`; a
+note claiming it is broken is a property nobody re-checks. Both were prose.
+
+`scripts/lint-guarded-pages.mjs` now runs in `pnpm lint`: every `await
+x.newPage()` must bind its result and call `installEscapeGuards` on *that*
+binding within the next few lines, or carry `// unguarded: <reason>`. The
+sabotage test deletes a guard from the real `rung3.mjs` and asserts the linter
+fails — a synthetic string would only have proved the regex compiles.
+
+The window is deliberately narrow. A guard attached after the page's first
+`goto` is a guard that was not installed when it mattered, and the linter
+rejects it for the same reason it rejects no guard at all.
+
+---
+
 ## Open
 
-- **`installEscapeGuards` is per-page and must be attached at each `newPage()`.**
-  One page in the route-capture path does not have it. The router covers the
-  navigation, so nothing escapes, but the popup would go unrecorded. Worth
-  folding into a `newGuardedPage()` helper rather than remembering.
 - **A guarded context blocks the navigation, and the popup then sits on
   `chrome-error://chromewebdata/`.** Recorded as a popup with a null origin,
   which reads oddly in a gap. Cosmetic.
