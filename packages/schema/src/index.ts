@@ -36,4 +36,4 @@ export * from './coverage.js';
 export * from './grade-contract.js';
 export * from './stage-report.js';
 export * from './capture-model.js';
-export * from './site-model.js';
+export * from './site-model/index.js';

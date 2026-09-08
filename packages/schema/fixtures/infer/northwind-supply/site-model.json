@@ -1,0 +1,3959 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "site-model",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 8120
+  },
+  "siteId": "northwind-supply",
+  "sourceCapture": {
+    "siteId": "northwind-supply",
+    "contentHash": "4128a18441de055a8f3e238535e6c822659dc5a0ae492eb27d8a565bb070b4a5"
+  },
+  "tokens": {
+    "colors": [
+      {
+        "name": "ink",
+        "value": "rgb(28, 25, 23)",
+        "snappedFrom": [
+          "rgb(28, 25, 23)"
+        ],
+        "usageCount": 28
+      },
+      {
+        "name": "surface",
+        "value": "rgb(255, 255, 255)",
+        "snappedFrom": [
+          "rgb(255, 255, 255)"
+        ],
+        "usageCount": 23
+      },
+      {
+        "name": "brand",
+        "value": "rgb(68, 64, 60)",
+        "snappedFrom": [
+          "rgb(68, 64, 60)"
+        ],
+        "usageCount": 21
+      },
+      {
+        "name": "muted",
+        "value": "rgb(87, 83, 78)",
+        "snappedFrom": [
+          "rgb(87, 83, 78)"
+        ],
+        "usageCount": 11
+      },
+      {
+        "name": "accent",
+        "value": "rgba(0, 0, 0, 0)",
+        "snappedFrom": [
+          "rgba(0, 0, 0, 0)"
+        ],
+        "usageCount": 9
+      },
+      {
+        "name": "line",
+        "value": "rgb(120, 113, 108)",
+        "snappedFrom": [
+          "rgb(120, 113, 108)"
+        ],
+        "usageCount": 9
+      },
+      {
+        "name": "ink-soft",
+        "value": "rgb(250, 250, 249)",
+        "snappedFrom": [
+          "rgb(250, 250, 249)"
+        ],
+        "usageCount": 6
+      },
+      {
+        "name": "brand-dark",
+        "value": "rgb(245, 245, 244)",
+        "snappedFrom": [
+          "rgb(245, 245, 244)"
+        ],
+        "usageCount": 6
+      },
+      {
+        "name": "surface-alt",
+        "value": "rgb(37, 99, 235)",
+        "snappedFrom": [
+          "rgb(37, 99, 235)"
+        ],
+        "usageCount": 6
+      },
+      {
+        "name": "danger",
+        "value": "rgb(220, 38, 38)",
+        "snappedFrom": [
+          "rgb(220, 38, 38)"
+        ],
+        "usageCount": 1
+      }
+    ],
+    "spacing": [
+      {
+        "name": "xs",
+        "value": "12px",
+        "snappedFrom": [
+          "12px"
+        ],
+        "usageCount": 38
+      },
+      {
+        "name": "sm",
+        "value": "10px",
+        "snappedFrom": [
+          "10px"
+        ],
+        "usageCount": 30
+      },
+      {
+        "name": "md",
+        "value": "8px",
+        "snappedFrom": [
+          "8px"
+        ],
+        "usageCount": 27
+      },
+      {
+        "name": "lg",
+        "value": "16px",
+        "snappedFrom": [
+          "16px"
+        ],
+        "usageCount": 26
+      },
+      {
+        "name": "xl",
+        "value": "20px",
+        "snappedFrom": [
+          "20px"
+        ],
+        "usageCount": 12
+      },
+      {
+        "name": "x2l",
+        "value": "40px",
+        "snappedFrom": [
+          "40px"
+        ],
+        "usageCount": 12
+      },
+      {
+        "name": "x3l",
+        "value": "24px",
+        "snappedFrom": [
+          "24px"
+        ],
+        "usageCount": 8
+      },
+      {
+        "name": "x4l",
+        "value": "6px",
+        "snappedFrom": [
+          "6px"
+        ],
+        "usageCount": 8
+      }
+    ],
+    "radii": [],
+    "shadows": [],
+    "fontSizes": [
+      {
+        "name": "xs",
+        "value": "14px",
+        "snappedFrom": [
+          "14px"
+        ],
+        "usageCount": 52
+      },
+      {
+        "name": "sm",
+        "value": "16px",
+        "snappedFrom": [
+          "16px"
+        ],
+        "usageCount": 10
+      },
+      {
+        "name": "base",
+        "value": "13px",
+        "snappedFrom": [
+          "13px"
+        ],
+        "usageCount": 10
+      },
+      {
+        "name": "lg",
+        "value": "36px",
+        "snappedFrom": [
+          "36px"
+        ],
+        "usageCount": 5
+      },
+      {
+        "name": "xl",
+        "value": "18px",
+        "snappedFrom": [
+          "18px"
+        ],
+        "usageCount": 3
+      },
+      {
+        "name": "x2l",
+        "value": "24px",
+        "snappedFrom": [
+          "24px"
+        ],
+        "usageCount": 3
+      },
+      {
+        "name": "x3l",
+        "value": "15px",
+        "snappedFrom": [
+          "15px"
+        ],
+        "usageCount": 3
+      },
+      {
+        "name": "x4l",
+        "value": "26px",
+        "snappedFrom": [
+          "26px"
+        ],
+        "usageCount": 1
+      }
+    ]
+  },
+  "fonts": [
+    {
+      "source": "substituted",
+      "family": "Söhne",
+      "substitutedWith": "Inter",
+      "reason": "licence-forbids-rehosting",
+      "gapId": "gap_01db97fa0ea1"
+    }
+  ],
+  "assets": [
+    {
+      "emit": "inline-svg",
+      "sha256": "28cd532743fde01c066da47e6854b62050663a30fa6c09ad35827da67430e8af",
+      "componentName": "BrandMark",
+      "originalUrls": [
+        "https://example.com/static/logo.svg"
+      ]
+    },
+    {
+      "emit": "omitted",
+      "sha256": "a3cd1892e21ee2f648dd253385d75cb17e98753b63f8a2521fd8bf88850ec9f1",
+      "gapId": "gap_ef63782da725",
+      "originalUrls": [
+        "https://example.com/static/app.css"
+      ]
+    },
+    {
+      "emit": "omitted",
+      "sha256": "a26b6f69e541e766aea9e13e813c8e779f51338bc4b34c64291d0805037ca36c",
+      "gapId": "gap_01db97fa0ea1",
+      "originalUrls": [
+        "https://example.com/static/fonts/sohne-buch.woff2"
+      ]
+    },
+    {
+      "emit": "public-file",
+      "sha256": "6bd0e168f506102ba943109d21f8827f223c38cfecef0169f3845696d2cbfad7",
+      "publicPath": "/assets/6bd0e168f506.png",
+      "originalUrls": [
+        "https://example.com/static/img/paper-texture.png"
+      ]
+    },
+    {
+      "emit": "public-file",
+      "sha256": "f5ebc99b1c11dc844ba9f582f18398b195d00fdddb6607ab7a90695917d56704",
+      "publicPath": "/assets/f5ebc99b1c11.jpg",
+      "originalUrls": [
+        "https://example.com/static/img/mug-blue.jpg"
+      ]
+    },
+    {
+      "emit": "public-file",
+      "sha256": "2c69fd490c27474e2ab5e81819349177d464dca0ae37c6603ea56d0f11506b72",
+      "publicPath": "/assets/2c69fd490c27.jpg",
+      "originalUrls": [
+        "https://example.com/static/img/notebook-a5.jpg"
+      ]
+    },
+    {
+      "emit": "public-file",
+      "sha256": "afa2e945062d458df2f44648be88ca09981aca882a8e505f7f07b534b2bcab5a",
+      "publicPath": "/assets/afa2e945062d.jpg",
+      "originalUrls": [
+        "https://example.com/static/img/pens-fine.jpg"
+      ]
+    },
+    {
+      "emit": "omitted",
+      "sha256": "140e2850d6a6587a24a55b302efa0878094570717c9d9594ec934c05b21e0ecb",
+      "gapId": "gap_ef63782da725",
+      "originalUrls": [
+        "https://widgets.example.net/reviews?site=northwind"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "componentId": "cmp_primary-button",
+      "name": "PrimaryButton",
+      "kind": "composite",
+      "props": [],
+      "root": {
+        "tag": "button",
+        "role": null,
+        "classes": [
+          "bg-surface-alt",
+          "text-surface",
+          "text-xs"
+        ],
+        "attributes": [
+          {
+            "name": "type",
+            "value": {
+              "kind": "literal",
+              "text": "button"
+            }
+          },
+          {
+            "name": "data-sku",
+            "value": {
+              "kind": "literal",
+              "text": "MUG-BLUE-12OZ"
+            }
+          }
+        ],
+        "stateVariants": [],
+        "entityAnchor": {
+          "entity": "Product",
+          "keyField": "sku"
+        },
+        "children": [
+          {
+            "kind": "text",
+            "value": {
+              "kind": "literal",
+              "text": "Add to cart"
+            }
+          }
+        ]
+      },
+      "evidence": {
+        "occurrences": 6,
+        "distinctRoutes": 4,
+        "varyingLeaves": 0
+      },
+      "derivedFrom": {
+        "routeIds": [
+          "product-id--anon-desktop--i0",
+          "product-id--anon-desktop--i1",
+          "product-id--anon-mobile--i0",
+          "root--anon-desktop--i0"
+        ]
+      }
+    },
+    {
+      "componentId": "cmp_product-card",
+      "name": "ProductCard",
+      "kind": "composite",
+      "props": [],
+      "root": {
+        "tag": "article",
+        "role": null,
+        "classes": [
+          "bg-surface"
+        ],
+        "attributes": [
+          {
+            "name": "data-sku",
+            "value": {
+              "kind": "literal",
+              "text": "MUG-BLUE-12OZ"
+            }
+          }
+        ],
+        "stateVariants": [],
+        "entityAnchor": {
+          "entity": "Product",
+          "keyField": "sku"
+        },
+        "children": [
+          {
+            "kind": "element",
+            "element": {
+              "tag": "a",
+              "role": null,
+              "classes": [],
+              "attributes": [
+                {
+                  "name": "href",
+                  "value": {
+                    "kind": "literal",
+                    "text": "/product/mug-blue-12oz"
+                  }
+                }
+              ],
+              "stateVariants": [],
+              "entityAnchor": null,
+              "children": [
+                {
+                  "kind": "element",
+                  "element": {
+                    "tag": "img",
+                    "role": null,
+                    "classes": [],
+                    "attributes": [
+                      {
+                        "name": "src",
+                        "value": {
+                          "kind": "literal",
+                          "text": "/static/img/mug-blue.jpg"
+                        }
+                      },
+                      {
+                        "name": "alt",
+                        "value": {
+                          "kind": "literal",
+                          "text": "Blue Enamel Mug, 12oz"
+                        }
+                      },
+                      {
+                        "name": "width",
+                        "value": {
+                          "kind": "literal",
+                          "text": "320"
+                        }
+                      },
+                      {
+                        "name": "height",
+                        "value": {
+                          "kind": "literal",
+                          "text": "320"
+                        }
+                      },
+                      {
+                        "name": "loading",
+                        "value": {
+                          "kind": "literal",
+                          "text": "lazy"
+                        }
+                      }
+                    ],
+                    "stateVariants": [],
+                    "entityAnchor": null,
+                    "children": []
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "kind": "element",
+            "element": {
+              "tag": "h3",
+              "role": null,
+              "classes": [
+                "text-sm"
+              ],
+              "attributes": [],
+              "stateVariants": [],
+              "entityAnchor": null,
+              "children": [
+                {
+                  "kind": "text",
+                  "value": {
+                    "kind": "entity-field",
+                    "entity": "Product",
+                    "field": "title"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "kind": "element",
+            "element": {
+              "tag": "p",
+              "role": null,
+              "classes": [
+                "text-xs",
+                "text-muted"
+              ],
+              "attributes": [],
+              "stateVariants": [],
+              "entityAnchor": null,
+              "children": [
+                {
+                  "kind": "text",
+                  "value": {
+                    "kind": "literal",
+                    "text": "$18.00"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "kind": "element",
+            "element": {
+              "tag": "button",
+              "role": null,
+              "classes": [
+                "bg-surface-alt",
+                "text-surface",
+                "text-xs"
+              ],
+              "attributes": [
+                {
+                  "name": "type",
+                  "value": {
+                    "kind": "literal",
+                    "text": "button"
+                  }
+                },
+                {
+                  "name": "data-sku",
+                  "value": {
+                    "kind": "literal",
+                    "text": "MUG-BLUE-12OZ"
+                  }
+                }
+              ],
+              "stateVariants": [],
+              "entityAnchor": null,
+              "children": [
+                {
+                  "kind": "text",
+                  "value": {
+                    "kind": "literal",
+                    "text": "Add to cart"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "evidence": {
+        "occurrences": 3,
+        "distinctRoutes": 1,
+        "varyingLeaves": 3
+      },
+      "derivedFrom": {
+        "routeIds": [
+          "root--anon-desktop--i0"
+        ]
+      }
+    }
+  ],
+  "layouts": [
+    {
+      "layoutId": "lay_site-shell",
+      "name": "SiteShell",
+      "root": {
+        "tag": "div",
+        "role": null,
+        "classes": [],
+        "attributes": [],
+        "stateVariants": [],
+        "entityAnchor": null,
+        "children": [
+          {
+            "kind": "element",
+            "element": {
+              "tag": "header",
+              "role": null,
+              "classes": [
+                "bg-surface"
+              ],
+              "attributes": [],
+              "stateVariants": [],
+              "entityAnchor": null,
+              "children": [
+                {
+                  "kind": "element",
+                  "element": {
+                    "tag": "a",
+                    "role": null,
+                    "classes": [
+                      "text-ink"
+                    ],
+                    "attributes": [
+                      {
+                        "name": "href",
+                        "value": {
+                          "kind": "literal",
+                          "text": "/"
+                        }
+                      }
+                    ],
+                    "stateVariants": [],
+                    "entityAnchor": null,
+                    "children": [
+                      {
+                        "kind": "element",
+                        "element": {
+                          "tag": "img",
+                          "role": null,
+                          "classes": [],
+                          "attributes": [
+                            {
+                              "name": "src",
+                              "value": {
+                                "kind": "literal",
+                                "text": "/static/logo.svg"
+                              }
+                            },
+                            {
+                              "name": "alt",
+                              "value": {
+                                "kind": "literal",
+                                "text": "Northwind Supply"
+                              }
+                            },
+                            {
+                              "name": "width",
+                              "value": {
+                                "kind": "literal",
+                                "text": "132"
+                              }
+                            },
+                            {
+                              "name": "height",
+                              "value": {
+                                "kind": "literal",
+                                "text": "28"
+                              }
+                            }
+                          ],
+                          "stateVariants": [],
+                          "entityAnchor": null,
+                          "children": []
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "kind": "element",
+                  "element": {
+                    "tag": "nw-search",
+                    "role": null,
+                    "classes": [],
+                    "attributes": [],
+                    "stateVariants": [],
+                    "entityAnchor": null,
+                    "children": [
+                      {
+                        "kind": "element",
+                        "element": {
+                          "tag": "div",
+                          "role": null,
+                          "classes": [
+                            "bg-brand-dark"
+                          ],
+                          "attributes": [
+                            {
+                              "name": "data-siteforge-shadow",
+                              "value": {
+                                "kind": "literal",
+                                "text": "nw-search"
+                              }
+                            }
+                          ],
+                          "stateVariants": [],
+                          "entityAnchor": null,
+                          "children": [
+                            {
+                              "kind": "element",
+                              "element": {
+                                "tag": "input",
+                                "role": null,
+                                "classes": [
+                                  "bg-accent",
+                                  "text-xs",
+                                  "text-ink"
+                                ],
+                                "attributes": [
+                                  {
+                                    "name": "type",
+                                    "value": {
+                                      "kind": "literal",
+                                      "text": "search"
+                                    }
+                                  },
+                                  {
+                                    "name": "placeholder",
+                                    "value": {
+                                      "kind": "literal",
+                                      "text": "Search supplies"
+                                    }
+                                  },
+                                  {
+                                    "name": "aria-label",
+                                    "value": {
+                                      "kind": "literal",
+                                      "text": "Search supplies"
+                                    }
+                                  },
+                                  {
+                                    "name": "data-siteforge-shadow",
+                                    "value": {
+                                      "kind": "literal",
+                                      "text": "nw-search"
+                                    }
+                                  }
+                                ],
+                                "stateVariants": [],
+                                "entityAnchor": null,
+                                "children": []
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "kind": "element",
+                  "element": {
+                    "tag": "nav",
+                    "role": null,
+                    "classes": [],
+                    "attributes": [
+                      {
+                        "name": "aria-label",
+                        "value": {
+                          "kind": "literal",
+                          "text": "Primary"
+                        }
+                      }
+                    ],
+                    "stateVariants": [],
+                    "entityAnchor": null,
+                    "children": [
+                      {
+                        "kind": "element",
+                        "element": {
+                          "tag": "ul",
+                          "role": null,
+                          "classes": [],
+                          "attributes": [],
+                          "stateVariants": [],
+                          "entityAnchor": null,
+                          "children": [
+                            {
+                              "kind": "element",
+                              "element": {
+                                "tag": "li",
+                                "role": null,
+                                "classes": [],
+                                "attributes": [],
+                                "stateVariants": [],
+                                "entityAnchor": null,
+                                "children": [
+                                  {
+                                    "kind": "element",
+                                    "element": {
+                                      "tag": "a",
+                                      "role": null,
+                                      "classes": [
+                                        "text-brand",
+                                        "text-xs"
+                                      ],
+                                      "attributes": [
+                                        {
+                                          "name": "href",
+                                          "value": {
+                                            "kind": "literal",
+                                            "text": "/shop"
+                                          }
+                                        }
+                                      ],
+                                      "stateVariants": [],
+                                      "entityAnchor": null,
+                                      "children": [
+                                        {
+                                          "kind": "text",
+                                          "value": {
+                                            "kind": "literal",
+                                            "text": "Shop"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "kind": "element",
+                              "element": {
+                                "tag": "li",
+                                "role": null,
+                                "classes": [],
+                                "attributes": [],
+                                "stateVariants": [],
+                                "entityAnchor": null,
+                                "children": [
+                                  {
+                                    "kind": "element",
+                                    "element": {
+                                      "tag": "a",
+                                      "role": null,
+                                      "classes": [
+                                        "text-brand",
+                                        "text-xs"
+                                      ],
+                                      "attributes": [
+                                        {
+                                          "name": "href",
+                                          "value": {
+                                            "kind": "literal",
+                                            "text": "/about"
+                                          }
+                                        }
+                                      ],
+                                      "stateVariants": [],
+                                      "entityAnchor": null,
+                                      "children": [
+                                        {
+                                          "kind": "text",
+                                          "value": {
+                                            "kind": "literal",
+                                            "text": "About"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "kind": "element",
+                  "element": {
+                    "tag": "button",
+                    "role": null,
+                    "classes": [
+                      "bg-ink",
+                      "text-surface",
+                      "text-xs"
+                    ],
+                    "attributes": [
+                      {
+                        "name": "type",
+                        "value": {
+                          "kind": "literal",
+                          "text": "button"
+                        }
+                      },
+                      {
+                        "name": "aria-label",
+                        "value": {
+                          "kind": "literal",
+                          "text": "Cart, 0 items"
+                        }
+                      }
+                    ],
+                    "stateVariants": [],
+                    "entityAnchor": null,
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": {
+                          "kind": "literal",
+                          "text": "Cart (0)"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "kind": "slot"
+          }
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "templateId": "tpl_about",
+      "pathPattern": "/about",
+      "layoutId": "lay_site-shell",
+      "content": {
+        "kind": "element",
+        "element": {
+          "tag": "main",
+          "role": null,
+          "classes": [],
+          "attributes": [],
+          "stateVariants": [],
+          "entityAnchor": null,
+          "children": [
+            {
+              "kind": "element",
+              "element": {
+                "tag": "h1",
+                "role": null,
+                "classes": [
+                  "text-lg"
+                ],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": {
+                      "kind": "literal",
+                      "text": "About Northwind Supply"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "p",
+                "role": null,
+                "classes": [],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": {
+                      "kind": "literal",
+                      "text": "We sell a small number of well-made things and try not to sell anything else."
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "p",
+                "role": null,
+                "classes": [],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": {
+                      "kind": "literal",
+                      "text": "Everything ships from one warehouse. Returns are accepted for sixty days."
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dataSources": [],
+      "instances": [
+        "about--anon-desktop--i0",
+        "about--auth-desktop--i0"
+      ],
+      "requiresAuth": false,
+      "unauthenticatedBehavior": null
+    },
+    {
+      "templateId": "tpl_account-orders",
+      "pathPattern": "/account/orders",
+      "layoutId": "lay_site-shell",
+      "content": {
+        "kind": "element",
+        "element": {
+          "tag": "main",
+          "role": null,
+          "classes": [],
+          "attributes": [],
+          "stateVariants": [],
+          "entityAnchor": null,
+          "children": [
+            {
+              "kind": "element",
+              "element": {
+                "tag": "h1",
+                "role": null,
+                "classes": [
+                  "text-lg"
+                ],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": {
+                      "kind": "literal",
+                      "text": "Your orders"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "select",
+                "role": null,
+                "classes": [
+                  "text-xs"
+                ],
+                "attributes": [
+                  {
+                    "name": "name",
+                    "value": {
+                      "kind": "literal",
+                      "text": "status"
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "value": {
+                      "kind": "literal",
+                      "text": "order-status-filter"
+                    }
+                  }
+                ],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "option",
+                      "role": null,
+                      "classes": [
+                        "text-xs"
+                      ],
+                      "attributes": [
+                        {
+                          "name": "value",
+                          "value": {
+                            "kind": "literal",
+                            "text": "placed"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Placed"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "option",
+                      "role": null,
+                      "classes": [
+                        "text-xs"
+                      ],
+                      "attributes": [
+                        {
+                          "name": "value",
+                          "value": {
+                            "kind": "literal",
+                            "text": "shipped"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Shipped"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "option",
+                      "role": null,
+                      "classes": [
+                        "text-xs"
+                      ],
+                      "attributes": [
+                        {
+                          "name": "value",
+                          "value": {
+                            "kind": "literal",
+                            "text": "delivered"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Delivered"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "table",
+                "role": null,
+                "classes": [
+                  "text-xs"
+                ],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "thead",
+                      "role": null,
+                      "classes": [],
+                      "attributes": [],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "tr",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "th",
+                                  "role": null,
+                                  "classes": [
+                                    "text-muted"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "scope",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "col"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Order"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "th",
+                                  "role": null,
+                                  "classes": [
+                                    "text-muted"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "scope",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "col"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Placed"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "th",
+                                  "role": null,
+                                  "classes": [
+                                    "text-muted"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "scope",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "col"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Status"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "th",
+                                  "role": null,
+                                  "classes": [
+                                    "text-muted"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "scope",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "col"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Total"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "tbody",
+                      "role": null,
+                      "classes": [],
+                      "attributes": [],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "tr",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "entity-field",
+                                        "entity": "Order",
+                                        "field": "orderId"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "2026-08-14"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Delivered"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "$30.50"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "tr",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "entity-field",
+                                        "entity": "Order",
+                                        "field": "orderId"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "2026-07-02"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Delivered"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "td",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "$18.00"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "section",
+                "role": null,
+                "classes": [],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "h2",
+                      "role": null,
+                      "classes": [
+                        "text-xl"
+                      ],
+                      "attributes": [],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Danger zone"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "button",
+                      "role": null,
+                      "classes": [
+                        "bg-danger",
+                        "text-surface",
+                        "text-xs"
+                      ],
+                      "attributes": [
+                        {
+                          "name": "type",
+                          "value": {
+                            "kind": "literal",
+                            "text": "button"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Delete account"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dataSources": [
+        "post-api-checkout",
+        "get-api-account-orders"
+      ],
+      "instances": [
+        "account-orders--auth-desktop--i0"
+      ],
+      "requiresAuth": true,
+      "unauthenticatedBehavior": {
+        "kind": "redirect",
+        "to": "/login"
+      }
+    },
+    {
+      "templateId": "tpl_embeds-size-guide",
+      "pathPattern": "/embeds/size-guide",
+      "layoutId": "lay_site-shell",
+      "content": {
+        "kind": "text",
+        "value": {
+          "kind": "literal",
+          "text": ""
+        }
+      },
+      "dataSources": [],
+      "instances": [
+        "embeds-size-guide--anon-desktop--i0"
+      ],
+      "requiresAuth": false,
+      "unauthenticatedBehavior": null
+    },
+    {
+      "templateId": "tpl_product-id",
+      "pathPattern": "/product/:id",
+      "layoutId": "lay_site-shell",
+      "content": {
+        "kind": "element",
+        "element": {
+          "tag": "main",
+          "role": null,
+          "classes": [],
+          "attributes": [],
+          "stateVariants": [],
+          "entityAnchor": null,
+          "children": [
+            {
+              "kind": "element",
+              "element": {
+                "tag": "nav",
+                "role": null,
+                "classes": [],
+                "attributes": [
+                  {
+                    "name": "aria-label",
+                    "value": {
+                      "kind": "literal",
+                      "text": "Breadcrumb"
+                    }
+                  }
+                ],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "ol",
+                      "role": null,
+                      "classes": [
+                        "text-base",
+                        "text-line"
+                      ],
+                      "attributes": [],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "li",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "a",
+                                  "role": null,
+                                  "classes": [
+                                    "text-brand",
+                                    "text-xs"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "href",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "/"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Home"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "li",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "entity-field",
+                                  "entity": "Product",
+                                  "field": "title"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "div",
+                "role": null,
+                "classes": [],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "img",
+                      "role": null,
+                      "classes": [],
+                      "attributes": [
+                        {
+                          "name": "src",
+                          "value": {
+                            "kind": "literal",
+                            "text": "/static/img/mug-blue.jpg"
+                          }
+                        },
+                        {
+                          "name": "alt",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Blue Enamel Mug, 12oz"
+                          }
+                        },
+                        {
+                          "name": "width",
+                          "value": {
+                            "kind": "literal",
+                            "text": "640"
+                          }
+                        },
+                        {
+                          "name": "height",
+                          "value": {
+                            "kind": "literal",
+                            "text": "640"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": []
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "div",
+                      "role": null,
+                      "classes": [],
+                      "attributes": [],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "h1",
+                            "role": null,
+                            "classes": [
+                              "text-lg"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "entity-field",
+                                  "entity": "Product",
+                                  "field": "title"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "p",
+                            "role": null,
+                            "classes": [
+                              "text-x2l"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "$18.00"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "nw-rating",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [
+                              {
+                                "name": "data-value",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "4.5"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": []
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "div",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "label",
+                                  "role": null,
+                                  "classes": [
+                                    "text-xs",
+                                    "text-brand"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "for",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "qty"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Quantity"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "input",
+                                  "role": null,
+                                  "classes": [
+                                    "text-xs"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "id",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "qty"
+                                      }
+                                    },
+                                    {
+                                      "name": "name",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "qty"
+                                      }
+                                    },
+                                    {
+                                      "name": "type",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "number"
+                                      }
+                                    },
+                                    {
+                                      "name": "value",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "1"
+                                      }
+                                    },
+                                    {
+                                      "name": "min",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "1"
+                                      }
+                                    },
+                                    {
+                                      "name": "max",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "10"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": []
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "button",
+                            "role": null,
+                            "classes": [
+                              "bg-surface-alt",
+                              "text-surface",
+                              "text-xs"
+                            ],
+                            "attributes": [
+                              {
+                                "name": "type",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "button"
+                                }
+                              },
+                              {
+                                "name": "data-sku",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "MUG-BLUE-12OZ"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "Add to cart"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "div",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [
+                              {
+                                "name": "data-state",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "closed"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "button",
+                                  "role": null,
+                                  "classes": [
+                                    "bg-accent",
+                                    "text-x3l",
+                                    "text-ink"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "type",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "button"
+                                      }
+                                    },
+                                    {
+                                      "name": "aria-expanded",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "false"
+                                      }
+                                    },
+                                    {
+                                      "name": "aria-controls",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "details-panel"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Product details"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "div",
+                                  "role": null,
+                                  "classes": [
+                                    "text-xs",
+                                    "text-brand"
+                                  ],
+                                  "attributes": [
+                                    {
+                                      "name": "id",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "details-panel"
+                                      }
+                                    },
+                                    {
+                                      "name": "hidden",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": ""
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": [
+                                    {
+                                      "kind": "text",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Vitreous enamel over steel. Dishwasher safe. Not for microwave use."
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "section",
+                "role": null,
+                "classes": [],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "h2",
+                      "role": null,
+                      "classes": [
+                        "text-xl"
+                      ],
+                      "attributes": [],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Size guide"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "iframe",
+                      "role": null,
+                      "classes": [],
+                      "attributes": [
+                        {
+                          "name": "src",
+                          "value": {
+                            "kind": "literal",
+                            "text": "/embeds/size-guide"
+                          }
+                        },
+                        {
+                          "name": "title",
+                          "value": {
+                            "kind": "literal",
+                            "text": "Size guide"
+                          }
+                        },
+                        {
+                          "name": "width",
+                          "value": {
+                            "kind": "literal",
+                            "text": "640"
+                          }
+                        },
+                        {
+                          "name": "height",
+                          "value": {
+                            "kind": "literal",
+                            "text": "420"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dataSources": [
+        "get-api-products-slug",
+        "get-api-cart",
+        "post-api-cart-items"
+      ],
+      "instances": [
+        "product-id--anon-desktop--i0",
+        "product-id--anon-desktop--i1",
+        "product-id--anon-mobile--i0"
+      ],
+      "requiresAuth": false,
+      "unauthenticatedBehavior": null
+    },
+    {
+      "templateId": "tpl_root",
+      "pathPattern": "/",
+      "layoutId": "lay_site-shell",
+      "content": {
+        "kind": "element",
+        "element": {
+          "tag": "main",
+          "role": null,
+          "classes": [],
+          "attributes": [],
+          "stateVariants": [],
+          "entityAnchor": null,
+          "children": [
+            {
+              "kind": "element",
+              "element": {
+                "tag": "h1",
+                "role": null,
+                "classes": [
+                  "text-lg"
+                ],
+                "attributes": [],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": {
+                      "kind": "literal",
+                      "text": "Everyday supplies, honestly priced"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "element",
+              "element": {
+                "tag": "section",
+                "role": null,
+                "classes": [],
+                "attributes": [
+                  {
+                    "name": "aria-label",
+                    "value": {
+                      "kind": "literal",
+                      "text": "Products"
+                    }
+                  }
+                ],
+                "stateVariants": [],
+                "entityAnchor": null,
+                "children": [
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "article",
+                      "role": null,
+                      "classes": [
+                        "bg-surface"
+                      ],
+                      "attributes": [
+                        {
+                          "name": "data-sku",
+                          "value": {
+                            "kind": "literal",
+                            "text": "MUG-BLUE-12OZ"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "a",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [
+                              {
+                                "name": "href",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "/product/mug-blue-12oz"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "img",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [
+                                    {
+                                      "name": "src",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "/static/img/mug-blue.jpg"
+                                      }
+                                    },
+                                    {
+                                      "name": "alt",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Blue Enamel Mug, 12oz"
+                                      }
+                                    },
+                                    {
+                                      "name": "width",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "320"
+                                      }
+                                    },
+                                    {
+                                      "name": "height",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "320"
+                                      }
+                                    },
+                                    {
+                                      "name": "loading",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "lazy"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": []
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "h3",
+                            "role": null,
+                            "classes": [
+                              "text-sm"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "entity-field",
+                                  "entity": "Product",
+                                  "field": "title"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "p",
+                            "role": null,
+                            "classes": [
+                              "text-xs",
+                              "text-muted"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "$18.00"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "button",
+                            "role": null,
+                            "classes": [
+                              "bg-surface-alt",
+                              "text-surface",
+                              "text-xs"
+                            ],
+                            "attributes": [
+                              {
+                                "name": "type",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "button"
+                                }
+                              },
+                              {
+                                "name": "data-sku",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "MUG-BLUE-12OZ"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "Add to cart"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "article",
+                      "role": null,
+                      "classes": [
+                        "bg-surface"
+                      ],
+                      "attributes": [
+                        {
+                          "name": "data-sku",
+                          "value": {
+                            "kind": "literal",
+                            "text": "NB-A5-DOT"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "a",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [
+                              {
+                                "name": "href",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "/product/notebook-a5-dot"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "img",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [
+                                    {
+                                      "name": "src",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "/static/img/notebook-a5.jpg"
+                                      }
+                                    },
+                                    {
+                                      "name": "alt",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "A5 Dot-Grid Notebook"
+                                      }
+                                    },
+                                    {
+                                      "name": "width",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "320"
+                                      }
+                                    },
+                                    {
+                                      "name": "height",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "320"
+                                      }
+                                    },
+                                    {
+                                      "name": "loading",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "lazy"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": []
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "h3",
+                            "role": null,
+                            "classes": [
+                              "text-sm"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "entity-field",
+                                  "entity": "Product",
+                                  "field": "title"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "p",
+                            "role": null,
+                            "classes": [
+                              "text-xs",
+                              "text-muted"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "$12.50"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "button",
+                            "role": null,
+                            "classes": [
+                              "bg-surface-alt",
+                              "text-surface",
+                              "text-xs"
+                            ],
+                            "attributes": [
+                              {
+                                "name": "type",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "button"
+                                }
+                              },
+                              {
+                                "name": "data-sku",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "NB-A5-DOT"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "Add to cart"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "element",
+                    "element": {
+                      "tag": "article",
+                      "role": null,
+                      "classes": [
+                        "bg-surface"
+                      ],
+                      "attributes": [
+                        {
+                          "name": "data-sku",
+                          "value": {
+                            "kind": "literal",
+                            "text": "PEN-FINE-4PK"
+                          }
+                        }
+                      ],
+                      "stateVariants": [],
+                      "entityAnchor": null,
+                      "children": [
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "a",
+                            "role": null,
+                            "classes": [],
+                            "attributes": [
+                              {
+                                "name": "href",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "/product/pens-fine-4pk"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "element",
+                                "element": {
+                                  "tag": "img",
+                                  "role": null,
+                                  "classes": [],
+                                  "attributes": [
+                                    {
+                                      "name": "src",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "/static/img/pens-fine.jpg"
+                                      }
+                                    },
+                                    {
+                                      "name": "alt",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "Fineliner Pens, 4-pack"
+                                      }
+                                    },
+                                    {
+                                      "name": "width",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "320"
+                                      }
+                                    },
+                                    {
+                                      "name": "height",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "320"
+                                      }
+                                    },
+                                    {
+                                      "name": "loading",
+                                      "value": {
+                                        "kind": "literal",
+                                        "text": "lazy"
+                                      }
+                                    }
+                                  ],
+                                  "stateVariants": [],
+                                  "entityAnchor": null,
+                                  "children": []
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "h3",
+                            "role": null,
+                            "classes": [
+                              "text-sm"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "entity-field",
+                                  "entity": "Product",
+                                  "field": "title"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "p",
+                            "role": null,
+                            "classes": [
+                              "text-xs",
+                              "text-muted"
+                            ],
+                            "attributes": [],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "$9.00"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "kind": "element",
+                          "element": {
+                            "tag": "button",
+                            "role": null,
+                            "classes": [
+                              "bg-surface-alt",
+                              "text-surface",
+                              "text-xs"
+                            ],
+                            "attributes": [
+                              {
+                                "name": "type",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "button"
+                                }
+                              },
+                              {
+                                "name": "data-sku",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "PEN-FINE-4PK"
+                                }
+                              }
+                            ],
+                            "stateVariants": [],
+                            "entityAnchor": null,
+                            "children": [
+                              {
+                                "kind": "text",
+                                "value": {
+                                  "kind": "literal",
+                                  "text": "Add to cart"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "dataSources": [
+        "get-api-products",
+        "post-api-auth-login"
+      ],
+      "instances": [
+        "root--anon-desktop--i0"
+      ],
+      "requiresAuth": false,
+      "unauthenticatedBehavior": null
+    }
+  ],
+  "entities": [
+    {
+      "name": "Product",
+      "key": {
+        "field": "sku",
+        "kind": "business"
+      },
+      "fields": [
+        {
+          "name": "sku",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "slug",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": [
+            "get-api-products-slug"
+          ]
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "price",
+          "type": "integer",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "categoryId",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "inStock",
+          "type": "boolean",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "imageUrl",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        }
+      ],
+      "relations": [],
+      "seed": {
+        "rows": [
+          {
+            "sku": "MUG-BLUE-12OZ",
+            "slug": "mug-blue-12oz",
+            "title": "Blue Enamel Mug, 12oz",
+            "price": 18,
+            "currency": "USD",
+            "categoryId": "drinkware",
+            "inStock": true,
+            "imageUrl": "https://example.com/static/img/mug-blue.jpg"
+          },
+          {
+            "sku": "NB-A5-DOT",
+            "slug": "notebook-a5-dot",
+            "title": "A5 Dot-Grid Notebook",
+            "price": 12.5,
+            "currency": "USD",
+            "categoryId": "paper",
+            "inStock": true,
+            "imageUrl": "https://example.com/static/img/notebook-a5.jpg"
+          },
+          {
+            "sku": "PEN-FINE-4PK",
+            "slug": "pens-fine-4pk",
+            "title": "Fineliner Pens, 4-pack",
+            "price": 9,
+            "currency": "USD",
+            "categoryId": "paper",
+            "inStock": false,
+            "imageUrl": "https://example.com/static/img/pens-fine.jpg"
+          }
+        ],
+        "derivedFrom": [
+          "get-api-products"
+        ],
+        "distinctRecords": 3
+      }
+    },
+    {
+      "name": "Cart",
+      "key": {
+        "field": "id",
+        "kind": "surrogate"
+      },
+      "fields": [
+        {
+          "name": "id",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "counter",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "items",
+          "type": "json",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "subtotal",
+          "type": "integer",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        }
+      ],
+      "relations": [],
+      "seed": {
+        "rows": [
+          {
+            "id": "cart_0001",
+            "items": [
+              {
+                "sku": "MUG-BLUE-12OZ",
+                "quantity": 2,
+                "unitPrice": 18
+              }
+            ],
+            "subtotal": 36
+          }
+        ],
+        "derivedFrom": [
+          "get-api-cart"
+        ],
+        "distinctRecords": 1
+      }
+    },
+    {
+      "name": "Order",
+      "key": {
+        "field": "orderId",
+        "kind": "business"
+      },
+      "fields": [
+        {
+          "name": "orderId",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "placedAt",
+          "type": "timestamp",
+          "optional": false,
+          "generatedBy": "clock",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "total",
+          "type": "number",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        }
+      ],
+      "relations": [],
+      "seed": {
+        "rows": [
+          {
+            "orderId": "NW-10428",
+            "placedAt": "2026-08-14T09:02:11.000Z",
+            "status": "delivered",
+            "total": 30.5
+          },
+          {
+            "orderId": "NW-10391",
+            "placedAt": "2026-07-02T16:44:03.000Z",
+            "status": "shipped",
+            "total": 18
+          }
+        ],
+        "derivedFrom": [
+          "get-api-account-orders"
+        ],
+        "distinctRecords": 2
+      }
+    },
+    {
+      "name": "Account",
+      "key": {
+        "field": "userId",
+        "kind": "surrogate"
+      },
+      "fields": [
+        {
+          "name": "userId",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "counter",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "displayName",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        },
+        {
+          "name": "password",
+          "type": "string",
+          "optional": false,
+          "generatedBy": "none",
+          "narrowing": null,
+          "pathParamOf": []
+        }
+      ],
+      "relations": [],
+      "seed": {
+        "rows": [
+          {
+            "userId": "usr_0001",
+            "displayName": "[REDACTED:NAME]"
+          }
+        ],
+        "derivedFrom": [
+          "post-api-auth-login"
+        ],
+        "distinctRecords": 1
+      }
+    }
+  ],
+  "operations": [
+    {
+      "operationId": "get-api-products",
+      "method": "GET",
+      "pathPattern": "/api/products",
+      "pathParams": [],
+      "queryParams": [
+        {
+          "name": "category",
+          "type": "string",
+          "required": false,
+          "binds": null
+        }
+      ],
+      "request": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [],
+                    "evidence": [
+                      "unique-per-record"
+                    ]
+                  }
+                },
+                "slug": {
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [
+                      "get-api-products-slug"
+                    ],
+                    "evidence": [
+                      "path-param-value-overlap",
+                      "unique-per-record"
+                    ]
+                  }
+                },
+                "title": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "number"
+                },
+                "currency": {
+                  "type": "string",
+                  "examples": [
+                    "USD"
+                  ]
+                },
+                "categoryId": {
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [],
+                    "evidence": [
+                      "identifier-name"
+                    ]
+                  }
+                },
+                "inStock": {
+                  "type": "boolean"
+                },
+                "imageUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "narrowing": {
+                    "kind": "format",
+                    "format": "uri",
+                    "matched": 3,
+                    "total": 3
+                  }
+                }
+              },
+              "required": [
+                "sku",
+                "slug",
+                "title",
+                "price",
+                "currency",
+                "categoryId",
+                "inStock"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
+      "discovery": {
+        "kind": "observed"
+      },
+      "effect": {
+        "kind": "list",
+        "entity": "Product",
+        "rowsAt": "/[]",
+        "projection": [
+          {
+            "pointer": "/[]/sku",
+            "field": "sku"
+          },
+          {
+            "pointer": "/[]/slug",
+            "field": "slug"
+          },
+          {
+            "pointer": "/[]/title",
+            "field": "title"
+          },
+          {
+            "pointer": "/[]/price",
+            "field": "price"
+          },
+          {
+            "pointer": "/[]/currency",
+            "field": "currency"
+          },
+          {
+            "pointer": "/[]/categoryId",
+            "field": "categoryId"
+          },
+          {
+            "pointer": "/[]/inStock",
+            "field": "inStock"
+          },
+          {
+            "pointer": "/[]/imageUrl",
+            "field": "imageUrl"
+          }
+        ],
+        "filters": [
+          {
+            "from": "query-param",
+            "name": "category",
+            "matches": "categoryId"
+          }
+        ],
+        "pagination": null
+      }
+    },
+    {
+      "operationId": "get-api-products-slug",
+      "method": "GET",
+      "pathPattern": "/api/products/:slug",
+      "pathParams": [
+        {
+          "name": "slug",
+          "type": "string",
+          "required": true,
+          "binds": {
+            "entity": "Product",
+            "field": "slug"
+          }
+        }
+      ],
+      "queryParams": [],
+      "request": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "sku": {
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "unique-per-record"
+                  ]
+                }
+              },
+              "slug": {
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [
+                    "get-api-products-slug"
+                  ],
+                  "evidence": [
+                    "path-param-value-overlap",
+                    "unique-per-record"
+                  ]
+                }
+              },
+              "title": {
+                "type": "string"
+              },
+              "price": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string",
+                "examples": [
+                  "USD"
+                ]
+              },
+              "categoryId": {
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
+              },
+              "inStock": {
+                "type": "boolean"
+              },
+              "imageUrl": {
+                "type": "string",
+                "format": "uri",
+                "narrowing": {
+                  "kind": "format",
+                  "format": "uri",
+                  "matched": 3,
+                  "total": 3
+                }
+              }
+            },
+            "required": [
+              "sku",
+              "slug",
+              "title",
+              "price",
+              "currency",
+              "categoryId",
+              "inStock"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "status": 404,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 3,
+          "contextId": "anon-desktop"
+        }
+      ],
+      "discovery": {
+        "kind": "observed"
+      },
+      "effect": {
+        "kind": "read",
+        "entity": "Product",
+        "rowsAt": "",
+        "projection": [
+          {
+            "pointer": "/sku",
+            "field": "sku"
+          },
+          {
+            "pointer": "/slug",
+            "field": "slug"
+          },
+          {
+            "pointer": "/title",
+            "field": "title"
+          },
+          {
+            "pointer": "/price",
+            "field": "price"
+          },
+          {
+            "pointer": "/currency",
+            "field": "currency"
+          },
+          {
+            "pointer": "/categoryId",
+            "field": "categoryId"
+          },
+          {
+            "pointer": "/inStock",
+            "field": "inStock"
+          },
+          {
+            "pointer": "/imageUrl",
+            "field": "imageUrl"
+          }
+        ],
+        "select": {
+          "from": "path-param",
+          "name": "slug",
+          "matches": "slug"
+        }
+      }
+    },
+    {
+      "operationId": "get-api-cart",
+      "method": "GET",
+      "pathPattern": "/api/cart",
+      "pathParams": [],
+      "queryParams": [],
+      "request": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string",
+                      "identifier": {
+                        "pathParamOf": [],
+                        "evidence": [
+                          "identifier-name"
+                        ]
+                      }
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "unitPrice": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "quantity",
+                    "unitPrice"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "subtotal": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "items",
+              "subtotal"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 2,
+          "contextId": "anon-desktop"
+        }
+      ],
+      "discovery": {
+        "kind": "observed"
+      },
+      "effect": {
+        "kind": "read",
+        "entity": "Cart",
+        "rowsAt": "",
+        "projection": [
+          {
+            "pointer": "/id",
+            "field": "id"
+          },
+          {
+            "pointer": "/items",
+            "field": "items"
+          },
+          {
+            "pointer": "/subtotal",
+            "field": "subtotal"
+          }
+        ],
+        "select": {
+          "from": "session",
+          "name": "cartId",
+          "matches": "id"
+        }
+      }
+    },
+    {
+      "operationId": "post-api-cart-items",
+      "method": "POST",
+      "pathPattern": "/api/cart/items",
+      "pathParams": [],
+      "queryParams": [],
+      "request": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sku",
+          "quantity"
+        ],
+        "additionalProperties": false
+      },
+      "responses": [
+        {
+          "status": 201,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string",
+                      "identifier": {
+                        "pathParamOf": [],
+                        "evidence": [
+                          "identifier-name"
+                        ]
+                      }
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "unitPrice": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "quantity",
+                    "unitPrice"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "subtotal": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "items",
+              "subtotal"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 201,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
+      "discovery": {
+        "kind": "observed"
+      },
+      "effect": {
+        "kind": "update",
+        "entity": "Cart",
+        "rowsAt": "",
+        "projection": [
+          {
+            "pointer": "/id",
+            "field": "id"
+          },
+          {
+            "pointer": "/items",
+            "field": "items"
+          },
+          {
+            "pointer": "/subtotal",
+            "field": "subtotal"
+          }
+        ],
+        "select": {
+          "from": "session",
+          "name": "cartId",
+          "matches": "id"
+        },
+        "input": [
+          {
+            "pointer": "/sku",
+            "field": "items"
+          },
+          {
+            "pointer": "/quantity",
+            "field": "items"
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "post-api-checkout",
+      "method": "POST",
+      "pathPattern": "/api/checkout",
+      "pathParams": [],
+      "queryParams": [],
+      "request": {
+        "type": "object",
+        "properties": {
+          "cartId": {
+            "type": "string"
+          },
+          "paymentToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cartId",
+          "paymentToken"
+        ],
+        "additionalProperties": false
+      },
+      "responses": [
+        {
+          "status": 201,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "unique-per-record"
+                  ]
+                }
+              },
+              "status": {
+                "type": "string",
+                "examples": [
+                  "placed"
+                ]
+              },
+              "total": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "orderId",
+              "status",
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "requiresAuth": "unknown",
+      "authEvidence": [
+        {
+          "kind": "all-observations-authenticated",
+          "header": "cookie",
+          "observedCount": 1
+        }
+      ],
+      "discovery": {
+        "kind": "observed"
+      },
+      "effect": {
+        "kind": "custom",
+        "gapId": "gap_b1222602cfcc",
+        "summary": "POST /api/checkout creates an Order; the request-to-column mapping was not observable from one exchange."
+      }
+    },
+    {
+      "operationId": "get-api-account-orders",
+      "method": "GET",
+      "pathPattern": "/api/account/orders",
+      "pathParams": [],
+      "queryParams": [],
+      "request": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orderId": {
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [],
+                    "evidence": [
+                      "unique-per-record"
+                    ]
+                  }
+                },
+                "placedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "narrowing": {
+                    "kind": "format",
+                    "format": "date-time",
+                    "matched": 2,
+                    "total": 2
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "placed",
+                    "shipped",
+                    "delivered"
+                  ],
+                  "narrowing": {
+                    "kind": "enum",
+                    "distinctRecords": 2,
+                    "distinctValues": 2,
+                    "uiConstraint": {
+                      "control": "select",
+                      "routeId": "account-orders--auth-desktop--i0",
+                      "nodeId": "n_61e30790074e184f",
+                      "optionValues": [
+                        "placed",
+                        "shipped",
+                        "delivered"
+                      ]
+                    },
+                    "reviewRequired": true,
+                    "gapId": "gap_8d0068487e56"
+                  }
+                },
+                "total": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "orderId",
+                "placedAt",
+                "status",
+                "total"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "requiresAuth": "required",
+      "authEvidence": [
+        {
+          "kind": "unauthorized-status",
+          "status": 401,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
+      "discovery": {
+        "kind": "observed"
+      },
+      "effect": {
+        "kind": "list",
+        "entity": "Order",
+        "rowsAt": "/[]",
+        "projection": [
+          {
+            "pointer": "/[]/orderId",
+            "field": "orderId"
+          },
+          {
+            "pointer": "/[]/placedAt",
+            "field": "placedAt"
+          },
+          {
+            "pointer": "/[]/status",
+            "field": "status"
+          },
+          {
+            "pointer": "/[]/total",
+            "field": "total"
+          }
+        ],
+        "filters": [],
+        "pagination": null
+      }
+    },
+    {
+      "operationId": "post-api-auth-login",
+      "method": "POST",
+      "pathPattern": "/api/auth/login",
+      "pathParams": [],
+      "queryParams": [],
+      "request": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "narrowing": {
+              "kind": "format",
+              "format": "email",
+              "matched": 2,
+              "total": 2
+            }
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "userId",
+              "displayName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "status": 401,
+          "contentType": "application/json",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
+      "discovery": {
+        "kind": "observed"
+      },
+      "effect": {
+        "kind": "session-create",
+        "identityEntity": "Account",
+        "credentialFields": [
+          {
+            "pointer": "/email",
+            "field": "email"
+          },
+          {
+            "pointer": "/password",
+            "field": "password"
+          }
+        ]
+      }
+    }
+  ],
+  "behaviours": [
+    {
+      "behaviourId": "bhv_add-mug-to-cart",
+      "trigger": {
+        "role": "button",
+        "accessibleName": "Add Blue Enamel Mug, 12oz to cart",
+        "onTemplate": "tpl_product-id",
+        "componentId": null
+      },
+      "precondition": null,
+      "effect": {
+        "kind": "mutate-entity",
+        "operationId": "post-api-cart-items",
+        "entity": "Cart"
+      },
+      "derivedFrom": {
+        "flowId": "add-mug-to-cart"
+      },
+      "networkCalls": [
+        "post-api-cart-items",
+        "get-api-cart"
+      ]
+    },
+    {
+      "behaviourId": "bhv_toggle-product-details",
+      "trigger": {
+        "role": "button",
+        "accessibleName": "Product details",
+        "onTemplate": "tpl_product-id",
+        "componentId": null
+      },
+      "precondition": null,
+      "effect": {
+        "kind": "toggle-ui-state",
+        "state": "Product details"
+      },
+      "derivedFrom": {
+        "flowId": "toggle-product-details"
+      },
+      "networkCalls": []
+    }
+  ]
+}
