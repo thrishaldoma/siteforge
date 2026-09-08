@@ -22,6 +22,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as S from '../dist/index.js';
+import { originOf, sameOrigin } from '../../shared/dist/index.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CAPTURE = join(HERE, '..', 'fixtures', 'capture', 'northwind-supply');
@@ -30,6 +31,10 @@ const read = (rel) => JSON.parse(readFileSync(join(CAPTURE, rel), 'utf8'));
 const fail = (message) => { console.error(`\n✗ ${message}\n`); process.exit(1); };
 
 const manifest = read('manifest.json');
+// `target.origin`, not `target.entryUrl`: this crawl entered on http:// and was
+// 301'd to https://, so the entry URL's origin is not the site's.
+const targetOrigin = originOf(`${manifest.target.origin}/`);
+if (targetOrigin === null) fail('the manifest has no parseable target origin');
 const endpoints = read('network/endpoints.json');
 const assetIndex = read('assets/index.json');
 const routeIds = readdirSync(join(CAPTURE, 'routes')).sort();
@@ -201,7 +206,9 @@ const fonts = [...fontFamilies.values()].map((font) => {
 
 const assets = Object.values(assetIndex.byUrl).map((asset) => {
   const url = asset.originalUrl;
-  const isForeign = !url.startsWith('https://example.com/');
+  // Parsed, not prefixed: `https://example.com.evil.net/x` passes a prefix
+  // test on a portless origin and is a different site (decision 0014).
+  const isForeign = !sameOrigin(url, targetOrigin);
   const ext = /\.([a-z0-9]+)(?:\?|$)/i.exec(url)?.[1]?.toLowerCase() ?? '';
   if (isForeign) {
     // §11: a third-party embed is a placeholder and a gap, never rehosted.
@@ -512,6 +519,8 @@ for (const [routeId, meta] of routes) {
 }
 
 const slug = (pattern) => pattern.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'root';
+/** A URL path is segments; rebuilding it from them is the anchored spelling. */
+const asPath = (pattern) => `/${pattern.split('/').filter(Boolean).join('/')}`;
 const siteRoutes = [...patterns.values()].map((bucket) => {
   const meta = bucket.metas[0];
   const dom = domOf.get(bucket.routeIds.find((id) => domOf.has(id)) ?? bucket.routeIds[0]);
@@ -522,7 +531,7 @@ const siteRoutes = [...patterns.values()].map((bucket) => {
   const uses = operations.filter((o) => (endpointById.get(o.operationId)?.observedOn ?? []).some((r) => bucket.routeIds.includes(r)));
   return {
     templateId: `tpl_${slug(bucket.pattern)}`,
-    pathPattern: bucket.pattern.startsWith('/') ? bucket.pattern : `/${bucket.pattern}`,
+    pathPattern: asPath(bucket.pattern),
     layoutId: 'lay_site-shell',
     content,
     dataSources: uses.map((o) => o.operationId),

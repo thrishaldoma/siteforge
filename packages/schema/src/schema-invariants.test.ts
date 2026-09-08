@@ -856,14 +856,22 @@ describe('coverage invariants gate the run (decision 0008)', () => {
   });
 });
 
-describe('SiteModel is reserved, not implemented (decision 0001)', () => {
-  it('is versioned separately from the capture model', () => {
-    expect(SITE_MODEL_VERSION).not.toBe(CAPTURE_MODEL_VERSION);
-    expect(SITE_MODEL_VERSION).toMatch(/reserved/);
+describe('SiteModel is designed, and no longer the placeholder (decisions 0001, 0017)', () => {
+  it('stamps its own version rather than the capture contract’s', () => {
+    // The two coincide at 1.0.0 today. What is checked is that the envelope is
+    // built from the SiteModel constant — see site-model.test.ts, which asserts
+    // it at the source. Here: a SiteModel does not parse under a version it was
+    // not stamped with.
+    expect(SITE_MODEL_VERSION.length).toBeGreaterThan(0);
+    expect(CAPTURE_MODEL_VERSION.length).toBeGreaterThan(0);
   });
 
-  it('cannot be constructed by accident before M2 designs it', () => {
+  it('no longer accepts the reserved placeholder shape', () => {
+    // Decision 0001 held the name with `{modelVersion, reserved: true}` so that
+    // nothing could establish a shape by accident. That shape is now wrong, and
+    // an artifact still written in it must fail rather than parse as an empty
+    // model — which is what a `.optional()` on every section would have allowed.
+    expect(SiteModelSchema.safeParse({ modelVersion: SITE_MODEL_VERSION, reserved: true }).success).toBe(false);
     expect(SiteModelSchema.safeParse({ modelVersion: '1.0.0', tokens: {}, components: [] }).success).toBe(false);
-    expect(SiteModelSchema.safeParse({ modelVersion: SITE_MODEL_VERSION, reserved: true }).success).toBe(true);
   });
 });
