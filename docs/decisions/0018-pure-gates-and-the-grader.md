@@ -182,6 +182,20 @@ arrangement as the post-click origin check behind the router chokepoint.
 It is now `sabotage/grade-empty-truth-scores.patch`, whose reachability note is
 the shortest in the table: *the grader as written this morning.*
 
+### And the practice caught a problem in itself, for the third time
+
+Generating that patch failed: `git diff` printed **"Binary files differ"**. A
+stray NUL byte had landed inside a template literal in `grade.ts`, which compiled,
+tested and committed without a murmur. Nothing would have said so — the file's
+diffs were simply unreadable in review, and no sabotage patch could be authored
+against it at all. That is the vacuity mode one step earlier than the three §13
+names: not a gate that cannot fire, but a gate whose sabotage cannot be *written*.
+
+So it is a gate now (`assessSourceBytes`, over every source file the repo-wide
+walker reaches — `packages/verify/src` included, verified rather than assumed),
+and it carries its own patch, deleting the check the way somebody would who found
+a whole-repo byte scan slow.
+
 ---
 
 ## 4. Measured
