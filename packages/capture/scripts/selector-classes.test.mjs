@@ -20,13 +20,13 @@ describe('selector class names are parsed, not searched for', () => {
     // The exact collision the rung-3 fixture now inflicts.
     const names = selectorClassNames(['.todo[data-flagged="true"] .title']);
     expect(names.has('flag')).toBe(false);
-    expect(names.has('flagged')).toBe(false);
+    expect(names.has('flagged'), 'an attribute-value token was reported as a class name').toBe(false);
     expect(names.has('todo')).toBe(true);
   });
 
   it('does not report a class merely contained in a longer class', () => {
     const names = selectorClassNames(['.is-open', '.opened']);
-    expect(names.has('open')).toBe(false);
+    expect(names.has('open'), 'a fragment of a longer class name was reported as a class name').toBe(false);
     expect(names.has('is-open')).toBe(true);
   });
 
