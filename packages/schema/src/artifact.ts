@@ -40,6 +40,23 @@ export const ProvenanceSchema = z.strictObject({
   recordedAt: IsoTimestampSchema,
   durationMs: z.number().nonnegative().optional(),
   runId: RunIdSchema,
+  /**
+   * Digests of side-files this artifact names whose **bytes are unavoidably
+   * volatile**, keyed by capture-relative path.
+   *
+   * There is exactly one such file today: `network/session.har`. A HAR embeds
+   * request timings, Playwright's per-run `page@…` / `frame@…` ids, and whatever
+   * per-request identifiers the origin's CDN attaches (`cf-ray`, `x-request-id`,
+   * `age`, `date`). Normalising those away is unbounded vendor-by-vendor work,
+   * and what survives it is just the method/URL/status list that
+   * `endpoints[]` already records stably.
+   *
+   * So the digest is kept for integrity but lives here, where the idempotency
+   * check ignores it. Found by running the M1 spike against a real page twice —
+   * the fixtures could not have shown this, because a generated HAR has no clock
+   * in it.
+   */
+  externalDigests: z.record(z.string().min(1), z.string().regex(/^[0-9a-f]{64}$/)).optional(),
 });
 
 /** The kinds of artifact file the capture stage writes. */

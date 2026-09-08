@@ -19,7 +19,6 @@ import {
   EndpointIdSchema,
   HttpMethodSchema,
   RouteIdSchema,
-  Sha256Schema,
 } from './primitives.js';
 import { artifactEnvelope } from './artifact.js';
 import { JsonSchemaNodeSchema } from './json-schema.js';
@@ -145,10 +144,20 @@ export const EndpointDescriptorSchema = z
 export const EndpointIndexSchema = z.strictObject({
   ...artifactEnvelope('endpoint-index'),
   endpoints: z.array(EndpointDescriptorSchema),
-  /** The raw log these were normalized from (§5: `network/session.har`). */
+  /**
+   * The raw log these endpoints were normalized from (§5: `network/session.har`).
+   *
+   * No digest here on purpose: a HAR's bytes differ on every crawl of an
+   * unchanged site (timings, Playwright's per-run page/frame ids, CDN request
+   * ids), so a hash in this artifact would be a volatile value living outside
+   * `provenance` and would fail M1's idempotency check every run. The digest is
+   * recorded in `provenance.externalDigests` instead.
+   *
+   * `entryCount` is kept because it is meaningful and usually stable; a site that
+   * races an optional request will vary it, and that is a real diff worth seeing.
+   */
   har: z.strictObject({
     path: z.literal('network/session.har'),
-    sha256: Sha256Schema,
     entryCount: z.int().nonnegative(),
   }),
   /** Requests to hosts outside the target origin. Recorded; never reproduced (§8). */

@@ -746,6 +746,14 @@ describe('manifest coherence', () => {
 /* --------------------------------------------------- idempotency + safety */
 
 describe('idempotency and safety', () => {
+  it('keeps no digest of the HAR outside provenance (decision 0006)', () => {
+    // A HAR's bytes differ on every crawl. A hash of one in the artifact body
+    // would fail M1's idempotency check every single run.
+    expect(Object.keys(endpoints.har).sort()).toEqual(['entryCount', 'path']);
+    expect(JSON.stringify(endpoints.har)).not.toMatch(/[0-9a-f]{64}/);
+    expect(endpoints.provenance.externalDigests?.['network/session.har']).toMatch(/^[0-9a-f]{64}$/);
+  });
+
   it('confines every volatile field to provenance (M1: idempotent modulo timestamps)', () => {
     expect(VOLATILE_ARTIFACT_KEYS).toEqual(['provenance']);
     const raw = readFileSync(join(ROOT, 'manifest.json'), 'utf8');

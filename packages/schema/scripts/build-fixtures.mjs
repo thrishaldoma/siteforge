@@ -31,11 +31,11 @@ const RUN_ID = `run_${short16('northwind-run-1')}`;
 const RECORDED_AT = '2026-09-08T11:24:07.000Z';
 const SEED = 42;
 const prov = (durationMs) => ({ recordedAt: RECORDED_AT, runId: RUN_ID, ...(durationMs !== undefined ? { durationMs } : {}) });
-const envelope = (artifact, durationMs) => ({
+const envelope = (artifact, durationMs, externalDigests) => ({
   modelVersion: S.CAPTURE_MODEL_VERSION,
   artifact,
   scrubbed: true,
-  provenance: prov(durationMs),
+  provenance: { ...prov(durationMs), ...(externalDigests ? { externalDigests } : {}) },
 });
 
 const DESKTOP = { width: 1280, height: 800, deviceScaleFactor: 1, isMobile: false, hasTouch: false };
@@ -575,9 +575,10 @@ const ENDPOINTS = [
 ];
 
 write('network/endpoints.json', S.EndpointIndexSchema, {
-  ...envelope('endpoint-index', 1490),
+  // The HAR digest is volatile, so it rides in provenance (decision 0006).
+  ...envelope('endpoint-index', 1490, { 'network/session.har': sha256('northwind-har') }),
   endpoints: ENDPOINTS,
-  har: { path: 'network/session.har', sha256: sha256('northwind-har'), entryCount: 64 },
+  har: { path: 'network/session.har', entryCount: 64 },
   thirdPartyOrigins: [{ origin: 'https://widgets.example.net', requestCount: 5, gapId: GAP.thirdPartyOrigin }],
 });
 

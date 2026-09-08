@@ -164,8 +164,8 @@
     },
     {
       "path": "network/endpoints.json",
-      "sha256": "68a2d330c3477b908883c8eb34e45a7274f4d7f1f764f7246298645c07f46ed9",
-      "bytes": 19483
+      "sha256": "c74707aafc57df74227f3ed48fcd4130bf2d04afaf64874a5aa4a922b6dd441d",
+      "bytes": 19529
     },
     {
       "path": "flows/add-mug-to-cart.trace.json",
@@ -184,7 +184,7 @@
     },
     {
       "path": "manifest.json",
-      "sha256": "9c2a384a9946821c1bdf0ecec0bf4a5a748084966c9b30e229aa899a96fe77f6",
+      "sha256": "2c32f0cc5fbd9368bd0ae0411cc856edc31dbdda6699015a4de31c0261074982",
       "bytes": 4576
     }
   ],

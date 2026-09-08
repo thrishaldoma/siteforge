@@ -5,7 +5,10 @@
   "provenance": {
     "recordedAt": "2026-09-08T11:24:07.000Z",
     "runId": "run_a7ff1a530f992ee9",
-    "durationMs": 1490
+    "durationMs": 1490,
+    "externalDigests": {
+      "network/session.har": "3e36813bf7254413c1911e79848474baae88dbf4d3913d04fe926398484c86de"
+    }
   },
   "endpoints": [
     {
@@ -761,7 +764,6 @@
   ],
   "har": {
     "path": "network/session.har",
-    "sha256": "3e36813bf7254413c1911e79848474baae88dbf4d3913d04fe926398484c86de",
     "entryCount": 64
   },
   "thirdPartyOrigins": [

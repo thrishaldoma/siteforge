@@ -183,6 +183,12 @@ describe('endpoint descriptors', () => {
     expect(EndpointIndexSchema.safeParse(bad).success).toBe(false);
   });
 
+  it('rejects a digest of the HAR in the artifact body (decision 0006)', () => {
+    const bad = clone(endpoints) as Record<string, Record<string, unknown>>;
+    bad['har']!['sha256'] = 'a'.repeat(64);
+    expect(EndpointIndexSchema.safeParse(bad).success).toBe(false);
+  });
+
   it('rejects a header descriptor that carries a value', () => {
     const bad = clone(endpoints);
     const list = bad['endpoints'] as Array<Record<string, unknown>>;
