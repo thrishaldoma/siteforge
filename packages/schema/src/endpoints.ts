@@ -133,7 +133,8 @@ export const EndpointDescriptorSchema = z
    * Three-valued, and derived from `authEvidence` rather than declared: rung 3
    * produced `false` for every endpoint of an app whose entire API is gated,
    * simply because the anonymous context never got far enough to be refused. See
-   * `auth.ts`. Codegen resolves `unknown` with `resolveAuthForCodegen`.
+   * `auth.ts`. Codegen resolves `unknown` with `resolveAuthForCodegen`, which
+   * fails closed for reads as well as mutations.
    */
   requiresAuth: AuthRequirementSchema,
   /** The observations `requiresAuth` is derived from. May be empty — that is `unknown`. */

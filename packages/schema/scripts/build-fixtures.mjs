@@ -611,7 +611,7 @@ const ENDPOINTS = [
     // The rung-3 shape, preserved deliberately: every observation carried a
     // session cookie and no anonymous attempt was ever made, so this is honestly
     // `unknown`. It is a mutation, so §8 resolves it closed and gates it —
-    // `resolveAuthForCodegen('unknown', true) === true`.
+    // `resolveAuthForCodegen('unknown') === true`.
     isMutation: true, requiresAuth: 'unknown', authEvidence: authOnly(1),
     observedCount: 1, observedOn: [ROUTE.orders],
   },
@@ -1059,7 +1059,7 @@ const boundDeleteEndpoint = {
   samples: [],
   isMutation: true,
   // Never called, so never refused. Mutations resolve closed at codegen:
-  // `resolveAuthForCodegen('unknown', true) === true`.
+  // `resolveAuthForCodegen('unknown') === true`.
   requiresAuth: 'unknown',
   authEvidence: [],
   observedCount: 0,

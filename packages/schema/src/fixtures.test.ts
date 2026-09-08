@@ -773,10 +773,42 @@ describe('route identity (decisions 0002, 0004)', () => {
     const checkout = endpoints.endpoints.find((e) => e.endpointId === 'post-api-checkout')!;
     expect(checkout.requiresAuth).toBe('unknown');
     expect(checkout.authEvidence.map((e) => e.kind)).toEqual(['all-observations-authenticated']);
-    // …and §8 resolves that closed, because it is a mutation.
-    expect(resolveAuthForCodegen(checkout.requiresAuth, checkout.isMutation)).toBe(true);
-    const products = endpoints.endpoints.find((e) => e.endpointId === 'get-api-products')!;
-    expect(resolveAuthForCodegen('unknown', products.isMutation)).toBe(false);
+    // …and §8 resolves that closed. Not "because it is a mutation": the
+    // read/write asymmetry was withdrawn. A wrongly-gated read costs one
+    // visible login step; a wrongly-public gated read is invisible and makes
+    // every §10 auth task reading through it bypassable.
+    expect(resolveAuthForCodegen(checkout.requiresAuth)).toBe(true);
+    expect(resolveAuthForCodegen('unknown')).toBe(true);
+  });
+
+  it('resolves closed for reads too, and only evidence opens an endpoint', () => {
+    expect(resolveAuthForCodegen('required')).toBe(true);
+    expect(resolveAuthForCodegen('unknown')).toBe(true);
+    expect(resolveAuthForCodegen('not-required')).toBe(false);
+  });
+
+  it('leaves the anonymously-observed reads open, on evidence', () => {
+    // Why failing closed is safe rather than merely cautious: §6 re-issues
+    // every distinct GET anonymously, so a genuinely public read carries
+    // `anonymous-success` and never reaches the resolver as `unknown`.
+    const reads = endpoints.endpoints.filter((e) => !e.isMutation);
+    expect(reads.length).toBeGreaterThan(0);
+    const opened = reads.filter((e) => !resolveAuthForCodegen(e.requiresAuth));
+    for (const endpoint of opened) {
+      expect(endpoint.requiresAuth).toBe('not-required');
+      expect(endpoint.authEvidence.map((e) => e.kind)).toContain('anonymous-success');
+    }
+  });
+
+  it('names the endpoints codegen gates on absence of evidence', () => {
+    // §8's stage report has to list these. A large set means a shallow
+    // anonymous crawl, which the operator wants to see rather than have a
+    // permissive default hide.
+    const gatedOnUnknown = endpoints.endpoints
+      .filter((e) => e.requiresAuth === 'unknown')
+      .map((e) => e.endpointId)
+      .sort();
+    expect(gatedOnUnknown).toEqual(['post-api-checkout']);
   });
 });
 

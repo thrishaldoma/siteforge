@@ -119,20 +119,32 @@ export function resolveAuthRequirement(
 /**
  * How codegen (§8) resolves the third state when it has to emit a real check.
  *
- * `unknown` fails **closed for mutations** and open for reads. The asymmetry is
- * the operator's ruling and it follows the cost: a wrongly-gated GET costs an
- * agent a login step, while a wrongly-open mutation makes every §10 auth task
- * bypassable. Reads are not generalised into the fail-closed rule — that was not
- * ruled, and gating a public GET would break the anonymous crawl the clone is
- * also supposed to reproduce (decision 0010).
+ * `unknown` fails **closed, full stop**. There is deliberately no `isMutation`
+ * parameter: the asymmetry that once justified one only holds if you compare
+ * the wrong two things.
+ *
+ * The costs are not symmetric between reads and writes — they are the same
+ * shape at different volumes. A wrongly-gated read costs an agent one login
+ * step, and it is visible: the trajectory shows a login the original did not
+ * need. A wrongly-public gated read is invisible and makes every §10 auth task
+ * that reads through it bypassable, so the trajectory reads as success while
+ * proving nothing. Failing open is the option whose damage cannot be seen.
+ *
+ * This is safe rather than merely cautious because `unknown` is narrow.
+ * §6 re-issues every distinct GET anonymously, so a read that is genuinely
+ * public gets `anonymous-success` evidence and resolves to `not-required` on
+ * that evidence — it never reaches this function. `unknown` means the crawl
+ * never saw the endpoint answer an anonymous caller *and* never saw a 401. A
+ * read that shallow is one nobody has grounds to publish.
+ *
+ * §8's stage report lists the endpoints resolved this way. A large `unknown`
+ * set means a shallow anonymous crawl, and the operator wants to see that
+ * rather than have a permissive default hide it.
  */
 export function resolveAuthForCodegen(
   requirement: z.infer<typeof AuthRequirementSchema>,
-  isMutation: boolean,
 ): boolean {
-  if (requirement === 'required') return true;
-  if (requirement === 'not-required') return false;
-  return isMutation;
+  return requirement !== 'not-required';
 }
 
 export type AuthRequirement = z.infer<typeof AuthRequirementSchema>;
