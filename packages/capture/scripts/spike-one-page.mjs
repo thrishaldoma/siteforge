@@ -1075,7 +1075,7 @@ for (const s2 of surprises) {
   finding('rung-declaration-stale', `${s2} is declared known-empty at rung ${rung} but produced output; update the declaration`);
 }
 for (const f of failures) {
-  finding('rung-gate', `rung ${rung} expects ${f.key} non-empty, got ${f.actual}`);
+  finding('rung-gate', `rung ${rung} expects ${f.key} ${f.expected}, got ${f.actual}`);
 }
 const gatesFailed = failures.length + brokenInvariants;
 

@@ -1156,7 +1156,7 @@ if (blockedOffOrigin.length === 0) {
 // everything from its own origin, so the number would be structurally zero and
 // a reader would take it as evidence of something it cannot show.
 
-for (const f of failures) finding('rung-gate', `rung 3 expects ${f.key} non-empty, got ${f.actual}`);
+for (const f of failures) finding('rung-gate', `rung 3 expects ${f.key} ${f.expected}, got ${f.actual}`);
 for (const s2 of surprises) finding('rung-declaration-stale', `${s2} is declared known-empty at rung 3 but produced output`);
 
 /**
