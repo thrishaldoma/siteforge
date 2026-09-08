@@ -22,7 +22,9 @@ import { StyleSheetDocumentSchema } from './styles.js';
 import { StateDeltasDocumentSchema } from './states.js';
 import { AssetIndexSchema } from './assets.js';
 import { EndpointIndexSchema } from './endpoints.js';
+import type { JsonSchemaNode } from './json-schema.js';
 import { FlowTraceSchema } from './flows.js';
+import { SkippedControlIndexSchema } from './controls.js';
 import { StageReportSchema } from './stage-report.js';
 import { CoverageReportSchema } from './coverage.js';
 
@@ -124,6 +126,11 @@ export const CaptureModelSchema = z
     assets: AssetIndexSchema,
     endpoints: EndpointIndexSchema,
     flows: z.record(FlowIdSchema, FlowTraceSchema),
+    /**
+     * Controls §6 discovered and refused to fire (decision 0010). Never optional:
+     * "nothing was skipped" and "nobody looked" must not be the same value.
+     */
+    skippedControls: SkippedControlIndexSchema,
     /** Absent while a capture is still in progress. */
     stageReport: StageReportSchema.optional(),
     /** Input-vs-output contradiction check. Absent while a capture is in progress. */
@@ -167,6 +174,47 @@ export const CaptureModelSchema = z
             : `a top-level route must render at context ${context.contextId}'s viewport`,
         });
       }
+    }
+
+    // Evidence about anonymous behaviour must come from a context that was
+    // actually anonymous. Without this, `anonymous-success` recorded against a
+    // signed-in crawl would settle `not-required` on an endpoint nobody ever
+    // tried without a session — the exact bug the tri-state exists to prevent,
+    // reintroduced one level down.
+    const anonymousClaims = new Set([
+      'anonymous-success',
+      'anonymous-redirect-to-login',
+      'unauthorized-status',
+    ]);
+    const checkEvidence = (
+      evidence: { kind: string; contextId?: string }[],
+      path: (string | number)[],
+    ): void => {
+      evidence.forEach((item, i) => {
+        if (!anonymousClaims.has(item.kind) || item.contextId === undefined) return;
+        const source = contexts.get(item.contextId);
+        if (!source) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [...path, i, 'contextId'],
+            message: `context ${item.contextId} is not declared in the manifest`,
+          });
+        } else if (source.auth.mode !== 'anonymous') {
+          ctx.addIssue({
+            code: 'custom',
+            path: [...path, i, 'contextId'],
+            message:
+              `${item.kind} was recorded against context ${item.contextId}, which crawls signed in. ` +
+              'Evidence about anonymous access has to come from an anonymous context.',
+          });
+        }
+      });
+    };
+    for (const [routeId, route] of routes) {
+      checkEvidence(route.meta.authEvidence, ['routes', routeId, 'meta', 'authEvidence']);
+    }
+    for (const endpoint of model.endpoints.endpoints) {
+      checkEvidence(endpoint.authEvidence, ['endpoints', endpoint.endpointId, 'authEvidence']);
     }
 
     // Shared content must point at a route that actually holds the artifacts,
@@ -282,8 +330,29 @@ export const CaptureModelSchema = z
       for (const gapId of flow.gapIds) note(gapId, `flows/${flow.flowId}`);
       note(flow.skipReason?.gapId, `flows/${flow.flowId} skipReason`);
     }
+    // A narrowed field type names a gap (§7: a narrowing is a claim, and every
+    // claim is review-required). Collected by walking the response schemas, so
+    // that gap is as unskippable as a stubbed endpoint's.
+    const walkSchema = (node: JsonSchemaNode | null | undefined, where: string): void => {
+      if (!node) return;
+      if (node.narrowing && 'gapId' in node.narrowing) note(node.narrowing.gapId, where);
+      for (const child of Object.values(node.properties ?? {})) walkSchema(child, where);
+      walkSchema(node.items, where);
+      for (const alt of node.anyOf ?? []) walkSchema(alt, where);
+      if (typeof node.additionalProperties === 'object') walkSchema(node.additionalProperties, where);
+    };
     for (const endpoint of model.endpoints.endpoints) {
       note(endpoint.stub?.gapId, `endpoint ${endpoint.endpointId}`);
+      walkSchema(endpoint.requestBodySchema, `endpoint ${endpoint.endpointId} request narrowing`);
+      for (const response of endpoint.responses) {
+        walkSchema(response.schema, `endpoint ${endpoint.endpointId} ${response.status} narrowing`);
+      }
+      if (endpoint.discovery.kind === 'bound-from-control') {
+        note(endpoint.discovery.gapId, `endpoint ${endpoint.endpointId} binding`);
+      }
+    }
+    for (const control of model.skippedControls.controls) {
+      note(control.gapId, `skipped control ${control.controlId}`);
     }
     for (const origin of model.endpoints.thirdPartyOrigins) note(origin.gapId, `third-party ${origin.origin}`);
 
@@ -335,6 +404,33 @@ export const CaptureModelSchema = z
           });
         }
       }
+    }
+
+    // A skipped control that names a route or flow nobody loaded is a pointer
+    // infer will follow into nothing — and following it is the entire reason the
+    // record exists.
+    for (const control of model.skippedControls.controls) {
+      if (!model.routes[control.routeId]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['skippedControls', 'controls', control.controlId, 'routeId'],
+          message: `control ${control.controlId} sits on route ${control.routeId}, which was not loaded`,
+        });
+      }
+      if (control.flowId !== null && !model.flows[control.flowId]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['skippedControls', 'controls', control.controlId, 'flowId'],
+          message: `control ${control.controlId} names flow ${control.flowId}, which does not exist`,
+        });
+      }
+    }
+    if (model.skippedControls.siteId !== model.siteId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['skippedControls', 'siteId'],
+        message: 'skipped-control index siteId disagrees with the capture directory',
+      });
     }
 
     if (model.manifest.siteId !== model.siteId) {

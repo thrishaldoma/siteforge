@@ -19,6 +19,7 @@ import {
   CaptureManifestSchema,
   CaptureModelSchema,
   DomDocumentSchema,
+  EndpointDescriptorSchema,
   EndpointIndexSchema,
   FlowTraceSchema,
   GapSchema,
@@ -44,6 +45,23 @@ const routeStates = load<Record<string, unknown>>(`routes/${MUG}/states.json`);
 const manifest = load<Record<string, unknown>>('manifest.json');
 const report = load<Record<string, unknown>>('stage-report.json');
 const endpoints = load<Record<string, unknown>>('network/endpoints.json');
+/**
+ * The infer-stage fixture (decision 0010). It lives outside `capture/` because
+ * the stage that can produce a shape is part of the contract, and this one is a
+ * shape §6 cannot produce.
+ */
+const inferFixture = JSON.parse(
+  readFileSync(join(ROOT, '..', '..', 'infer', 'northwind-supply', 'bound-endpoints.json'), 'utf8'),
+) as { endpoints: unknown[]; gaps: unknown[] };
+const boundEndpoint = inferFixture.endpoints[0] as Record<string, unknown>;
+const skippedControls = load<Record<string, unknown>>('flows/skipped-controls.json');
+/**
+ * Most model tests load one route to isolate one rule. The real control index
+ * points at `/account/orders` and at a flow, and those pointers are checked — so
+ * a partial model gets an empty index. "Nothing was skipped" is a legitimate
+ * capture; a control pointing into a route nobody loaded is not.
+ */
+const noControls = (): unknown => ({ ...clone(skippedControls), controls: [] });
 const addToCart = load<Record<string, unknown>>('flows/add-mug-to-cart.trace.json');
 const aboutAnon = load<Record<string, unknown>>('routes/about--anon-desktop--i0/meta.json');
 const aboutAuth = load<Record<string, unknown>>('routes/about--auth-desktop--i0/meta.json');
@@ -199,14 +217,29 @@ describe('flow traces form a chain', () => {
 /* ------------------------------------------------------------- endpoints */
 
 describe('endpoint descriptors', () => {
-  it('rejects an endpoint with no observed response and no stub (§7)', () => {
+  it('rejects an endpoint with no observed response, no stub and no binding (§7)', () => {
+    const bad = clone(boundEndpoint) as Record<string, unknown>;
+    bad['discovery'] = { kind: 'observed' };
+    const result = EndpointDescriptorSchema.safeParse(bad);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('stubbed or bound');
+  });
+
+  it('accepts a zero-response endpoint that is bound to the control it came from', () => {
+    // The shape decision 0010 hands to infer: no responses, but a gap id that
+    // reaches GAPS.md by the binding rather than by a 501 stub.
+    expect(EndpointDescriptorSchema.safeParse(clone(boundEndpoint)).success).toBe(true);
+  });
+
+  it('keeps a bound endpoint out of the capture artifact (decision 0010)', () => {
+    // The ownership rule, enforced rather than documented. Capture never fired
+    // the control, so it never learned the URL; a capture artifact claiming this
+    // shape is a fixture lying about which stage produced it.
     const bad = clone(endpoints);
-    const list = bad['endpoints'] as Array<Record<string, unknown>>;
-    const stubbed = list.find((e) => e['endpointId'] === 'delete-api-account')!;
-    delete stubbed['stub'];
+    (bad['endpoints'] as unknown[]).push(clone(boundEndpoint));
     const result = EndpointIndexSchema.safeParse(bad);
     expect(result.success).toBe(false);
-    expect(JSON.stringify(result.error?.issues)).toContain('stubbed');
+    expect(JSON.stringify(result.error?.issues)).toContain('which capture cannot do');
   });
 
   it('rejects a sample of a status the endpoint never returned', () => {
@@ -233,16 +266,134 @@ describe('endpoint descriptors', () => {
   });
 });
 
+/* ------------------------------------------------ the narrowing contract (§7) */
+
+describe('narrowing a type requires evidence (decision 0010)', () => {
+  const uiConstraint = {
+    control: 'select',
+    routeId: 'account-orders--auth-desktop--i0',
+    nodeId: `n_${'a'.repeat(16)}`,
+    optionValues: ['open', 'doing', 'done'],
+  };
+  const enumNode = (narrowing: unknown): unknown => ({
+    type: 'string',
+    enum: ['open', 'doing', 'done'],
+    narrowing,
+  });
+  const gapId = `gap_${'b'.repeat(12)}`;
+
+  it('accepts an enum a UI control constrains, however thin the sample', () => {
+    // The rung-3 shape, done right: four records is nowhere near the floor, but
+    // a <select> with three options is ground truth about the domain. A field is
+    // an enum because the DOM constrains it, not because sampling was thin.
+    expect(JsonSchemaNodeSchema.safeParse(enumNode({
+      kind: 'enum', distinctRecords: 4, distinctValues: 3,
+      uiConstraint, reviewRequired: true, gapId,
+    })).success).toBe(true);
+  });
+
+  it('rejects the exact enum rung 3 invented: low cardinality, thin sample, no control', () => {
+    // 23 observations of 4 todos is n=4. Without a control behind it this is a
+    // small sample wearing a domain's clothes, and §5 would make it the mock
+    // backend's data model.
+    const result = JsonSchemaNodeSchema.safeParse(enumNode({
+      kind: 'enum', distinctRecords: 4, distinctValues: 3,
+      uiConstraint: null, reviewRequired: true, gapId,
+    }));
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('not evidence of a closed domain');
+  });
+
+  it('accepts an enum corroborated by cardinality that stayed flat as records grew', () => {
+    expect(JsonSchemaNodeSchema.safeParse(enumNode({
+      kind: 'enum', distinctRecords: 40, distinctValues: 3,
+      uiConstraint: null, reviewRequired: true, gapId,
+    })).success).toBe(true);
+  });
+
+  it('rejects an enum whose values track its records, even past the floor', () => {
+    // 30 distinct values across 40 records is data, not a domain.
+    const many = { type: 'string', enum: Array.from({ length: 30 }, (_, i) => `v${i}`),
+      narrowing: { kind: 'enum', distinctRecords: 40, distinctValues: 30, uiConstraint: null, reviewRequired: true, gapId } };
+    const result = JsonSchemaNodeSchema.safeParse(many);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('this is data, not a domain');
+  });
+
+  it('rejects a control that does not actually cover the observed values', () => {
+    const result = JsonSchemaNodeSchema.safeParse(enumNode({
+      kind: 'enum', distinctRecords: 4, distinctValues: 9,
+      uiConstraint, reviewRequired: true, gapId,
+    }));
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('does not constrain this field');
+  });
+
+  it('makes an enum on an identity field unrepresentable', () => {
+    // The hard exclusion: values observed as somebody's path parameter are a key,
+    // and a key's value set is open by definition. `id: enum ["td_1".."td_4"]`
+    // cannot be written at all.
+    const result = JsonSchemaNodeSchema.safeParse({
+      type: 'string',
+      enum: ['td_1', 'td_2', 'td_3'],
+      narrowing: { kind: 'enum', distinctRecords: 40, distinctValues: 3, uiConstraint: null, reviewRequired: true, gapId },
+      identifier: { pathParamOf: ['patch-api-todos-id'], evidence: ['path-param-value-overlap'] },
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('an id, not an enum');
+  });
+
+  it('lets a field be an identifier without narrowing anything', () => {
+    // Widening is free: this is what §7.4 reads to derive a foreign key.
+    expect(JsonSchemaNodeSchema.safeParse({
+      type: 'string',
+      identifier: { pathParamOf: ['patch-api-todos-id'], evidence: ['path-param-value-overlap'] },
+      examples: ['td_1', 'td_2'],
+    }).success).toBe(true);
+  });
+
+  it('requires an enum to be reviewable: no gap id, no enum', () => {
+    const { gapId: _g, ...noGap } = {
+      kind: 'enum', distinctRecords: 4, distinctValues: 3, uiConstraint, reviewRequired: true, gapId,
+    };
+    expect(JsonSchemaNodeSchema.safeParse(enumNode(noGap)).success).toBe(false);
+  });
+});
+
 /* --------------------------------------------------------- JSON Schema subset */
 
 describe('the JSON Schema subset is closed', () => {
   it('accepts what response inference emits', () => {
     expect(JsonSchemaNodeSchema.safeParse({
       type: 'object',
-      properties: { id: { type: 'string', format: 'uuid' }, tags: { type: 'array', items: { type: 'string' } } },
+      properties: {
+        id: {
+          type: 'string',
+          format: 'uuid',
+          narrowing: { kind: 'format', format: 'uuid', matched: 12, total: 12 },
+        },
+        tags: { type: 'array', items: { type: 'string' } },
+      },
       required: ['id'],
       additionalProperties: false,
     }).success).toBe(true);
+  });
+
+  it('rejects a narrowing with no evidence recorded, at any depth', () => {
+    // Widening is free; narrowing is a claim. A bare `format` nested three levels
+    // down must fail exactly as it does at the root — the refinement lives inside
+    // the lazy object so it fires everywhere without anyone walking the tree.
+    const result = JsonSchemaNodeSchema.safeParse({
+      type: 'object',
+      properties: {
+        page: {
+          type: 'object',
+          properties: { items: { type: 'array', items: { type: 'string', format: 'uuid' } } },
+        },
+      },
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('records no evidence');
   });
 
   it('rejects keywords that cannot be inferred from examples', () => {
@@ -337,6 +488,7 @@ describe('cross-file drift is caught at load', () => {
       assets: load('assets/index.json'),
       endpoints: clone(endpoints),
       flows: {},
+      skippedControls: noControls(),
     };
     const result = CaptureModelSchema.safeParse(bad);
     expect(result.success).toBe(false);
@@ -355,6 +507,7 @@ describe('cross-file drift is caught at load', () => {
       assets: load('assets/index.json'),
       endpoints: clone(endpoints),
       flows: {},
+      skippedControls: noControls(),
     });
     expect(result.success).toBe(false); // …but not in place.
   });
@@ -373,6 +526,7 @@ describe('capture contexts (decision 0004)', () => {
     assets: load('assets/index.json'),
     endpoints: clone(endpoints),
     flows: {},
+    skippedControls: noControls(),
     stageReport: clone(report),
     ...overrides,
   });
@@ -450,6 +604,7 @@ describe('shared content pointers (decision 0004)', () => {
       assets: load('assets/index.json'),
       endpoints: clone(endpoints),
       flows: {},
+      skippedControls: noControls(),
       stageReport: clone(report),
     };
   };
@@ -552,6 +707,7 @@ describe('closed shadow roots are a permanent gap (§11)', () => {
       assets: load('assets/index.json'),
       endpoints: clone(endpoints),
       flows: {},
+      skippedControls: noControls(),
       // no stageReport
     };
     const result = CaptureModelSchema.safeParse(m);
@@ -575,6 +731,7 @@ describe('closed shadow roots are a permanent gap (§11)', () => {
       assets: load('assets/index.json'),
       endpoints: clone(endpoints),
       flows: {},
+      skippedControls: noControls(),
       stageReport: (() => {
         const r = clone(report) as Record<string, unknown[]>;
         r['gaps'] = [];
@@ -648,6 +805,7 @@ describe('coverage invariants gate the run (decision 0008)', () => {
     assets: load('assets/index.json'),
     endpoints: clone(endpoints),
     flows: {},
+    skippedControls: noControls(),
     stageReport: { ...clone(report), status },
     coverage: cov,
   });

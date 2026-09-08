@@ -51,6 +51,12 @@ export const CoverageObservedSchema = z.strictObject({
   axInteractiveRoles: z.int().nonnegative(),
   /** Elements the browser actually requested a subresource for. */
   subresourceRequests: z.int().nonnegative(),
+  /**
+   * Requests that went out carrying a `cookie` or `authorization` header,
+   * counted from raw header names on the wire — not from anything the endpoint
+   * inferencer produces.
+   */
+  harCredentialedRequests: z.int().nonnegative(),
 });
 
 /** What extraction produced from those inputs. */
@@ -74,6 +80,14 @@ export const CoverageExtractedSchema = z.strictObject({
   interactionCandidates: z.int().nonnegative(),
   assets: z.int().nonnegative(),
   a11yNodes: z.int().nonnegative(),
+  /**
+   * Endpoints whose auth verdict rests on at least one recorded observation.
+   *
+   * Compared for *equality* with `endpoints`, not for non-emptiness: decision
+   * 0008's lesson is that a total hides a partial loss, and this is precisely a
+   * per-endpoint drop.
+   */
+  endpointsWithAuthEvidence: z.int().nonnegative(),
 });
 
 export type CoverageObserved = z.infer<typeof CoverageObservedSchema>;
@@ -131,6 +145,21 @@ export const COVERAGE_INVARIANTS: readonly CoverageInvariant[] = [
     description: 'every HTTP method seen in XHR traffic must appear in some endpoint descriptor',
     vacuous: (o) => o.harDistinctMethods === 0,
     holds: (o, e) => e.endpointDistinctMethods >= o.harDistinctMethods,
+  },
+  {
+    // Added after decision 0010. Auth evidence was read from Playwright's
+    // `request.headers()`, which omits cookies — so "every observation carried a
+    // credential" could never fire and every endpoint the anonymous crawl never
+    // reached recorded no evidence at all. Silent, and invisible in the totals:
+    // the one endpoint an anonymous probe *had* refused looked fine.
+    //
+    // The observed side counts raw header names on the wire, sharing no code
+    // with the inferencer. The assertion is an equality, so losing one
+    // endpoint's evidence fails even while the others keep theirs.
+    id: 'credentialed-traffic-implies-auth-evidence',
+    description: 'when credentialed requests were seen, every endpoint must record the observations its auth verdict rests on',
+    vacuous: (o) => o.harCredentialedRequests === 0,
+    holds: (_o, e) => e.endpointsWithAuthEvidence === e.endpoints,
   },
   {
     id: 'tall-document-implies-scroll-steps',

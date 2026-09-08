@@ -23,7 +23,15 @@
     "confidence": 0.72,
     "rationale": "Standalone document with no shared shell; single table body."
   },
-  "requiresAuth": false,
+  "requiresAuth": "not-required",
+  "authEvidence": [
+    {
+      "kind": "anonymous-success",
+      "status": 200,
+      "observedCount": 1,
+      "contextId": "anon-desktop"
+    }
+  ],
   "unauthenticatedBehavior": {
     "kind": "accessible"
   },

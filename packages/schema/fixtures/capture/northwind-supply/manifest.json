@@ -179,14 +179,14 @@
     "toggle-product-details",
     "delete-account"
   ],
-  "contentHash": "9c2a10dd0327a441d6fc15e30a9b4139adcadc5a82183e6f9246084b236c6ff8",
+  "contentHash": "fef146693ca5f5fe06549a12c45428e1903834c1f08c4435a772104d79409ea3",
   "counts": {
     "contexts": 3,
     "routes": 8,
     "capturedRoutes": 7,
     "patterns": 5,
     "assets": 8,
-    "endpoints": 8,
+    "endpoints": 7,
     "flows": 3,
     "gaps": 6
   }

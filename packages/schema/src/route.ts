@@ -22,6 +22,7 @@ import {
 } from './primitives.js';
 import { artifactEnvelope } from './artifact.js';
 import { GapIdSchema } from './gap.js';
+import { AuthEvidenceSchema, AuthRequirementSchema, resolveAuthRequirement } from './auth.js';
 
 /**
  * A URL pattern with named parameters, e.g. `/product/:id` or `/blog/:year/:slug`.
@@ -69,9 +70,15 @@ export const TemplateGuessSchema = z.strictObject({
  * redirect-to-login behavior." Recorded as a field on the authenticated capture
  * rather than as a second route directory, so the auth axis does not join the
  * route id.
+ *
+ * `unknown` exists for the same reason `AuthRequirement` has three states: a
+ * route captured only under a signed-in context was never visited anonymously,
+ * and `accessible` is a claim about a request nobody made. Defaulting to it is
+ * the route-level form of the `requiresAuth: false` bug rung 3 found.
  */
 export const UnauthenticatedBehaviorSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('accessible') }),
+  z.strictObject({ kind: z.literal('unknown') }),
   z.strictObject({
     kind: z.literal('redirect'),
     to: z.string().min(1),
@@ -160,8 +167,14 @@ export const RouteMetaSchema = z.strictObject({
    * Whether the *route* is gated — a property of the site, not of the context it
    * happened to be captured under. `manifest.contexts[contextId].auth` says which
    * state the crawler was in.
+   *
+   * Derived from `authEvidence`, never asserted; the refinement below rejects a
+   * verdict the observations do not support. See `auth.ts` for why this is not a
+   * boolean.
    */
-  requiresAuth: z.boolean(),
+  requiresAuth: AuthRequirementSchema,
+  /** The observations `requiresAuth` is derived from. May be empty — that is `unknown`. */
+  authEvidence: z.array(AuthEvidenceSchema),
   unauthenticatedBehavior: UnauthenticatedBehaviorSchema,
 
   /** BFS depth from the entry URL (§6 crawl frontier). */
@@ -198,7 +211,40 @@ export const RouteMetaSchema = z.strictObject({
   content: RouteContentSchema,
 
   gapIds: z.array(GapIdSchema),
-});
+})
+  .superRefine((route, ctx) => {
+    const derived = resolveAuthRequirement(route.authEvidence);
+    if (derived !== route.requiresAuth) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['requiresAuth'],
+        message:
+          `claims '${route.requiresAuth}' but its evidence supports '${derived}'. ` +
+          'The verdict is derived from what was observed, not declared alongside it.',
+      });
+    }
+
+    // One-directional on purpose. `not-required` means an anonymous visit was
+    // observed to succeed, which is exactly `accessible`; the converse is not
+    // enforced, because pinning a five-variant union to the verdict is how a
+    // legitimate observation becomes unrepresentable.
+    if (route.requiresAuth === 'not-required' && route.unauthenticatedBehavior.kind !== 'accessible') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['unauthenticatedBehavior'],
+        message:
+          `a route with no auth requirement was reached anonymously, so its anonymous behaviour is 'accessible', not '${route.unauthenticatedBehavior.kind}'`,
+      });
+    }
+    if (route.unauthenticatedBehavior.kind === 'unknown' && route.requiresAuth !== 'unknown') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['unauthenticatedBehavior'],
+        message:
+          `anonymous behaviour is unknown, so the requirement cannot be '${route.requiresAuth}' — the two are settled by the same observation`,
+      });
+    }
+  });
 
 export type RouteContent = z.infer<typeof RouteContentSchema>;
 export type UrlPattern = z.infer<typeof UrlPatternSchema>;

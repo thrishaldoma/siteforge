@@ -7,7 +7,7 @@ capture/northwind-supply/
 ├── manifest.json
 ├── stage-report.json                    # 5 gaps, 2 warnings
 ├── assets/index.json                    # 8 assets, 30 typed references
-├── network/endpoints.json               # 8 endpoints, 1 stubbed
+├── network/endpoints.json               # 7 endpoints, all observed on the wire
 ├── flows/
 │   ├── add-mug-to-cart.trace.json       # scripted, 3 steps, 2 network calls
 │   ├── toggle-product-details.trace.json# probe, 1 step, JS-driven
@@ -75,9 +75,30 @@ consistent world and `src/fixtures.test.ts` asserts the joins:
   template, different computed styles (`grid` becomes `flex-column`, smaller type).
 - **home** — three `ProductCard` subtrees with varying leaf text, so §7.2's "≥3
   repeats" threshold is actually reachable.
-- **`/account/orders`** — `authState: authenticated`, `requiresAuth: true`, and
+- **`/account/orders`** — `authState: authenticated`, `requiresAuth: 'required'`
+  backed by an observed `anonymous-redirect-to-login`, and
   `unauthenticatedBehavior: redirect → /login`, which is §6's "the clone must
   reproduce the redirect-to-login behavior" without giving auth its own key axis.
+  The verdict is *derived* from that evidence, not declared beside it
+  (decision 0010).
+- **`POST /api/checkout`** — the third auth state. Every observation carried a
+  session and nothing anonymous was ever tried, so it is honestly `'unknown'`,
+  and §8 resolves that closed because it is a mutation. This shape is preserved
+  deliberately: it is what rung 3 actually produced, and what a boolean had to
+  record as `false`.
+- **`status` on `GET /api/account/orders`** — the only enum in the capture, and
+  the only field with ground truth behind it: the order-status `<select>` on
+  `/account/orders`. Note it has three members while two were observed — the
+  domain comes from the control, not the sample. `currency` sits next to it as
+  the counter-example: one observed value across three products, no control, so
+  it stays `string` with `examples`.
+- **`slug` on the product schema** — an identifier by *value overlap* with
+  `/api/products/:slug`'s path parameters, which is the observation §7.4 turns
+  into a foreign key.
+- **`flows/skipped-controls.json`** — the "Delete account" button §6 refused to
+  fire. Capture records the control; it does **not** record an endpoint, because
+  it never learned the URL. The bound endpoint lives in `fixtures/infer/`, and
+  `EndpointIndexSchema` rejects it if it strays back here (decision 0010).
 - **`/embeds/size-guide`** — a same-origin iframe recursed into as a nested route
   (§11). It inherits its parent's context and records the frame's content box
   (640×420) as `content.renderedSize`; `embeddedIn` lists both desktop product

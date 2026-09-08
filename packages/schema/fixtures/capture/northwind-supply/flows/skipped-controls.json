@@ -1,0 +1,24 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "skipped-control-index",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 320
+  },
+  "siteId": "northwind-supply",
+  "controls": [
+    {
+      "controlId": "ctl_9b5cba7d31dc",
+      "routeId": "account-orders--auth-desktop--i0",
+      "nodeId": "n_da219963007efd4a",
+      "role": "button",
+      "name": "Delete account",
+      "cause": "destructive-heuristic",
+      "matchedTerm": "delete",
+      "gapId": "gap_5e8cb74e1ae7",
+      "flowId": "delete-account"
+    }
+  ]
+}

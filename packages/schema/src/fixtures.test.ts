@@ -29,12 +29,15 @@ import {
   EndpointIndexSchema,
   FlowTraceSchema,
   RouteMetaSchema,
+  SkippedControlIndexSchema,
   StageReportSchema,
   StateDeltasDocumentSchema,
   StyleSheetDocumentSchema,
   VOLATILE_ARTIFACT_KEYS,
   canonicalizeStyleDeclarations,
   deriveRouteContentHash,
+  resolveAuthRequirement,
+  resolveAuthForCodegen,
   deriveA11yRef,
   deriveContentFingerprint,
   deriveNodeId,
@@ -42,6 +45,7 @@ import {
   deriveSemanticKey,
   deriveStyleId,
   isFrameworkGeneratedId,
+  type JsonSchemaNode,
   type DomDocument,
   type DomNode,
   type A11yNode,
@@ -51,12 +55,15 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'ca
 const read = (rel: string): unknown => JSON.parse(readFileSync(join(ROOT, rel), 'utf8'));
 
 const routeIds = readdirSync(join(ROOT, 'routes')).sort();
-const flowFiles = readdirSync(join(ROOT, 'flows')).sort();
+// `.trace.json` is the naming convention §5 gives flow traces; `flows/` also
+// holds `skipped-controls.json`, which is the record of probes that never ran.
+const flowFiles = readdirSync(join(ROOT, 'flows')).filter((f) => f.endsWith('.trace.json')).sort();
 
 const manifest = CaptureManifestSchema.parse(read('manifest.json'));
 const assets = AssetIndexSchema.parse(read('assets/index.json'));
 const endpoints = EndpointIndexSchema.parse(read('network/endpoints.json'));
 const report = StageReportSchema.parse(read('stage-report.json'));
+const skippedControls = SkippedControlIndexSchema.parse(read('flows/skipped-controls.json'));
 /**
  * A `shared` route stores only `meta.json` and points at the route that holds the
  * artifacts, so dom/styles/states are optional here by design.
@@ -190,6 +197,7 @@ describe('every fixture artifact parses', () => {
       assets,
       endpoints,
       flows: Object.fromEntries(flows),
+      skippedControls,
       stageReport: report,
       coverage: CoverageReportSchema.parse(read('coverage.json')),
     });
@@ -497,6 +505,19 @@ describe('referential integrity across files', () => {
     for (const f of flows.values()) f.gapIds.forEach((g) => referenced.add(g));
     for (const e of endpoints.endpoints) if (e.stub) referenced.add(e.stub.gapId);
     for (const o of endpoints.thirdPartyOrigins) if (o.gapId) referenced.add(o.gapId);
+    for (const c of skippedControls.controls) referenced.add(c.gapId);
+    // A narrowed field type is a claim, and §7 makes every claim review-required.
+    const walk = (n: JsonSchemaNode | null | undefined): void => {
+      if (!n) return;
+      if (n.narrowing && 'gapId' in n.narrowing) referenced.add(n.narrowing.gapId);
+      Object.values(n.properties ?? {}).forEach(walk);
+      walk(n.items);
+      (n.anyOf ?? []).forEach(walk);
+    };
+    for (const e of endpoints.endpoints) {
+      walk(e.requestBodySchema);
+      e.responses.forEach((r) => walk(r.schema));
+    }
     for (const gapId of referenced) {
       expect(defined.has(gapId), `${gapId} is referenced but never defined`).toBe(true);
     }
@@ -647,7 +668,7 @@ describe('route identity (decisions 0002, 0004)', () => {
     const byMode = new Map(manifest.contexts.map((c) => [c.contextId, c.auth.mode]));
     expect([...new Set(byMode.values())].sort()).toEqual(['anonymous', 'storage-state']);
     for (const r of routes.values()) {
-      if (r.meta.requiresAuth) expect(byMode.get(r.meta.contextId)).toBe('storage-state');
+      if (r.meta.requiresAuth === 'required') expect(byMode.get(r.meta.contextId)).toBe('storage-state');
     }
   });
 
@@ -715,14 +736,47 @@ describe('route identity (decisions 0002, 0004)', () => {
   });
 
   it('records the redirect-to-login behaviour for the auth-gated route (§6, M6)', () => {
-    const secured = [...routes.values()].filter((r) => r.meta.requiresAuth);
+    const secured = [...routes.values()].filter((r) => r.meta.requiresAuth === 'required');
     expect(secured.length).toBeGreaterThan(0);
     for (const r of secured) {
       expect(r.meta.unauthenticatedBehavior.kind).toBe('redirect');
     }
     for (const r of routes.values()) {
-      if (!r.meta.requiresAuth) expect(r.meta.unauthenticatedBehavior.kind).toBe('accessible');
+      if (r.meta.requiresAuth === 'not-required') {
+        expect(r.meta.unauthenticatedBehavior.kind).toBe('accessible');
+      }
     }
+  });
+
+  it('never records an auth verdict its evidence does not support (decision 0010)', () => {
+    // The schema derives the verdict, so this cannot fail while the fixture
+    // parses — which is the point. It is asserted anyway because the property is
+    // the whole reason the field stopped being a boolean, and a future refactor
+    // that reintroduces a declared verdict should break here first.
+    const anonContexts = new Set(
+      manifest.contexts.filter((c) => c.auth.mode === 'anonymous').map((c) => c.contextId),
+    );
+    for (const r of routes.values()) {
+      expect(r.meta.requiresAuth).toBe(resolveAuthRequirement(r.meta.authEvidence));
+      for (const e of r.meta.authEvidence) {
+        if ('contextId' in e) expect(anonContexts.has(e.contextId)).toBe(true);
+      }
+    }
+    for (const e of endpoints.endpoints) {
+      expect(e.requiresAuth).toBe(resolveAuthRequirement(e.authEvidence));
+    }
+  });
+
+  it('leaves an endpoint unknown rather than false when nothing anonymous was tried', () => {
+    // The rung-3 shape. Every observation carried a session and no anonymous
+    // attempt was made, so `false` would be an assertion nobody checked.
+    const checkout = endpoints.endpoints.find((e) => e.endpointId === 'post-api-checkout')!;
+    expect(checkout.requiresAuth).toBe('unknown');
+    expect(checkout.authEvidence.map((e) => e.kind)).toEqual(['all-observations-authenticated']);
+    // …and §8 resolves that closed, because it is a mutation.
+    expect(resolveAuthForCodegen(checkout.requiresAuth, checkout.isMutation)).toBe(true);
+    const products = endpoints.endpoints.find((e) => e.endpointId === 'get-api-products')!;
+    expect(resolveAuthForCodegen('unknown', products.isMutation)).toBe(false);
   });
 });
 
@@ -833,6 +887,7 @@ describe('idempotency and safety', () => {
       }
     }
     lines.push(`assets/index.json:${stable(read('assets/index.json'))}`);
+    lines.push(`flows/skipped-controls.json:${stable(read('flows/skipped-controls.json'))}`);
     lines.push(`network/endpoints.json:${stable(read('network/endpoints.json'))}`);
     for (const f of flowFiles) lines.push(`flows/${f}:${stable(read(`flows/${f}`))}`);
 

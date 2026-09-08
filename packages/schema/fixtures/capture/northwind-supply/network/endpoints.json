@@ -43,10 +43,25 @@
               "type": "object",
               "properties": {
                 "sku": {
-                  "type": "string"
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [],
+                    "evidence": [
+                      "unique-per-record"
+                    ]
+                  }
                 },
                 "slug": {
-                  "type": "string"
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [
+                      "get-api-products-id"
+                    ],
+                    "evidence": [
+                      "path-param-value-overlap",
+                      "unique-per-record"
+                    ]
+                  }
                 },
                 "title": {
                   "type": "string"
@@ -56,19 +71,31 @@
                 },
                 "currency": {
                   "type": "string",
-                  "enum": [
+                  "examples": [
                     "USD"
                   ]
                 },
                 "categoryId": {
-                  "type": "string"
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [],
+                    "evidence": [
+                      "identifier-name"
+                    ]
+                  }
                 },
                 "inStock": {
                   "type": "boolean"
                 },
                 "imageUrl": {
                   "type": "string",
-                  "format": "uri"
+                  "format": "uri",
+                  "narrowing": {
+                    "kind": "format",
+                    "format": "uri",
+                    "matched": 3,
+                    "total": 3
+                  }
                 }
               },
               "required": [
@@ -126,8 +153,19 @@
           "observedOn": "root--anon-desktop--i0"
         }
       ],
+      "discovery": {
+        "kind": "observed"
+      },
       "isMutation": false,
-      "requiresAuth": false,
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
       "observedCount": 1,
       "observedOn": [
         "root--anon-desktop--i0"
@@ -163,10 +201,25 @@
             "type": "object",
             "properties": {
               "sku": {
-                "type": "string"
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "unique-per-record"
+                  ]
+                }
               },
               "slug": {
-                "type": "string"
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [
+                    "get-api-products-id"
+                  ],
+                  "evidence": [
+                    "path-param-value-overlap",
+                    "unique-per-record"
+                  ]
+                }
               },
               "title": {
                 "type": "string"
@@ -176,19 +229,31 @@
               },
               "currency": {
                 "type": "string",
-                "enum": [
+                "examples": [
                   "USD"
                 ]
               },
               "categoryId": {
-                "type": "string"
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
               },
               "inStock": {
                 "type": "boolean"
               },
               "imageUrl": {
                 "type": "string",
-                "format": "uri"
+                "format": "uri",
+                "narrowing": {
+                  "kind": "format",
+                  "format": "uri",
+                  "matched": 3,
+                  "total": 3
+                }
               }
             },
             "required": [
@@ -257,8 +322,19 @@
           "observedOn": "product-id--anon-desktop--i1"
         }
       ],
+      "discovery": {
+        "kind": "observed"
+      },
       "isMutation": false,
-      "requiresAuth": false,
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 3,
+          "contextId": "anon-desktop"
+        }
+      ],
       "observedCount": 3,
       "observedOn": [
         "product-id--anon-desktop--i0",
@@ -292,7 +368,13 @@
             "type": "object",
             "properties": {
               "id": {
-                "type": "string"
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
               },
               "items": {
                 "type": "array",
@@ -300,7 +382,13 @@
                   "type": "object",
                   "properties": {
                     "sku": {
-                      "type": "string"
+                      "type": "string",
+                      "identifier": {
+                        "pathParamOf": [],
+                        "evidence": [
+                          "identifier-name"
+                        ]
+                      }
                     },
                     "quantity": {
                       "type": "integer"
@@ -350,8 +438,19 @@
           "observedOn": "product-id--anon-desktop--i0"
         }
       ],
+      "discovery": {
+        "kind": "observed"
+      },
       "isMutation": false,
-      "requiresAuth": false,
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 2,
+          "contextId": "anon-desktop"
+        }
+      ],
       "observedCount": 2,
       "observedOn": [
         "product-id--anon-desktop--i0"
@@ -403,7 +502,13 @@
             "type": "object",
             "properties": {
               "id": {
-                "type": "string"
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
               },
               "items": {
                 "type": "array",
@@ -411,7 +516,13 @@
                   "type": "object",
                   "properties": {
                     "sku": {
-                      "type": "string"
+                      "type": "string",
+                      "identifier": {
+                        "pathParamOf": [],
+                        "evidence": [
+                          "identifier-name"
+                        ]
+                      }
                     },
                     "quantity": {
                       "type": "integer"
@@ -461,8 +572,19 @@
           "observedOn": "product-id--anon-desktop--i0"
         }
       ],
+      "discovery": {
+        "kind": "observed"
+      },
       "isMutation": true,
-      "requiresAuth": false,
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 201,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
       "observedCount": 1,
       "observedOn": [
         "product-id--anon-desktop--i0"
@@ -509,11 +631,17 @@
             "type": "object",
             "properties": {
               "orderId": {
-                "type": "string"
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "unique-per-record"
+                  ]
+                }
               },
               "status": {
                 "type": "string",
-                "enum": [
+                "examples": [
                   "placed"
                 ]
               },
@@ -541,14 +669,24 @@
             "total": 30.5
           },
           "bytes": 53,
-          "observedOn": "product-id--anon-desktop--i0"
+          "observedOn": "account-orders--auth-desktop--i0"
         }
       ],
+      "discovery": {
+        "kind": "observed"
+      },
       "isMutation": true,
-      "requiresAuth": true,
+      "requiresAuth": "unknown",
+      "authEvidence": [
+        {
+          "kind": "all-observations-authenticated",
+          "header": "cookie",
+          "observedCount": 1
+        }
+      ],
       "observedCount": 1,
       "observedOn": [
-        "product-id--anon-desktop--i0"
+        "account-orders--auth-desktop--i0"
       ]
     },
     {
@@ -579,11 +717,23 @@
               "type": "object",
               "properties": {
                 "orderId": {
-                  "type": "string"
+                  "type": "string",
+                  "identifier": {
+                    "pathParamOf": [],
+                    "evidence": [
+                      "unique-per-record"
+                    ]
+                  }
                 },
                 "placedAt": {
                   "type": "string",
-                  "format": "date-time"
+                  "format": "date-time",
+                  "narrowing": {
+                    "kind": "format",
+                    "format": "date-time",
+                    "matched": 2,
+                    "total": 2
+                  }
                 },
                 "status": {
                   "type": "string",
@@ -591,7 +741,24 @@
                     "placed",
                     "shipped",
                     "delivered"
-                  ]
+                  ],
+                  "narrowing": {
+                    "kind": "enum",
+                    "distinctRecords": 2,
+                    "distinctValues": 2,
+                    "uiConstraint": {
+                      "control": "select",
+                      "routeId": "account-orders--auth-desktop--i0",
+                      "nodeId": "n_61e30790074e184f",
+                      "optionValues": [
+                        "placed",
+                        "shipped",
+                        "delivered"
+                      ]
+                    },
+                    "reviewRequired": true,
+                    "gapId": "gap_8d0068487e56"
+                  }
                 },
                 "total": {
                   "type": "number"
@@ -623,16 +790,27 @@
             {
               "orderId": "NW-10391",
               "placedAt": "2026-07-02T16:44:03.000Z",
-              "status": "delivered",
+              "status": "shipped",
               "total": 18
             }
           ],
-          "bytes": 189,
+          "bytes": 187,
           "observedOn": "account-orders--auth-desktop--i0"
         }
       ],
+      "discovery": {
+        "kind": "observed"
+      },
       "isMutation": false,
-      "requiresAuth": true,
+      "requiresAuth": "required",
+      "authEvidence": [
+        {
+          "kind": "unauthorized-status",
+          "status": 401,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
       "observedCount": 1,
       "observedOn": [
         "account-orders--auth-desktop--i0"
@@ -659,7 +837,13 @@
         "properties": {
           "email": {
             "type": "string",
-            "format": "email"
+            "format": "email",
+            "narrowing": {
+              "kind": "format",
+              "format": "email",
+              "matched": 2,
+              "total": 2
+            }
           },
           "password": {
             "type": "string"
@@ -680,7 +864,13 @@
             "type": "object",
             "properties": {
               "userId": {
-                "type": "string"
+                "type": "string",
+                "identifier": {
+                  "pathParamOf": [],
+                  "evidence": [
+                    "identifier-name"
+                  ]
+                }
               },
               "displayName": {
                 "type": "string"
@@ -721,45 +911,26 @@
             "displayName": "[REDACTED:NAME]"
           },
           "bytes": 53,
-          "observedOn": "account-orders--auth-desktop--i0"
+          "observedOn": "root--anon-desktop--i0"
         }
       ],
+      "discovery": {
+        "kind": "observed"
+      },
       "isMutation": true,
-      "requiresAuth": false,
+      "requiresAuth": "not-required",
+      "authEvidence": [
+        {
+          "kind": "anonymous-success",
+          "status": 200,
+          "observedCount": 1,
+          "contextId": "anon-desktop"
+        }
+      ],
       "observedCount": 2,
       "observedOn": [
-        "account-orders--auth-desktop--i0"
+        "root--anon-desktop--i0"
       ]
-    },
-    {
-      "endpointId": "delete-api-account",
-      "method": "DELETE",
-      "pathPattern": "/api/account",
-      "origin": "https://example.com",
-      "params": {
-        "path": [],
-        "query": [],
-        "headers": [
-          {
-            "name": "cookie",
-            "required": true,
-            "sensitive": true
-          }
-        ]
-      },
-      "requestBodySchema": null,
-      "responses": [],
-      "samples": [],
-      "isMutation": true,
-      "requiresAuth": true,
-      "observedCount": 0,
-      "observedOn": [
-        "account-orders--auth-desktop--i0"
-      ],
-      "stub": {
-        "reason": "insufficient-observations",
-        "gapId": "gap_06dfc30ddfa2"
-      }
     }
   ],
   "har": {

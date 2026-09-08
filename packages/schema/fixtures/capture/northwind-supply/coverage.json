@@ -25,22 +25,24 @@
     "harXhrEntries": 7,
     "harDistinctMethods": 2,
     "documentHeightRatio": 2.625,
-    "axInteractiveRoles": 49,
-    "subresourceRequests": 8
+    "axInteractiveRoles": 50,
+    "subresourceRequests": 8,
+    "harCredentialedRequests": 9
   },
   "extracted": {
-    "styleTableEntries": 193,
+    "styleTableEntries": 195,
     "statesCssomPseudo": 21,
     "statesCssomAttribute": 6,
     "statesProbed": 6,
     "statesScroll": 5,
     "fonts": 1,
-    "endpoints": 8,
-    "endpointDistinctMethods": 3,
+    "endpoints": 7,
+    "endpointDistinctMethods": 2,
     "scrollSteps": 14,
-    "interactionCandidates": 49,
+    "interactionCandidates": 50,
     "assets": 8,
-    "a11yNodes": 155
+    "endpointsWithAuthEvidence": 7,
+    "a11yNodes": 159
   },
   "invariants": [
     {
@@ -76,6 +78,12 @@
     {
       "id": "methods-imply-endpoint-methods",
       "description": "every HTTP method seen in XHR traffic must appear in some endpoint descriptor",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "credentialed-traffic-implies-auth-evidence",
+      "description": "when credentialed requests were seen, every endpoint must record the observations its auth verdict rests on",
       "vacuous": false,
       "holds": true
     },

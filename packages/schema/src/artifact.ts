@@ -69,6 +69,7 @@ export const ArtifactKindSchema = z.enum([
   'asset-index',
   'endpoint-index',
   'flow-trace',
+  'skipped-control-index',
   'stage-report',
   'coverage-report',
 ]);

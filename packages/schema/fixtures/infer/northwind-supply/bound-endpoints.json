@@ -1,0 +1,57 @@
+{
+  "note": "Infer-stage output. These endpoints were recovered by static analysis from controls capture refused to fire; EndpointIndexSchema rejects them, by design (decision 0010).",
+  "endpoints": [
+    {
+      "endpointId": "delete-api-account",
+      "method": "DELETE",
+      "pathPattern": "/api/account",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [],
+        "headers": [
+          {
+            "name": "cookie",
+            "required": true,
+            "sensitive": true
+          }
+        ]
+      },
+      "requestBodySchema": null,
+      "discovery": {
+        "kind": "bound-from-control",
+        "controlId": "ctl_9b5cba7d31dc",
+        "evidence": "fetch-literal",
+        "gapId": "gap_e0fb84bb13c7"
+      },
+      "responses": [],
+      "samples": [],
+      "isMutation": true,
+      "requiresAuth": "unknown",
+      "authEvidence": [],
+      "observedCount": 0,
+      "observedOn": [
+        "account-orders--auth-desktop--i0"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "gapId": "gap_e0fb84bb13c7",
+      "stage": "infer",
+      "category": "endpoint-synthesized",
+      "severity": "degraded",
+      "subject": {
+        "endpointId": "delete-api-account",
+        "routeId": "account-orders--auth-desktop--i0"
+      },
+      "summary": "DELETE /api/account bound from a skipped control; behaviour synthesized.",
+      "detail": "Capture skipped the \"Delete account\" button by §6’s destructive heuristic, so no request was ever issued and no response was ever seen. Infer recovered the URL from a fetch() literal in the captured source. The clone implements the endpoint fully against the mock store — deleting an account is free locally, and a control that does nothing is worse than one that works, because it teaches an agent the button is inert. The response shape is derived from the inferred data model, not observed, which is why this is a gap: if the real endpoint returns something else, a trajectory that reads the response will diverge.",
+      "stub": {
+        "kind": "synthesized-endpoint",
+        "endpointId": "delete-api-account",
+        "basis": "inferred-data-model"
+      }
+    }
+  ]
+}

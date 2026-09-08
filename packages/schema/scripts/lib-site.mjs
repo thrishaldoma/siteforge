@@ -33,7 +33,10 @@ export const GAP = {
   thirdPartyIframe: gap('third-party-iframe-reviews'),
   licensedFont: gap('licensed-font-sohne'),
   destructiveSkip: gap('destructive-delete-account'),
-  stubbedDelete: gap('stubbed-delete-account-endpoint'),
+  /** Infer-stage: the skipped control was bound to a URL and synthesized. */
+  boundDelete: gap('bound-delete-account-endpoint'),
+  /** A narrowed field type, review-required (§7). */
+  narrowedOrderStatus: gap('narrowed-order-status-enum'),
   thirdPartyOrigin: gap('third-party-origin-widgets'),
   closedShadowRoot: gap('closed-shadow-root-nw-rating'),
 };
@@ -48,6 +51,7 @@ const SANS = 'Söhne, ui-sans-serif, system-ui, sans-serif';
 
 /** Abridged computed styles. A real capture writes only properties that differ from initial. */
 const ST = {
+  optionStyle: { display: 'block', 'font-size': '14px' },
   html: { display: 'block', 'font-family': SANS, 'font-size': '16px', 'line-height': '24px', color: 'rgb(28, 25, 23)' },
   head: { display: 'none' },
   meta: { display: 'none' },
@@ -367,6 +371,23 @@ export function accountOrdersPage() {
           siteHeader(false),
           el('main', { style: ST.main, role: 'main' }, [
             el('h1', { style: ST.h1, role: 'heading', name: 'Your orders', level: 1 }, [txt('Your orders')]),
+            // The order-status filter. It is here so the fixture can demonstrate the
+            // one kind of evidence that actually settles a closed domain: the API's
+            // `status` field is an enum because this control constrains it, not
+            // because a thin sample happened to show three values (decision 0010).
+            el('select', {
+              attrs: { name: 'status', id: 'order-status-filter' },
+              style: { display: 'inline-block', 'font-size': '14px', 'padding-top': '6px', 'padding-bottom': '6px', 'padding-left': '8px', 'padding-right': '8px', 'border-top-left-radius': '6px', 'border-top-right-radius': '6px', 'border-bottom-right-radius': '6px', 'border-bottom-left-radius': '6px' },
+              role: 'combobox', name: 'Filter by status', box: box(32, 150, 180, 34),
+              interaction: {
+                discoveredBy: ['a11y-tree'], selector: 'select#order-status-filter',
+                eventTypes: ['change'], stateDeltaObserved: false,
+              },
+            }, [
+              el('option', { attrs: { value: 'placed' }, style: ST.optionStyle, role: 'option', name: 'Placed' }, [txt('Placed')]),
+              el('option', { attrs: { value: 'shipped' }, style: ST.optionStyle, role: 'option', name: 'Shipped' }, [txt('Shipped')]),
+              el('option', { attrs: { value: 'delivered' }, style: ST.optionStyle, role: 'option', name: 'Delivered' }, [txt('Delivered')]),
+            ]),
             el('table', { style: ST.table, role: 'table', name: 'Your orders' }, [
               el('thead', { style: ST.thead, role: 'rowgroup' }, [
                 el('tr', { style: ST.tr, role: 'row' }, ['Order', 'Placed', 'Status', 'Total'].map((h) =>

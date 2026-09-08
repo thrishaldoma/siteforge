@@ -23,7 +23,15 @@
     "confidence": 0.88,
     "rationale": "Shell plus a heading and two paragraphs; no data regions."
   },
-  "requiresAuth": false,
+  "requiresAuth": "not-required",
+  "authEvidence": [
+    {
+      "kind": "anonymous-success",
+      "status": 200,
+      "observedCount": 1,
+      "contextId": "anon-desktop"
+    }
+  ],
   "unauthenticatedBehavior": {
     "kind": "accessible"
   },

@@ -23,7 +23,15 @@
     "confidence": 0.81,
     "rationale": "Shares the shell with every route; body is a single data table."
   },
-  "requiresAuth": true,
+  "requiresAuth": "required",
+  "authEvidence": [
+    {
+      "kind": "anonymous-redirect-to-login",
+      "to": "/login",
+      "status": 302,
+      "contextId": "anon-desktop"
+    }
+  ],
   "unauthenticatedBehavior": {
     "kind": "redirect",
     "to": "/login",
@@ -38,7 +46,7 @@
   "embeddedIn": [],
   "content": {
     "kind": "captured",
-    "contentHash": "caa30d53b721e1fc04855b68a347110fdd5398bcdb1367a2a5483f4a0629dbda",
+    "contentHash": "e851840d9d8bc08e17155e8698f7418c241b2672eb57b8fcb34105f95829dc65",
     "renderedSize": {
       "width": 1280,
       "height": 800

@@ -16,6 +16,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { z } from 'zod';
 import * as S from '../dist/index.js';
 import { materialize, sha256, short16, short12 } from './lib-dom.mjs';
 import {
@@ -26,6 +27,14 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', 'fixtures', 'capture', SITE_ID);
+/**
+ * Infer-stage fixtures live outside `capture/` because the stage that produces a
+ * shape is part of the contract. Rung 3 found a stubbed `DELETE /api/account`
+ * sitting in the capture artifact — a shape §6 cannot produce, because it never
+ * fires the control and so never learns the URL. Keeping it there made the
+ * fixture a lie about who owns what (decision 0010).
+ */
+const OUT_INFER = join(HERE, '..', 'fixtures', 'infer', SITE_ID);
 
 const RUN_ID = `run_${short16('northwind-run-1')}`;
 const RECORDED_AT = '2026-09-08T11:24:07.000Z';
@@ -109,7 +118,7 @@ const stableHash = (artifact) => {
 };
 
 const written = [];
-function write(relPath, schema, value) {
+function write(relPath, schema, value, root = OUT) {
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     console.error(`\n✗ ${relPath} does not satisfy its schema:\n`);
@@ -117,20 +126,29 @@ function write(relPath, schema, value) {
     process.exit(1);
   }
   const json = `${JSON.stringify(value, null, 2)}\n`;
-  const abs = join(OUT, relPath);
+  const abs = join(root, relPath);
   mkdirSync(dirname(abs), { recursive: true });
   writeFileSync(abs, json);
-  written.push({ path: relPath, sha256: sha256(json), bytes: Buffer.byteLength(json), artifact: value });
+  if (root === OUT) {
+    written.push({ path: relPath, sha256: sha256(json), bytes: Buffer.byteLength(json), artifact: value });
+  }
   return value;
 }
 
 /* ------------------------------------------------------------------- routes */
 
+/**
+ * Every anonymous-context route in this fixture was reached anonymously and
+ * rendered, which is what settles `not-required`. The verdict is derived from
+ * this list, never written beside it — see `resolveAuthRequirement`.
+ */
+const ANON_OK = [{ kind: 'anonymous-success', status: 200, observedCount: 1, contextId: 'anon-desktop' }];
+
 const PAGES = [
   { routeId: ROUTE.home, page: homePage(), urlPattern: '/', url: `${ORIGIN}/`, pathParams: {},
     contextId: 'anon-desktop', instanceIndex: 0,
     template: { name: 'home', confidence: 0.94, rationale: 'Unique layout at the origin root; no sibling shares its structure.' },
-    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 0,
+    requiresAuth: 'not-required', authEvidence: ANON_OK, unauth: { kind: 'accessible' }, depth: 0,
     discoveredFrom: { kind: 'entry' }, scrollHeight: 2100, scrollSteps: 4,
     redirectChain: [{ from: 'http://example.com/', to: `${ORIGIN}/`, status: 301 }] },
 
@@ -138,7 +156,7 @@ const PAGES = [
     url: `${ORIGIN}/product/mug-blue-12oz`, pathParams: { id: 'mug-blue-12oz' },
     contextId: 'anon-desktop', instanceIndex: 0,
     template: { name: 'product-detail', confidence: 0.97, rationale: 'Structural hash matches instance i1 at 0.98 similarity.' },
-    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    requiresAuth: 'not-required', authEvidence: ANON_OK, unauth: { kind: 'accessible' }, depth: 1,
     discoveredFromRoute: ROUTE.home, discoveredFromHref: '/product/mug-blue-12oz',
     scrollHeight: 1400, scrollSteps: 2 },
 
@@ -146,7 +164,7 @@ const PAGES = [
     url: `${ORIGIN}/product/notebook-a5-dot`, pathParams: { id: 'notebook-a5-dot' },
     contextId: 'anon-desktop', instanceIndex: 1,
     template: { name: 'product-detail', confidence: 0.97, rationale: 'Structural hash matches instance i0 at 0.98 similarity.' },
-    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    requiresAuth: 'not-required', authEvidence: ANON_OK, unauth: { kind: 'accessible' }, depth: 1,
     discoveredFromRoute: ROUTE.home, discoveredFromHref: '/product/notebook-a5-dot',
     scrollHeight: 1400, scrollSteps: 2 },
 
@@ -154,7 +172,7 @@ const PAGES = [
     url: `${ORIGIN}/product/mug-blue-12oz`, pathParams: { id: 'mug-blue-12oz' },
     contextId: 'anon-mobile', instanceIndex: 0,
     template: { name: 'product-detail', confidence: 0.95, rationale: 'Same template as the desktop capture; layout differs by media query only.' },
-    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    requiresAuth: 'not-required', authEvidence: ANON_OK, unauth: { kind: 'accessible' }, depth: 1,
     discoveredFromRoute: ROUTE.home, discoveredFromHref: '/product/mug-blue-12oz',
     scrollHeight: 1900, scrollSteps: 3 },
 
@@ -162,7 +180,7 @@ const PAGES = [
     url: `${ORIGIN}/embeds/size-guide`, pathParams: {},
     contextId: 'anon-desktop', instanceIndex: 0,
     template: { name: 'embed-table', confidence: 0.72, rationale: 'Standalone document with no shared shell; single table body.' },
-    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 2,
+    requiresAuth: 'not-required', authEvidence: ANON_OK, unauth: { kind: 'accessible' }, depth: 2,
     embedded: true, scrollHeight: 420, scrollSteps: 1 },
 
   // Captured in two contexts. The page does not depend on the session, so the
@@ -170,21 +188,25 @@ const PAGES = [
   { routeId: ROUTE.aboutAnon, page: aboutPage(), urlPattern: '/about', url: `${ORIGIN}/about`, pathParams: {},
     contextId: 'anon-desktop', instanceIndex: 0,
     template: { name: 'prose', confidence: 0.88, rationale: 'Shell plus a heading and two paragraphs; no data regions.' },
-    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    requiresAuth: 'not-required', authEvidence: ANON_OK, unauth: { kind: 'accessible' }, depth: 1,
     discoveredFromRoute: ROUTE.home, discoveredFromHref: '/about',
     scrollHeight: 900, scrollSteps: 1 },
 
   { routeId: ROUTE.aboutAuth, page: aboutPage(), urlPattern: '/about', url: `${ORIGIN}/about`, pathParams: {},
     contextId: 'auth-desktop', instanceIndex: 0,
     template: { name: 'prose', confidence: 0.88, rationale: 'Shell plus a heading and two paragraphs; no data regions.' },
-    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    requiresAuth: 'not-required', authEvidence: ANON_OK, unauth: { kind: 'accessible' }, depth: 1,
     discoveredFromRoute: ROUTE.home, discoveredFromHref: '/about',
     scrollHeight: 900, scrollSteps: 1, sharedWith: ROUTE.aboutAnon },
 
   { routeId: ROUTE.orders, page: accountOrdersPage(), urlPattern: '/account/orders', url: `${ORIGIN}/account/orders`,
     pathParams: {}, contextId: 'auth-desktop', instanceIndex: 0,
     template: { name: 'account-table', confidence: 0.81, rationale: 'Shares the shell with every route; body is a single data table.' },
-    requiresAuth: true, unauth: { kind: 'redirect', to: '/login', status: 302 }, depth: 1,
+    requiresAuth: 'required',
+    // Observed, not assumed: the anonymous context requested this URL and was
+    // bounced. Without that probe the honest verdict would be 'unknown'.
+    authEvidence: [{ kind: 'anonymous-redirect-to-login', to: '/login', status: 302, contextId: 'anon-desktop' }],
+    unauth: { kind: 'redirect', to: '/login', status: 302 }, depth: 1,
     discoveredFromRoute: ROUTE.home, discoveredFromHref: null, scrollHeight: 900, scrollSteps: 1 },
 ];
 
@@ -380,7 +402,7 @@ for (const [routeId, r] of routes) {
     url: p.url, pathParams: p.pathParams, canonicalUrl: p.url, title: p.page.title,
     status: 200, redirectChain: p.redirectChain ?? [],
     templateGuess: p.template,
-    requiresAuth: p.requiresAuth, unauthenticatedBehavior: p.unauth,
+    requiresAuth: p.requiresAuth, authEvidence: p.authEvidence, unauthenticatedBehavior: p.unauth,
     depth: p.depth, discoveredFrom, embeddedIn: frameHosts,
     content, gapIds,
   });
@@ -450,17 +472,57 @@ write('assets/index.json', S.AssetIndexSchema, {
 
 /* ----------------------------------------------------------------- endpoints */
 
+// Resolved from the materialized DOM rather than hand-written, so a structural
+// change to the page cannot leave these pointing at nothing.
+const ordersRoute = routes.get(ROUTE.orders);
+const ORDER_STATUS_SELECT = findOne(ordersRoute.root, (n) => n.attributes?.id === 'order-status-filter').nodeId;
+const DELETE_ACCOUNT_BUTTON = findOne(ordersRoute.root, (n) => n.attributes?.class === 'btn btn-danger').nodeId;
+
+/* Auth evidence, by what was actually observed (decision 0010). */
+const anonOk = (status, observedCount) => [
+  { kind: 'anonymous-success', status, observedCount, contextId: 'anon-desktop' },
+];
+/** The rung-3 situation: the whole crawl was signed in, so nothing was refused. */
+const authOnly = (observedCount) => [
+  { kind: 'all-observations-authenticated', header: 'cookie', observedCount },
+];
+/** §6's anonymous re-issue of a GET, which is what settles `required`. */
+const anonRefused = (observedCount) => [
+  { kind: 'unauthorized-status', status: 401, observedCount, contextId: 'anon-desktop' },
+];
+const seenOnTheWire = { kind: 'observed' };
+
+/** A format is the cheap narrowing: it annotates a shape without closing a domain. */
+const fmt = (format, n) => ({
+  format,
+  narrowing: { kind: 'format', format, matched: n, total: n },
+});
+/** Entity identity. Widens rather than narrows, and feeds §7.4's foreign keys. */
+const idField = (evidence, pathParamOf = []) => ({
+  type: 'string',
+  identifier: { pathParamOf, evidence },
+});
+
 const productSchema = {
   type: 'object',
   properties: {
-    sku: { type: 'string' },
-    slug: { type: 'string' },
+    sku: idField(['unique-per-record']),
+    // The strong case: these values were observed as the path parameter of
+    // `/api/products/:slug`, so the field is a key by observation, not by name.
+    slug: idField(['path-param-value-overlap', 'unique-per-record'], ['get-api-products-id']),
     title: { type: 'string' },
     price: { type: 'number' },
-    currency: { type: 'string', enum: ['USD'] },
-    categoryId: { type: 'string' },
+    // Three products, all 'USD'. A human knows this domain is closed; capture
+    // does not, and nothing in the UI constrains it. `string` + examples carries
+    // the same information for seeding without making every other currency
+    // unrepresentable in the clone. Narrowing must be justified; widening is free.
+    currency: { type: 'string', examples: ['USD'] },
+    // §7.4's own example: `categoryId` plus a categories endpoint is a foreign
+    // key. No endpoint here ever took it as a path parameter, so the evidence is
+    // only the name — recorded as such, and weaker for it.
+    categoryId: idField(['identifier-name']),
     inStock: { type: 'boolean' },
-    imageUrl: { type: 'string', format: 'uri' },
+    imageUrl: { type: 'string', ...fmt('uri', 3) },
   },
   required: ['sku', 'slug', 'title', 'price', 'currency', 'categoryId', 'inStock'],
   additionalProperties: false,
@@ -484,7 +546,9 @@ const ENDPOINTS = [
     requestBodySchema: null,
     responses: [{ status: 200, contentType: 'application/json', observedCount: 1, schema: { type: 'array', items: productSchema } }],
     samples: [sample('products', 200, [productJson(PRODUCTS[0], 'drinkware'), productJson(PRODUCTS[1], 'paper'), productJson(PRODUCTS[2], 'paper', false)], ROUTE.home)],
-    isMutation: false, requiresAuth: false, observedCount: 1, observedOn: [ROUTE.home],
+    discovery: seenOnTheWire,
+    isMutation: false, requiresAuth: 'not-required', authEvidence: anonOk(200, 1),
+    observedCount: 1, observedOn: [ROUTE.home],
   },
   {
     endpointId: 'get-api-products-id', method: 'GET', pathPattern: '/api/products/:slug', origin: ORIGIN,
@@ -498,7 +562,9 @@ const ENDPOINTS = [
       sample('product-mug', 200, productJson(PRODUCTS[0], 'drinkware'), ROUTE.mug),
       sample('product-notebook', 200, productJson(PRODUCTS[1], 'paper'), ROUTE.notebook),
     ],
-    isMutation: false, requiresAuth: false, observedCount: 3, observedOn: [ROUTE.mug, ROUTE.notebook, ROUTE.mugMobile],
+    discovery: seenOnTheWire,
+    isMutation: false, requiresAuth: 'not-required', authEvidence: anonOk(200, 3),
+    observedCount: 3, observedOn: [ROUTE.mug, ROUTE.notebook, ROUTE.mugMobile],
   },
   {
     endpointId: 'get-api-cart', method: 'GET', pathPattern: '/api/cart', origin: ORIGIN,
@@ -508,15 +574,17 @@ const ENDPOINTS = [
       schema: {
         type: 'object',
         properties: {
-          id: { type: 'string' },
-          items: { type: 'array', items: { type: 'object', properties: { sku: { type: 'string' }, quantity: { type: 'integer' }, unitPrice: { type: 'number' } }, required: ['sku', 'quantity', 'unitPrice'], additionalProperties: false } },
+          id: idField(['identifier-name']),
+          items: { type: 'array', items: { type: 'object', properties: { sku: idField(['identifier-name']), quantity: { type: 'integer' }, unitPrice: { type: 'number' } }, required: ['sku', 'quantity', 'unitPrice'], additionalProperties: false } },
           subtotal: { type: 'number' },
         },
         required: ['id', 'items', 'subtotal'], additionalProperties: false,
       },
     }],
     samples: [sample('cart-two', 200, { id: 'cart_0001', items: [{ sku: 'MUG-BLUE-12OZ', quantity: 2, unitPrice: 18 }], subtotal: 36 }, ROUTE.mug)],
-    isMutation: false, requiresAuth: false, observedCount: 2, observedOn: [ROUTE.mug],
+    discovery: seenOnTheWire,
+    isMutation: false, requiresAuth: 'not-required', authEvidence: anonOk(200, 2),
+    observedCount: 2, observedOn: [ROUTE.mug],
   },
   {
     endpointId: 'post-api-cart-items', method: 'POST', pathPattern: '/api/cart/items', origin: ORIGIN,
@@ -524,55 +592,115 @@ const ENDPOINTS = [
     requestBodySchema: { type: 'object', properties: { sku: { type: 'string' }, quantity: { type: 'integer' } }, required: ['sku', 'quantity'], additionalProperties: false },
     responses: [{
       status: 201, contentType: 'application/json', observedCount: 1,
-      schema: { type: 'object', properties: { id: { type: 'string' }, items: { type: 'array', items: { type: 'object', properties: { sku: { type: 'string' }, quantity: { type: 'integer' }, unitPrice: { type: 'number' } }, required: ['sku', 'quantity', 'unitPrice'], additionalProperties: false } }, subtotal: { type: 'number' } }, required: ['id', 'items', 'subtotal'], additionalProperties: false },
+      schema: { type: 'object', properties: { id: idField(['identifier-name']), items: { type: 'array', items: { type: 'object', properties: { sku: idField(['identifier-name']), quantity: { type: 'integer' }, unitPrice: { type: 'number' } }, required: ['sku', 'quantity', 'unitPrice'], additionalProperties: false } }, subtotal: { type: 'number' } }, required: ['id', 'items', 'subtotal'], additionalProperties: false },
     }],
     samples: [sample('cart-add', 201, { id: 'cart_0001', items: [{ sku: 'MUG-BLUE-12OZ', quantity: 2, unitPrice: 18 }], subtotal: 36 }, ROUTE.mug)],
-    isMutation: true, requiresAuth: false, observedCount: 1, observedOn: [ROUTE.mug],
+    discovery: seenOnTheWire,
+    isMutation: true, requiresAuth: 'not-required', authEvidence: anonOk(201, 1),
+    observedCount: 1, observedOn: [ROUTE.mug],
   },
   {
     endpointId: 'post-api-checkout', method: 'POST', pathPattern: '/api/checkout', origin: ORIGIN,
     params: { path: [], query: [], headers: sessionHeader },
     requestBodySchema: { type: 'object', properties: { cartId: { type: 'string' }, paymentToken: { type: 'string' } }, required: ['cartId', 'paymentToken'], additionalProperties: false },
-    responses: [{ status: 201, contentType: 'application/json', observedCount: 1, schema: { type: 'object', properties: { orderId: { type: 'string' }, status: { type: 'string', enum: ['placed'] }, total: { type: 'number' } }, required: ['orderId', 'status', 'total'], additionalProperties: false } }],
-    samples: [sample('checkout', 201, { orderId: 'NW-10428', status: 'placed', total: 30.5 }, ROUTE.mug)],
-    isMutation: true, requiresAuth: true, observedCount: 1, observedOn: [ROUTE.mug],
+    // `status: 'placed'` was seen once. One observation is a sample, not a
+    // domain, and nothing in the UI constrains this field — so it stays a string.
+    responses: [{ status: 201, contentType: 'application/json', observedCount: 1, schema: { type: 'object', properties: { orderId: idField(['unique-per-record']), status: { type: 'string', examples: ['placed'] }, total: { type: 'number' } }, required: ['orderId', 'status', 'total'], additionalProperties: false } }],
+    samples: [sample('checkout', 201, { orderId: 'NW-10428', status: 'placed', total: 30.5 }, ROUTE.orders)],
+    discovery: seenOnTheWire,
+    // The rung-3 shape, preserved deliberately: every observation carried a
+    // session cookie and no anonymous attempt was ever made, so this is honestly
+    // `unknown`. It is a mutation, so §8 resolves it closed and gates it —
+    // `resolveAuthForCodegen('unknown', true) === true`.
+    isMutation: true, requiresAuth: 'unknown', authEvidence: authOnly(1),
+    observedCount: 1, observedOn: [ROUTE.orders],
   },
   {
     endpointId: 'get-api-account-orders', method: 'GET', pathPattern: '/api/account/orders', origin: ORIGIN,
     params: { path: [], query: [], headers: sessionHeader }, requestBodySchema: null,
     responses: [{
       status: 200, contentType: 'application/json', observedCount: 1,
-      schema: { type: 'array', items: { type: 'object', properties: { orderId: { type: 'string' }, placedAt: { type: 'string', format: 'date-time' }, status: { type: 'string', enum: ['placed', 'shipped', 'delivered'] }, total: { type: 'number' } }, required: ['orderId', 'placedAt', 'status', 'total'], additionalProperties: false } },
+      schema: { type: 'array', items: { type: 'object', properties: {
+        orderId: idField(['unique-per-record']),
+        placedAt: { type: 'string', ...fmt('date-time', 2) },
+        // The only enum in this capture, and the only one with ground truth
+        // behind it. Note that it has three members while two were observed:
+        // the domain comes from the control, not from the sample. That is the
+        // whole point — a field is an enum because the DOM constrains it.
+        status: {
+          type: 'string',
+          enum: ['placed', 'shipped', 'delivered'],
+          narrowing: {
+            kind: 'enum',
+            distinctRecords: 2,
+            distinctValues: 2,
+            uiConstraint: {
+              control: 'select',
+              routeId: ROUTE.orders,
+              nodeId: ORDER_STATUS_SELECT,
+              optionValues: ['placed', 'shipped', 'delivered'],
+            },
+            reviewRequired: true,
+            gapId: GAP.narrowedOrderStatus,
+          },
+        },
+        total: { type: 'number' },
+      }, required: ['orderId', 'placedAt', 'status', 'total'], additionalProperties: false } },
     }],
     samples: [sample('orders', 200, [
       { orderId: 'NW-10428', placedAt: '2026-08-14T09:02:11.000Z', status: 'delivered', total: 30.5 },
-      { orderId: 'NW-10391', placedAt: '2026-07-02T16:44:03.000Z', status: 'delivered', total: 18 },
+      { orderId: 'NW-10391', placedAt: '2026-07-02T16:44:03.000Z', status: 'shipped', total: 18 },
     ], ROUTE.orders)],
-    isMutation: false, requiresAuth: true, observedCount: 1, observedOn: [ROUTE.orders],
+    discovery: seenOnTheWire,
+    // §6 re-issues each distinct GET once anonymously, purely to learn this.
+    isMutation: false, requiresAuth: 'required', authEvidence: anonRefused(1),
+    observedCount: 1, observedOn: [ROUTE.orders],
   },
   {
     endpointId: 'post-api-auth-login', method: 'POST', pathPattern: '/api/auth/login', origin: ORIGIN,
     params: { path: [], query: [], headers: [{ name: 'content-type', required: true, sensitive: false }] },
-    requestBodySchema: { type: 'object', properties: { email: { type: 'string', format: 'email' }, password: { type: 'string' } }, required: ['email', 'password'], additionalProperties: false },
+    requestBodySchema: { type: 'object', properties: { email: { type: 'string', ...fmt('email', 2) }, password: { type: 'string' } }, required: ['email', 'password'], additionalProperties: false },
     responses: [
-      { status: 200, contentType: 'application/json', observedCount: 1, schema: { type: 'object', properties: { userId: { type: 'string' }, displayName: { type: 'string' } }, required: ['userId', 'displayName'], additionalProperties: false } },
+      { status: 200, contentType: 'application/json', observedCount: 1, schema: { type: 'object', properties: { userId: idField(['identifier-name']), displayName: { type: 'string' } }, required: ['userId', 'displayName'], additionalProperties: false } },
       { status: 401, contentType: 'application/json', observedCount: 1, schema: { type: 'object', properties: { error: { type: 'string' } }, required: ['error'], additionalProperties: false } },
     ],
     // Request bodies are never sampled for this endpoint: they carry credentials (§3.3).
-    samples: [sample('login-ok', 200, { userId: 'usr_0001', displayName: '[REDACTED:NAME]' }, ROUTE.orders)],
-    isMutation: true, requiresAuth: false, observedCount: 2, observedOn: [ROUTE.orders],
-  },
-  {
-    endpointId: 'delete-api-account', method: 'DELETE', pathPattern: '/api/account', origin: ORIGIN,
-    params: { path: [], query: [], headers: sessionHeader }, requestBodySchema: null,
-    // Never invoked: §6's destructive heuristic skipped it, so there is no observed
-    // response to infer a schema from. It becomes a 501 stub rather than a guess.
-    responses: [],
-    samples: [],
-    isMutation: true, requiresAuth: true, observedCount: 0, observedOn: [ROUTE.orders],
-    stub: { reason: 'insufficient-observations', gapId: GAP.stubbedDelete },
+    samples: [sample('login-ok', 200, { userId: 'usr_0001', displayName: '[REDACTED:NAME]' }, ROUTE.home)],
+    discovery: seenOnTheWire,
+    // This endpoint's 401 is a wrong password, not a refusal to serve an
+    // anonymous caller — so it is deliberately *not* recorded as
+    // `unauthorized-status`. Evidence is an act of interpretation by the
+    // producer; a 401 in the response list does not become evidence on its own.
+    isMutation: true, requiresAuth: 'not-required', authEvidence: anonOk(200, 1),
+    observedCount: 2, observedOn: [ROUTE.home],
   },
 ];
+
+/**
+ * The control §6 discovered and refused to fire.
+ *
+ * Capture stops here. It knows a "Delete account" button exists on
+ * /account/orders; it does not know what URL that button calls, because it never
+ * clicked it — and clicking destructive controls against a target we do not own
+ * is precisely what §6 declines to do. Binding this to `DELETE /api/account`
+ * means reading the handler out of the page source, which is §7's job, and the
+ * result lives in fixtures/infer/ (decision 0010).
+ */
+write('flows/skipped-controls.json', S.SkippedControlIndexSchema, {
+  ...envelope('skipped-control-index', 320),
+  siteId: SITE_ID,
+  controls: [{
+    controlId: `ctl_${sha256('northwind-control:delete-account').slice(0, 12)}`,
+    routeId: ROUTE.orders,
+    nodeId: DELETE_ACCOUNT_BUTTON,
+    role: 'button',
+    name: 'Delete account',
+    cause: 'destructive-heuristic',
+    matchedTerm: 'delete',
+    gapId: GAP.destructiveSkip,
+    flowId: 'delete-account',
+  }],
+});
 
 write('network/endpoints.json', S.EndpointIndexSchema, {
   // The HAR digest is volatile, so it rides in provenance (decision 0006).
@@ -740,15 +868,15 @@ const GAPS = [
     gapId: GAP.destructiveSkip, stage: 'capture', category: 'destructive-action-skipped', severity: 'degraded',
     subject: { routeId: ROUTE.orders, flowId: 'delete-account' },
     summary: 'Delete account was not probed (destructive heuristic matched "delete").',
-    detail: '§6 skips destructive actions unless --allow-destructive. The control was discovered via the a11y tree and CDP listeners, but never clicked, so its transition is unknown. The clone renders the button; activating it hits the stubbed endpoint.',
-    stub: { kind: 'omitted', detail: 'Button renders and is focusable; its click handler posts to the 501 stub.' },
+    detail: '§6 skips destructive actions unless --allow-destructive. The control was discovered via the a11y tree and CDP listeners, but never clicked against the target, so its transition is unknown. It is recorded in flows/skipped-controls.json with the role, name and node infer needs to bind it to a URL. The danger is to the target, not to a local mock: in the clone the endpoint is implemented fully against the store, because a dead button teaches an agent the control does nothing.',
+    stub: { kind: 'omitted', detail: 'Recorded as a skipped control; infer binds it and codegen implements it against the mock store.' },
   },
   {
-    gapId: GAP.stubbedDelete, stage: 'capture', category: 'endpoint-stubbed', severity: 'degraded',
-    subject: { endpointId: 'delete-api-account' },
-    summary: 'DELETE /api/account has no observed response; stubbed 501.',
-    detail: 'Because the destructive probe was skipped, no response was ever observed and no schema could be inferred. §7 requires a 501 stub rather than a plausible invention, so a trajectory that reaches it fails visibly instead of silently succeeding against fabricated data.',
-    stub: { kind: 'http-501', header: 'X-Siteforge-Stub: true', endpointId: 'delete-api-account' },
+    gapId: GAP.narrowedOrderStatus, stage: 'capture', category: 'inferred-type-narrowed', severity: 'info',
+    subject: { endpointId: 'get-api-account-orders', routeId: ROUTE.orders },
+    summary: 'order status narrowed to an enum on the evidence of a <select>.',
+    detail: 'The `status` field of GET /api/account/orders is typed as an enum of three values, though only two were observed. The evidence is the order-status <select> on /account/orders, whose options constrain the domain — the one kind of evidence that is actually ground truth about a closed set. Recorded here because every narrowing is review-required (§7): if that control is a display filter rather than the field\'s domain, this enum is wrong and the clone will reject valid states.',
+    stub: { kind: 'none' },
   },
   {
     gapId: GAP.thirdPartyOrigin, stage: 'capture', category: 'iframe-third-party', severity: 'info',
@@ -832,6 +960,8 @@ const observed = {
   axInteractiveRoles: capturedRoutes.reduce(
     (n, r) => n + findAll(r.root, (x) => x.interaction !== undefined).length, 0),
   subresourceRequests: FILES.length,
+  // Every API request in this capture rode a session cookie except the anonymous probes.
+  harCredentialedRequests: 9,
 };
 const extracted = {
   styleTableEntries: capturedRoutes.reduce((n, r) => n + r.table.length, 0),
@@ -847,6 +977,7 @@ const extracted = {
   scrollSteps: capturedRoutes.reduce((n, r) => n + r.spec.scrollSteps, 0),
   interactionCandidates: observed.axInteractiveRoles,
   assets: FILES.length,
+  endpointsWithAuthEvidence: ENDPOINTS.filter((e) => e.authEvidence.length > 0).length,
   a11yNodes: capturedRoutes.reduce(
     (n, r) => n + findAll(r.root, (x) => x.a11y !== undefined).length, 0),
 };
@@ -874,6 +1005,68 @@ write('stage-report.json', S.StageReportSchema, {
   ],
   gaps: GAPS,
 });
+
+/* --------------------------------------------------- infer-stage: bound endpoint */
+
+/**
+ * What §7 makes of the skipped control, and the reason 0009 §5 is closed.
+ *
+ * Capture recorded a "Delete account" button and stopped. Infer reads the
+ * captured source, finds the `fetch('/api/account', {method:'DELETE'})` behind
+ * that button, and can now name the endpoint — with `responses: []`, because
+ * nothing was ever observed, and with the capture gap carried through.
+ *
+ * What it is *not* is a 501. Destructive actions are dangerous against the
+ * target, not against a local mock: `DELETE /api/account` is free in the clone,
+ * so codegen implements it fully against the store and the gap records that the
+ * response shape came from §7.4's data model rather than the wire. A dead button
+ * teaches an agent the control does nothing, and "delete your account" is a
+ * legitimate §10 task with a clean state-based validator.
+ *
+ * `EndpointIndexSchema` — the capture artifact — rejects this shape outright.
+ * That rejection is the ownership rule, and `fixtures.test.ts` asserts it.
+ */
+const boundDeleteEndpoint = {
+  endpointId: 'delete-api-account',
+  method: 'DELETE',
+  pathPattern: '/api/account',
+  origin: ORIGIN,
+  params: { path: [], query: [], headers: sessionHeader },
+  requestBodySchema: null,
+  discovery: {
+    kind: 'bound-from-control',
+    controlId: `ctl_${sha256('northwind-control:delete-account').slice(0, 12)}`,
+    evidence: 'fetch-literal',
+    gapId: GAP.boundDelete,
+  },
+  responses: [],
+  samples: [],
+  isMutation: true,
+  // Never called, so never refused. Mutations resolve closed at codegen:
+  // `resolveAuthForCodegen('unknown', true) === true`.
+  requiresAuth: 'unknown',
+  authEvidence: [],
+  observedCount: 0,
+  observedOn: [ROUTE.orders],
+};
+
+const boundDeleteGap = {
+  gapId: GAP.boundDelete, stage: 'infer', category: 'endpoint-synthesized', severity: 'degraded',
+  subject: { endpointId: 'delete-api-account', routeId: ROUTE.orders },
+  summary: 'DELETE /api/account bound from a skipped control; behaviour synthesized.',
+  detail: 'Capture skipped the "Delete account" button by §6’s destructive heuristic, so no request was ever issued and no response was ever seen. Infer recovered the URL from a fetch() literal in the captured source. The clone implements the endpoint fully against the mock store — deleting an account is free locally, and a control that does nothing is worse than one that works, because it teaches an agent the button is inert. The response shape is derived from the inferred data model, not observed, which is why this is a gap: if the real endpoint returns something else, a trajectory that reads the response will diverge.',
+  stub: { kind: 'synthesized-endpoint', endpointId: 'delete-api-account', basis: 'inferred-data-model' },
+};
+
+write('bound-endpoints.json', z.strictObject({
+  note: z.string().min(1),
+  endpoints: z.array(S.EndpointDescriptorSchema).min(1),
+  gaps: z.array(S.GapSchema).min(1),
+}), {
+  note: 'Infer-stage output. These endpoints were recovered by static analysis from controls capture refused to fire; EndpointIndexSchema rejects them, by design (decision 0010).',
+  endpoints: [boundDeleteEndpoint],
+  gaps: [boundDeleteGap],
+}, OUT_INFER);
 
 console.log(`✓ fixtures written to ${OUT.replace(process.cwd() + '/', '')}`);
 console.log(`  ${written.length} artifacts · ${routes.size} routes · ${ENDPOINTS.length} endpoints · 3 flows · ${GAPS.length} gaps`);

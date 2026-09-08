@@ -109,6 +109,35 @@
             "level": 1
           },
           {
+            "ref": "a11y_666ef5af5127",
+            "role": "combobox",
+            "name": "Filter by status",
+            "nodeId": "n_61e30790074e184f",
+            "children": [
+              {
+                "ref": "a11y_f9f9723465d8",
+                "role": "option",
+                "name": "Placed",
+                "nodeId": "n_41ab4eb45098ec0b",
+                "children": []
+              },
+              {
+                "ref": "a11y_4d7013fb6698",
+                "role": "option",
+                "name": "Shipped",
+                "nodeId": "n_0b6b364b3921b19b",
+                "children": []
+              },
+              {
+                "ref": "a11y_e5ae06556c5b",
+                "role": "option",
+                "name": "Delivered",
+                "nodeId": "n_339097f2a10a1c9d",
+                "children": []
+              }
+            ]
+          },
+          {
             "ref": "a11y_20e97a385a3a",
             "role": "table",
             "name": "Your orders",

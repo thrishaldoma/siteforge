@@ -564,6 +564,122 @@
                   },
                   {
                     "nodeType": "element",
+                    "nodeId": "n_61e30790074e184f",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/main[1]/select[1]",
+                      "semanticKey": "0a489310f999b0d7",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "select",
+                    "attributes": {
+                      "name": "status",
+                      "id": "order-status-filter"
+                    },
+                    "styleId": "s_5b0c404b6bcb3876",
+                    "a11y": {
+                      "ref": "a11y_666ef5af5127",
+                      "role": "combobox",
+                      "name": "Filter by status"
+                    },
+                    "boundingBox": {
+                      "x": 32,
+                      "y": 150,
+                      "width": 180,
+                      "height": 34
+                    },
+                    "interaction": {
+                      "discoveredBy": [
+                        "a11y-tree"
+                      ],
+                      "selector": "select#order-status-filter",
+                      "eventTypes": [
+                        "change"
+                      ],
+                      "stateDeltaObserved": false
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_41ab4eb45098ec0b",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/select[1]/option[1]",
+                          "semanticKey": "5be343027112070a",
+                          "contentFingerprint": "e6c3abce64ffc372"
+                        },
+                        "tag": "option",
+                        "attributes": {
+                          "value": "placed"
+                        },
+                        "styleId": "s_2d17be8fcd291f5f",
+                        "a11y": {
+                          "ref": "a11y_f9f9723465d8",
+                          "role": "option",
+                          "name": "Placed"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_be651e7667318dc5",
+                            "value": "Placed"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_0b6b364b3921b19b",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/select[1]/option[2]",
+                          "semanticKey": "5be343027112070a",
+                          "contentFingerprint": "aa77242501ee69ea"
+                        },
+                        "tag": "option",
+                        "attributes": {
+                          "value": "shipped"
+                        },
+                        "styleId": "s_2d17be8fcd291f5f",
+                        "a11y": {
+                          "ref": "a11y_4d7013fb6698",
+                          "role": "option",
+                          "name": "Shipped"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_0f66130b29cf9be2",
+                            "value": "Shipped"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_339097f2a10a1c9d",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/select[1]/option[3]",
+                          "semanticKey": "5be343027112070a",
+                          "contentFingerprint": "9dbe7f9d6aa6b951"
+                        },
+                        "tag": "option",
+                        "attributes": {
+                          "value": "delivered"
+                        },
+                        "styleId": "s_2d17be8fcd291f5f",
+                        "a11y": {
+                          "ref": "a11y_e5ae06556c5b",
+                          "role": "option",
+                          "name": "Delivered"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_461ed73615b9da3d",
+                            "value": "Delivered"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
                     "nodeId": "n_c84abad2fb34de11",
                     "identity": {
                       "structuralPath": "html/body[1]/div[1]/main[1]/table[1]",
@@ -1129,6 +1245,6 @@
       }
     ]
   },
-  "nodeCount": 68,
-  "domHash": "a50bd8fd42f88c4f"
+  "nodeCount": 75,
+  "domHash": "1f8adacc82cc4ad8"
 }

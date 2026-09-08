@@ -29,7 +29,15 @@
     "confidence": 0.94,
     "rationale": "Unique layout at the origin root; no sibling shares its structure."
   },
-  "requiresAuth": false,
+  "requiresAuth": "not-required",
+  "authEvidence": [
+    {
+      "kind": "anonymous-success",
+      "status": 200,
+      "observedCount": 1,
+      "contextId": "anon-desktop"
+    }
+  ],
   "unauthenticatedBehavior": {
     "kind": "accessible"
   },

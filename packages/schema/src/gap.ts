@@ -58,6 +58,19 @@ export const GapCategorySchema = z.enum([
   'low-confidence-inference',
   'unknown-effect-type',
   'endpoint-stubbed',
+  /**
+   * A field's type was narrowed below what the observations strictly support —
+   * an enum or a const. Recorded so every narrowing reaches GAPS.md as a review
+   * item; §7's "write a gap, not an invention" applies to a guessed constraint
+   * exactly as it applies to a guessed endpoint.
+   */
+  'inferred-type-narrowed',
+  /**
+   * A control §6 refused to fire was bound to a URL by static analysis, and the
+   * endpoint's behaviour is synthesized from the inferred data model rather than
+   * observed. See `synthesized-endpoint` below.
+   */
+  'endpoint-synthesized',
   // §9
   'visual-gate-cap-reached',
   'behavioral-gate-cap-reached',
@@ -84,6 +97,22 @@ export const GapStubSchema = z.discriminatedUnion('kind', [
     originalFamily: z.string().min(1),
     substituteFamily: z.string().min(1),
     metricCompatible: z.boolean(),
+  }),
+  /**
+   * §6 never fired the control, so the endpoint's behaviour was never observed —
+   * but the clone implements it fully against the mock store anyway.
+   *
+   * Destructive actions are dangerous against the **target**, not against a local
+   * mock: `DELETE /api/account` is free in the clone. A dead button is worse than
+   * a working one, because it teaches an agent the control does nothing, and
+   * "delete your account" is a legitimate §10 task with a clean state-based
+   * validator. The response shape comes from §7.4's inferred data model, which is
+   * why this is a gap at all — the shape is derived, not seen.
+   */
+  z.strictObject({
+    kind: z.literal('synthesized-endpoint'),
+    endpointId: EndpointIdSchema,
+    basis: z.literal('inferred-data-model'),
   }),
   z.strictObject({ kind: z.literal('local-credential-stub'), detail: z.string().min(1) }),
   z.strictObject({ kind: z.literal('scripted-timeline'), frameCount: z.int().nonnegative() }),

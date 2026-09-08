@@ -14,8 +14,8 @@
   "outputs": [
     {
       "path": "routes/root--anon-desktop--i0/meta.json",
-      "sha256": "97f60428dbbf44e9891a7c8ebb2be42b0317067ded9af2dd18b14ca0b2ad0fd7",
-      "bytes": 2734
+      "sha256": "e03bc1721087ad1f8d3bde05c13ae517876beee0c7954a12998ccd577caa769d",
+      "bytes": 2896
     },
     {
       "path": "routes/root--anon-desktop--i0/dom.json",
@@ -34,8 +34,8 @@
     },
     {
       "path": "routes/product-id--anon-desktop--i0/meta.json",
-      "sha256": "84aa9fee79e3430d134c149c5a0a39100bdfeef57ad8aa5325cfec6cad9b3f0f",
-      "bytes": 2233
+      "sha256": "b9a16c4d132b275350643144c69ede1cd348ebf75eefd0d9640ac05a6235aa23",
+      "bytes": 2395
     },
     {
       "path": "routes/product-id--anon-desktop--i0/dom.json",
@@ -54,8 +54,8 @@
     },
     {
       "path": "routes/product-id--anon-desktop--i1/meta.json",
-      "sha256": "1ae84877b990f2d9dd3ea851ff01c1ced82c8c24988a23ec8346650c79653ca4",
-      "bytes": 2238
+      "sha256": "c1f812003535e06aa9160c329cbe5a3a7ad8ada80db0af6a856161279c28f766",
+      "bytes": 2400
     },
     {
       "path": "routes/product-id--anon-desktop--i1/dom.json",
@@ -74,8 +74,8 @@
     },
     {
       "path": "routes/product-id--anon-mobile--i0/meta.json",
-      "sha256": "7ce5e06d00f3ad4b5972442dd1dded7fc44d10b78ee55708f50c39e1676f7dc5",
-      "bytes": 2526
+      "sha256": "263158c0ad3d5a24e241ab56f85f89b71643ea99d4be703b730f899732c06031",
+      "bytes": 2688
     },
     {
       "path": "routes/product-id--anon-mobile--i0/dom.json",
@@ -94,8 +94,8 @@
     },
     {
       "path": "routes/embeds-size-guide--anon-desktop--i0/meta.json",
-      "sha256": "9b228ffedd0ed24e6f567b5d6325325ab1a83936f80f57f67ab518d72451e0eb",
-      "bytes": 2270
+      "sha256": "c75d715431bef9d66ef7cdaefb03d55af7b97b78ea07475115a29bc79c47857a",
+      "bytes": 2432
     },
     {
       "path": "routes/embeds-size-guide--anon-desktop--i0/dom.json",
@@ -114,8 +114,8 @@
     },
     {
       "path": "routes/about--anon-desktop--i0/meta.json",
-      "sha256": "78b660600fb27304750c608ba0195c47303c3c421b4bfe49b1ca5814c304f1b4",
-      "bytes": 1829
+      "sha256": "d55aa0433aa290fc37d51baa13d8bda0b82158eda06920e1196626b6b8b59e92",
+      "bytes": 1991
     },
     {
       "path": "routes/about--anon-desktop--i0/dom.json",
@@ -134,23 +134,23 @@
     },
     {
       "path": "routes/about--auth-desktop--i0/meta.json",
-      "sha256": "b62808577eeff643092508198e4fc26cd1887d177c4e3902670b53be07345da4",
-      "bytes": 1180
+      "sha256": "fd3512cdbe22b277a8460d0a20558f4779277c383f9f3ec08aaa4e955da7af8c",
+      "bytes": 1342
     },
     {
       "path": "routes/account-orders--auth-desktop--i0/meta.json",
-      "sha256": "541b30a16d960ede06f93af0b2630ad5bac577af7779cfbeab28224504657547",
-      "bytes": 1945
+      "sha256": "bbaaf8153ad1c6c143b56409759422203ab68434ef05d5e87c0bdf37a77bcc7c",
+      "bytes": 2110
     },
     {
       "path": "routes/account-orders--auth-desktop--i0/dom.json",
-      "sha256": "834a8b9bbab85549ed2af2c17e0ed3ff192876d50b01937db9281b83be42d224",
-      "bytes": 49580
+      "sha256": "33f4d9f8f74c5c9bba6581c153611b63069d15fa32a81e2b878d8465869be317",
+      "bytes": 54414
     },
     {
       "path": "routes/account-orders--auth-desktop--i0/styles.json",
-      "sha256": "11db32ab98e16687a4006a22fbc88ff4bd86d9c089d4a33ce01f1726c0024fee",
-      "bytes": 12209
+      "sha256": "3925cf04160c63c92052154d76c82243b042d71c095d82ba77135bc52347e3ea",
+      "bytes": 13028
     },
     {
       "path": "routes/account-orders--auth-desktop--i0/states.json",
@@ -163,9 +163,14 @@
       "bytes": 13282
     },
     {
+      "path": "flows/skipped-controls.json",
+      "sha256": "d7d8c67b58f322a74bb6a14c83028bb3f9636b1105d78704ff7ed75e271aee02",
+      "bytes": 607
+    },
+    {
       "path": "network/endpoints.json",
-      "sha256": "c74707aafc57df74227f3ed48fcd4130bf2d04afaf64874a5aa4a922b6dd441d",
-      "bytes": 19529
+      "sha256": "a98ea0a983c53c89e6d51d7a858abe2eaa662d6fa4a65d89555b7ace586ce6a3",
+      "bytes": 24617
     },
     {
       "path": "flows/add-mug-to-cart.trace.json",
@@ -179,18 +184,18 @@
     },
     {
       "path": "flows/delete-account.trace.json",
-      "sha256": "a5c2950fdf249ac42e6d636e6b707f0fae865a6a18aedce4fc5b2dbc842119be",
-      "bytes": 9132
+      "sha256": "8b54bf1dad391589fabf67b215a41ef97ddfe23fdee759b4eb336cf6b403c180",
+      "bytes": 10028
     },
     {
       "path": "manifest.json",
-      "sha256": "da816bbed663b12a54132f3e40912180023076def48607a7235b4ef9bf1e1cda",
+      "sha256": "6eac5fac58c350c24299530291635ec267654096e8070f007cbf373fc73f258c",
       "bytes": 4576
     },
     {
       "path": "coverage.json",
-      "sha256": "61ebe6c721868da7f343faac8e9b8eda3e8cc855aab687dc8d90fc3b3976601f",
-      "bytes": 2884
+      "sha256": "bb2c74d6b06f933afae80ccabe5238e760ae68809d59ef65fe0e9423d868136b",
+      "bytes": 3201
     }
   ],
   "warnings": [
@@ -247,26 +252,25 @@
         "flowId": "delete-account"
       },
       "summary": "Delete account was not probed (destructive heuristic matched \"delete\").",
-      "detail": "§6 skips destructive actions unless --allow-destructive. The control was discovered via the a11y tree and CDP listeners, but never clicked, so its transition is unknown. The clone renders the button; activating it hits the stubbed endpoint.",
+      "detail": "§6 skips destructive actions unless --allow-destructive. The control was discovered via the a11y tree and CDP listeners, but never clicked against the target, so its transition is unknown. It is recorded in flows/skipped-controls.json with the role, name and node infer needs to bind it to a URL. The danger is to the target, not to a local mock: in the clone the endpoint is implemented fully against the store, because a dead button teaches an agent the control does nothing.",
       "stub": {
         "kind": "omitted",
-        "detail": "Button renders and is focusable; its click handler posts to the 501 stub."
+        "detail": "Recorded as a skipped control; infer binds it and codegen implements it against the mock store."
       }
     },
     {
-      "gapId": "gap_06dfc30ddfa2",
+      "gapId": "gap_8d0068487e56",
       "stage": "capture",
-      "category": "endpoint-stubbed",
-      "severity": "degraded",
+      "category": "inferred-type-narrowed",
+      "severity": "info",
       "subject": {
-        "endpointId": "delete-api-account"
+        "endpointId": "get-api-account-orders",
+        "routeId": "account-orders--auth-desktop--i0"
       },
-      "summary": "DELETE /api/account has no observed response; stubbed 501.",
-      "detail": "Because the destructive probe was skipped, no response was ever observed and no schema could be inferred. §7 requires a 501 stub rather than a plausible invention, so a trajectory that reaches it fails visibly instead of silently succeeding against fabricated data.",
+      "summary": "order status narrowed to an enum on the evidence of a <select>.",
+      "detail": "The `status` field of GET /api/account/orders is typed as an enum of three values, though only two were observed. The evidence is the order-status <select> on /account/orders, whose options constrain the domain — the one kind of evidence that is actually ground truth about a closed set. Recorded here because every narrowing is review-required (§7): if that control is a display filter rather than the field's domain, this enum is wrong and the clone will reject valid states.",
       "stub": {
-        "kind": "http-501",
-        "header": "X-Siteforge-Stub: true",
-        "endpointId": "delete-api-account"
+        "kind": "none"
       }
     },
     {

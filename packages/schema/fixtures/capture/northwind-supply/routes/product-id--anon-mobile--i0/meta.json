@@ -25,7 +25,15 @@
     "confidence": 0.95,
     "rationale": "Same template as the desktop capture; layout differs by media query only."
   },
-  "requiresAuth": false,
+  "requiresAuth": "not-required",
+  "authEvidence": [
+    {
+      "kind": "anonymous-success",
+      "status": 200,
+      "observedCount": 1,
+      "contextId": "anon-desktop"
+    }
+  ],
   "unauthenticatedBehavior": {
     "kind": "accessible"
   },

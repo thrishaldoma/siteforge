@@ -23,6 +23,8 @@ import {
 import { artifactEnvelope } from './artifact.js';
 import { JsonSchemaNodeSchema } from './json-schema.js';
 import { GapIdSchema } from './gap.js';
+import { AuthEvidenceSchema, AuthRequirementSchema, resolveAuthRequirement } from './auth.js';
+import { ControlIdSchema } from './controls.js';
 
 export const ParamPrimitiveTypeSchema = z.enum([
   'string',
@@ -90,18 +92,51 @@ export const EndpointDescriptorSchema = z
   requestBodySchema: JsonSchemaNodeSchema.nullable(),
 
   /**
+   * How this endpoint came to be known.
+   *
+   * The stage that may write each kind is not the same, which is the whole point
+   * (decision 0010). Capture only ever observes: an endpoint it never called is
+   * an endpoint whose URL it never learned, because §6 refuses to fire the
+   * control. Binding a skipped control to a URL means reading `<form action>` or
+   * a `fetch()` literal out of the captured source, which is §7's job.
+   * `EndpointIndexSchema` — the capture artifact — rejects anything but
+   * `observed`, so the ownership rule is enforced rather than documented.
+   */
+  discovery: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('observed') }),
+    z.strictObject({
+      kind: z.literal('bound-from-control'),
+      /** The `SkippedControl` this endpoint was recovered from. */
+      controlId: ControlIdSchema,
+      evidence: z.enum(['form-action', 'fetch-literal']),
+      /** Carried forward from the skipped control; the behaviour is still unobserved. */
+      gapId: GapIdSchema,
+    }),
+  ]),
+
+  /**
    * Empty only for an endpoint that was discovered but never invoked — §6 skips
    * destructive actions, so `DELETE /api/account` can be known from a button
-   * without any response ever having been observed. Enforced below: no responses
-   * means a stub is mandatory.
+   * without any response ever having been observed. That endpoint can only come
+   * from infer (see `discovery`); enforced below, it must carry either a stub or
+   * a binding, so §7 stays unskippable either way.
    */
   responses: z.array(ResponseDescriptorSchema),
   samples: z.array(ResponseSampleSchema),
 
   /** §8: "Mutations actually mutate the store." Derived from method and observed effects. */
   isMutation: z.boolean(),
-  /** Observed to 401/403 without a session. Drives §8's session check. */
-  requiresAuth: z.boolean(),
+  /**
+   * Whether the endpoint is gated. Drives §8's session check and §10's auth tasks.
+   *
+   * Three-valued, and derived from `authEvidence` rather than declared: rung 3
+   * produced `false` for every endpoint of an app whose entire API is gated,
+   * simply because the anonymous context never got far enough to be refused. See
+   * `auth.ts`. Codegen resolves `unknown` with `resolveAuthForCodegen`.
+   */
+  requiresAuth: AuthRequirementSchema,
+  /** The observations `requiresAuth` is derived from. May be empty — that is `unknown`. */
+  authEvidence: z.array(AuthEvidenceSchema),
   /** Requests actually seen on the wire. Zero for a discovered-but-never-invoked endpoint. */
   observedCount: z.int().nonnegative(),
   observedOn: z.array(RouteIdSchema).min(1),
@@ -119,12 +154,37 @@ export const EndpointDescriptorSchema = z
     .optional(),
   })
   .superRefine((endpoint, ctx) => {
-    if (endpoint.responses.length === 0 && !endpoint.stub) {
+    const derivedAuth = resolveAuthRequirement(endpoint.authEvidence);
+    if (derivedAuth !== endpoint.requiresAuth) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['requiresAuth'],
+        message:
+          `claims '${endpoint.requiresAuth}' but its evidence supports '${derivedAuth}'. ` +
+          'The verdict is derived from what was observed, not declared alongside it.',
+      });
+    }
+
+    // An endpoint with nothing observed must name a gap by one route or the
+    // other: a `stub` (codegen answers 501) or a `bound-from-control` binding
+    // (codegen implements it against the store, and the gap records that the
+    // response shape was synthesized rather than seen). What it may never be is
+    // silent.
+    if (endpoint.responses.length === 0 && !endpoint.stub && endpoint.discovery.kind !== 'bound-from-control') {
       ctx.addIssue({
         code: 'custom',
         path: ['stub'],
         message:
-          'an endpoint with no observed response must be stubbed — §7: a stub is useful, a guess corrupts every trajectory that touches it',
+          'an endpoint with no observed response must be stubbed or bound to the control it came from — ' +
+          '§7: a stub is useful, a guess corrupts every trajectory that touches it',
+      });
+    }
+    if (endpoint.discovery.kind === 'bound-from-control' && endpoint.observedCount > 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['observedCount'],
+        message:
+          `bound from a control §6 never fired, yet claims ${endpoint.observedCount} observations`,
       });
     }
     // Samples exist to seed the mock store (§8); one that does not correspond to
@@ -141,6 +201,15 @@ export const EndpointDescriptorSchema = z
     });
   });
 
+/**
+ * The capture-stage endpoint artifact.
+ *
+ * Everything in it was seen on the wire. An endpoint recovered by static analysis
+ * is a legitimate `EndpointDescriptor` but not a legitimate *capture* output, and
+ * the check below is what keeps that honest. Rung 3 found the hand-written
+ * fixture claiming a shape its producing stage cannot produce — §13's schema
+ * drift, caught only because a real crawl was finally run beside it.
+ */
 export const EndpointIndexSchema = z.strictObject({
   ...artifactEnvelope('endpoint-index'),
   endpoints: z.array(EndpointDescriptorSchema),
@@ -168,6 +237,25 @@ export const EndpointIndexSchema = z.strictObject({
       gapId: GapIdSchema.optional(),
     }),
   ),
+}).superRefine((index, ctx) => {
+  index.endpoints.forEach((endpoint, i) => {
+    if (endpoint.discovery.kind !== 'observed') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endpoints', i, 'discovery', 'kind'],
+        message:
+          `${endpoint.endpointId} was ${endpoint.discovery.kind}, which capture cannot do — ` +
+          'it never fired the control, so it never learned the URL. Binding one is infer\'s job (decision 0010).',
+      });
+    }
+    if (endpoint.observedCount === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endpoints', i, 'observedCount'],
+        message: `${endpoint.endpointId} appears in a capture artifact with no observations`,
+      });
+    }
+  });
 });
 
 export type ParamPrimitiveType = z.infer<typeof ParamPrimitiveTypeSchema>;

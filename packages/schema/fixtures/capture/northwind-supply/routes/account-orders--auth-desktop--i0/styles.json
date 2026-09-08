@@ -223,6 +223,30 @@
       "refCount": 1
     },
     {
+      "styleId": "s_5b0c404b6bcb3876",
+      "declarations": {
+        "display": "inline-block",
+        "font-size": "14px",
+        "padding-top": "6px",
+        "padding-bottom": "6px",
+        "padding-left": "8px",
+        "padding-right": "8px",
+        "border-top-left-radius": "6px",
+        "border-top-right-radius": "6px",
+        "border-bottom-right-radius": "6px",
+        "border-bottom-left-radius": "6px"
+      },
+      "refCount": 1
+    },
+    {
+      "styleId": "s_2d17be8fcd291f5f",
+      "declarations": {
+        "display": "block",
+        "font-size": "14px"
+      },
+      "refCount": 3
+    },
+    {
       "styleId": "s_3726905419f76846",
       "declarations": {
         "display": "table",
@@ -388,6 +412,10 @@
     "n_0fcd1a657c752962": "s_2cda4f9633842617",
     "n_a2303eec6306b8b4": "s_02831320aafa7ece",
     "n_ba97a69d09bc6807": "s_916c9839bd2e24c7",
+    "n_61e30790074e184f": "s_5b0c404b6bcb3876",
+    "n_41ab4eb45098ec0b": "s_2d17be8fcd291f5f",
+    "n_0b6b364b3921b19b": "s_2d17be8fcd291f5f",
+    "n_339097f2a10a1c9d": "s_2d17be8fcd291f5f",
     "n_c84abad2fb34de11": "s_3726905419f76846",
     "n_495abe9107071578": "s_4dab2545a7ad9999",
     "n_af3f8bfc0a4f4a60": "s_d758d0e1c2e685ad",
@@ -430,8 +458,8 @@
     }
   ],
   "stats": {
-    "styledNodeCount": 48,
-    "distinctStyles": 29,
-    "dedupeRatio": 0.6042
+    "styledNodeCount": 52,
+    "distinctStyles": 31,
+    "dedupeRatio": 0.5962
   }
 }

@@ -25,7 +25,15 @@
     "confidence": 0.97,
     "rationale": "Structural hash matches instance i0 at 0.98 similarity."
   },
-  "requiresAuth": false,
+  "requiresAuth": "not-required",
+  "authEvidence": [
+    {
+      "kind": "anonymous-success",
+      "status": 200,
+      "observedCount": 1,
+      "contextId": "anon-desktop"
+    }
+  ],
   "unauthenticatedBehavior": {
     "kind": "accessible"
   },
