@@ -35,6 +35,7 @@ Do not attempt these. If a target site depends on them, record the gap and stub 
 - Defeating bot protection (Turnstile, hCaptcha, fingerprinting walls). Abort the run with a clear message.
 - Byte-identical HTML. We reproduce **rendered appearance** and **observable behavior**, not source.
 - Real payments, real emails, real third-party OAuth. These become deterministic local stubs.
+- Cross-browser capture. Capture depends on CDP (`Accessibility.getFullAXTree`, `DOMDebugger.getEventListeners`), so it is **Chromium-only**. Generated clones are ordinary web apps and are not restricted this way.
 
 ---
 
@@ -106,7 +107,7 @@ capture/<site-id>/
 Key schema rules:
 
 - **Deduplicate styles.** A page has thousands of nodes and maybe 200 distinct style objects. Store `styleId` references. This is the difference between a 400MB and a 4MB model.
-- **Stable node IDs.** Derive from a structural path hash (`tag[nth-of-type]/...`) plus a content fingerprint, not from DOM order alone. They must survive re-crawls so diffs are meaningful.
+- **Stable node IDs.** Derive from a structural path hash (`tag[nth-of-type]/...`) plus a **semantic key** of authored, data-independent attributes — not from DOM order alone, and not from content. Record the content fingerprint separately, so a diff can distinguish "node moved" from "node's content changed". Exclude classnames and framework-generated ids (React `useId`, Angular `ng-*`) from identity: both look stable and are not. They must survive re-crawls so diffs are meaningful.
 - **URL patterns, not URLs.** `/product/1183` and `/product/902` collapse to `/product/:id` with two observed instances. Route identity is the pattern.
 - **Response schemas, not just responses.** For each endpoint, infer a JSON Schema across all observed responses. That schema becomes the mock backend's data model.
 
@@ -126,7 +127,7 @@ Attach to `page.route('**/*')` and persist **every** response body content-addre
 
 ### Interaction discovery
 Build the candidate set from the union of:
-- The accessibility tree (`page.accessibility.snapshot()`) — roles `button`, `link`, `textbox`, `checkbox`, `combobox`, `tab`, `menuitem`.
+- The accessibility tree, via CDP `Accessibility.getFullAXTree` on the **same** CDP session already opened for `getEventListeners` below — roles `button`, `link`, `textbox`, `checkbox`, `combobox`, `tab`, `menuitem`. Each AX node carries a `backendDOMNodeId` that resolves to the live element, which is what maps a11y nodes onto captured `nodeId`s. Do not use `page.accessibility.snapshot()`: it was removed from Playwright, and its replacement (`locator.ariaSnapshot()`) returns YAML with no refs and no DOM mapping. Do not reimplement accname — it is a spec you do not want to own.
 - CDP `DOMDebugger.getEventListeners` on every element — catches divs with click handlers, which the a11y tree misses and which real sites are full of.
 - Elements matched by the pseudo-class rules extracted above.
 - `cursor: pointer` in computed style.
@@ -148,10 +149,10 @@ Skip destructive actions by heuristic (`delete`, `remove`, `cancel subscription`
 Step scroll in 0.5-viewport increments to the bottom. Screenshot each step. Diff consecutive DOM snapshots to detect lazy loading, infinite scroll, sticky/fixed transitions, and IntersectionObserver reveals. Record scroll-triggered state changes explicitly — they are a common source of "the clone looks right on load and wrong at 40% scroll."
 
 ### Authenticated capture
-`--auth` launches headful, navigates to the login route, and waits for the operator to sign in by hand (this handles MFA and CAPTCHA without any bypass logic). On success, persist `storageState`. Every subsequent run reuses it non-interactively until it expires. Crawl authenticated and anonymous route sets separately — record which routes require which, because the clone must reproduce the redirect-to-login behavior.
+`--auth` launches headful, navigates to the login route, and waits for the operator to sign in by hand (this handles MFA and CAPTCHA without any bypass logic). On success, persist `storageState`. Every subsequent run reuses it non-interactively until it expires. Anonymous and authenticated crawls are two **capture contexts** (`CaptureContext`, decision 0004), declared in the manifest and referenced by every `routeId` as `<pattern>--<context>--i<instance>`. Record which routes require auth (`RouteMeta.requiresAuth`) and what an anonymous visitor gets (`unauthenticatedBehavior`), because the clone must reproduce the redirect-to-login behavior.
 
 ### Crawl frontier
-BFS from the entry URL. Same-origin only. Respect `--max-routes` (default 40) and `--max-depth` (default 3). Deduplicate by URL pattern with a cap of 3 instances per pattern — three product pages is enough to infer the template, thirty is waste.
+BFS from the entry URL. Same-origin only. Respect `--max-depth` (default 3), and the context-aware budget (decision 0004): `--max-routes` (default 40) applies **per context**, the cap of 3 instances applies **per (pattern, context)**, and `maxRoutesTotal` is a global ceiling across every context — without it, declaring six contexts silently costs six times as much. Three product pages is enough to infer the template, thirty is waste.
 
 ---
 
@@ -239,14 +240,22 @@ type Observation = {
   a11yTree: A11yNode[];      // primary modality — most agents use this
   dom: string;               // sanitized outerHTML
   focusedRef: string | null;
-  actionSpace: ActionRef[];  // enumerated interactive elements w/ stable refs
+  actionSpace: ElementRef[];  // enumerated interactive elements w/ stable refs
 };
 ```
 
-Enumerate `actionSpace` from the live DOM using the same discovery logic as capture (§6). Reusing that code is what keeps the action space consistent between the capture-time spec and runtime.
+Enumerate `actionSpace` from the live DOM using the same discovery logic as capture (§6) — the *discovery* is shared, not the id scheme. Strip `data-sf-entity` from both `dom` and `a11yTree` before they reach the agent (decision 0007): the agent gets an opaque ref, the env holds the map. An agent that can read entity identity off the DOM learns a policy that cannot survive contact with the real site.
 
 ### Action space
-`click(ref)`, `type(ref, text)`, `select(ref, option)`, `scroll(dx, dy)`, `key(k)`, `goto(url)`, `back()`, `done()`. Refs are stable IDs from the a11y tree, not CSS selectors — selectors break the moment the agent causes a re-render.
+`click(ref)`, `type(ref, text)`, `select(ref, option)`, `scroll(dx, dy)`, `key(k)`, `goto(url)`, `back()`, `done()`.
+
+Refs are `elementRef`s, not CSS selectors and **not** capture-time `nodeId`s (decision 0007) — selectors break the moment the agent causes a re-render, and `nodeId` is positional within a homogeneous collection, so it would silently retarget rather than break. Resolution order:
+
+1. **Entity anchor** — `data-sf-entity="product:MUG-BLUE"`, emitted by codegen from the mock backend's own ids. `ref = hash(role | entityKey)`.
+2. **Accessible name + role**, where no entity backs the element.
+3. **Position** — last resort; the observation marks the ref `positional: true` so fragility is visible rather than assumed away.
+
+Refs are episode-scoped: re-enumerated every observation, never persisted across `reset`. An action against a ref whose element identity signature has changed returns a typed `StaleRefError`. **Never silently retarget** — a rejected action costs one step, a retargeted click writes a corrupted trajectory that reads as success.
 
 ### Adapters
 Ship a Gymnasium-compatible Python wrapper in `envkit/python/` and a TS client. Keep them thin: the HTTP control plane is the real interface, and adapters are conveniences.

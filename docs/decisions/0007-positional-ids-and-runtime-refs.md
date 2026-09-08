@@ -1,14 +1,14 @@
-# DECISION 0007 — homogeneous collections get positional-only ids
+# DECISION 0007 — split the identifier: `nodeId` for diffing, `elementRef` for acting
 
-**Status:** OPEN — needs an operator ruling before M5
-**Raised:** M0 review, after decision 0005 landed
-**Affects:** `identity.ts`, and §10's action space
+**Status:** RESOLVED (operator ruling). Contract fixed now; **implementation waits
+for M5**, when `envkit` exists.
+**Raised:** M0 review, after decision 0005
+**Affects:** `identity.ts` (unchanged), `envkit` (new type), §10
 
-## The observation
+## The finding
 
-Decision 0005 made `nodeId = hash(structuralPath | semanticKey)`, where
-`semanticKey` covers `tag`, `id`, `name`, `type`, `role`, and the `data-test*`
-hooks. Measured against the project's own fixture:
+Decision 0005 made `nodeId = hash(structuralPath | semanticKey)`. Measured
+against this project's own fixture:
 
 ```
 product cards on the home route: 3
@@ -19,55 +19,85 @@ product cards on the home route: 3
 add-to-cart buttons: 3   distinct semanticKeys: 1
 ```
 
-All three cards share one semantic key, so their nodeIds differ **only** by
-position. The content fingerprint does not disambiguate them either: an
-`<article>` has no *direct* text (its text lives in descendant `<h3>`/`<p>`), and
-`data-sku` is in neither `SEMANTIC_ATTRIBUTES` nor `CONTENT_ATTRIBUTES`.
+In a homogeneous collection every semantic attribute is empty, so nodeIds differ
+only by structural position — and the content fingerprint does not disambiguate
+either, because an `<article>` has no *direct* text and `data-sku` is in neither
+attribute list.
 
-This is not a regression from 0005 — under the previous scheme the discriminator
-would have been `class`, identical across all three. 0005 made it visible.
+## The ruling
 
-## Why it matters at M5, not at M1
+**Do not reconcile the two uses. Split the identifier.**
 
-For **diffing** (§5), positional ids are correct and desirable. The existing test
-`is stable under content churn and unstable under structural change` asserts
-exactly that, and should keep asserting it.
+### `nodeId` — unchanged
 
-For **addressing** (§10) they are dangerous. `deriveA11yRef(nodeId)` inherits the
-property, and §10's refs are what an agent acts on. Insert a product at the front
-of the grid: `article[1]`'s nodeId is unchanged, so the ref stays valid and now
-points at a *different product*. The agent adds the wrong item to the cart and
-nothing errors.
+Structural, content-free, positional in homogeneous collections. That is correct
+for §5's diffing and is not to be weakened to serve §10. The existing test
+asserting that a node's id moves with its position stays as an assertion of
+intent.
 
-§10 chose refs over selectors because "selectors break the moment the agent
-causes a re-render." A broken selector fails loudly. A positional ref that
-silently retargets is strictly worse than the thing §10 was avoiding.
+### `elementRef` — new, owned by `envkit`
 
-One function is currently serving two requirements that want opposite properties.
+§10's runtime refs become a separate type, **never derived from `nodeId`**.
 
-## Options
+Naming matters here: `a11yRef` keeps its current meaning — the *capture-time*
+identifier on `A11yNode`, `DomElementNode.a11y`, and recorded flow targets. The
+runtime thing is `elementRef`. Reusing one name for both is how the collision
+becomes a bug.
 
-**A — separate the two.** Keep `nodeId` positional for diffing; give runtime refs
-their own derivation that folds in the content fingerprint. Refs then break
-loudly when the thing under them changes, which is what §10 wants. Compatible
-with the shared-content pointer (identical renderings have identical
-fingerprints, so they still hash equal). Cost: two id schemes to keep straight,
-and a ref goes stale when a price ticker updates mid-episode.
+### Resolution order
 
-**B — disambiguate homogeneous collections.** Extend `SEMANTIC_ATTRIBUTES` with
-conventional item keys (`data-sku`, `data-id`, `data-key`, `data-item-id`,
-`data-index`). Cheap, and it fixes the common case — but it is site-convention
-guesswork, and a site that uses none of them is back to positional.
+1. **Entity anchor.** Codegen emits `data-sf-entity="product:MUG-BLUE"` from the
+   mock backend's own ids. `ref = hash(role | entityKey)`. Stable across
+   insertion, reorder, and re-render, because it is anchored to identity rather
+   than to position or presentation.
+2. **Accessible name + role**, where no entity backs the element.
+3. **Position** — last resort. The observation must mark the ref
+   `positional: true`, so fragility is visible to the agent and to anyone reading
+   a trajectory, rather than assumed away.
 
-**C — accept it, and constrain the environment.** Document that refs are
-positional within a collection and require the mock backend to keep collection
-order stable across a reset (§8 already seeds deterministically, so within one
-episode this may hold). Cheapest; pushes the risk into every task validator.
+## Two hard requirements
 
-## Recommendation
+### No leakage
 
-**A**, with **B** as a cheap additional signal. The failure mode C tolerates is a
-silently wrong trajectory, and §10's entire argument for state-based validators
-over DOM-based ones is that silent wrongness is the thing to design out.
+`data-sf-entity` must be stripped from **both** `Observation.dom` and
+`Observation.a11yTree`. The agent sees an opaque ref; the environment holds the
+map.
 
-Not implemented. This wants a ruling, not a default.
+If the agent can read entity identity off the DOM, the environment teaches a
+policy that cannot survive contact with the real site — the clone would be
+training against an affordance that exists nowhere else. This is the same failure
+§10 already names for validators ("DOM-based validators are how agents learn to
+fake success"), one level down.
+
+### Stale refs fail loudly
+
+- Refs are **episode-scoped**: re-enumerated on every observation, never
+  persisted across `reset`.
+- An action against a ref whose element identity signature has changed since the
+  observation that issued it returns a typed **`StaleRefError`**.
+- **Never silently retarget.**
+
+A rejected action costs the agent one step. A retargeted click writes a corrupted
+trajectory that reads as a success — it adds the wrong product to the cart and
+the validator may well pass. One is a cost; the other is poison in the training
+data.
+
+## Consequence to settle at M5
+
+`ActionSchema` currently lives in `packages/schema` and types its `ref` as
+`A11yRef`, shared between recorded flows and §10's action space. Under this
+ruling those are two different things:
+
+- **Recorded flows** keep `A11yRef` — they describe a capture, and the capture is
+  what it is.
+- **Runtime actions** take `elementRef`.
+
+§9 replays flows against the clone, so it must bridge the two. It can:
+`ActionTarget` already carries `role`, `name`, `nodeId`, and `selector`, which is
+enough to resolve a recorded step to a runtime ref by rule 2 — and once codegen
+emits entity anchors, by rule 1.
+
+§10's "Reusing that code is what keeps the action space consistent" still holds:
+what is shared is the *discovery logic* (§6's four candidate sources), not the id
+scheme. Worth restating in `envkit` when it is written, because the sentence
+reads as if it means the ids.
