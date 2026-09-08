@@ -60,6 +60,33 @@ describe('the catch taxonomy is linted, not remembered', () => {
     expect(lintCatches('x.mjs', src).violations).toEqual([]);
   });
 
+  // `.catch(fn)` is the same swallow in different syntax. Nine of them sat in
+  // the crawler while the linter reported every catch accounted for — including
+  // one in the anonymous auth probe, where a swallowed rejection left the
+  // endpoint `unknown` and §8 resolves `unknown` to not-required for reads.
+  it.each([
+    ['an empty promise catch', 'await p().catch(() => {});'],
+    ['a promise catch that logs', 'await p().catch((e) => log(e));'],
+    ['a promise catch returning a default', 'const x = await p().catch(() => null);'],
+  ])('flags %s', async (_label, src) => {
+    const { lintCatches } = await lint();
+    expect(lintCatches('x.mjs', src).violations).toHaveLength(1);
+  });
+
+  it.each([
+    ['a justified promise catch', '// operational: the page is already gone\nawait p().catch(() => {});'],
+    ['a promise catch that rethrows', 'await p().catch((e) => { rethrowIfDefect(e); });'],
+    ['a promise catch passed a handler', 'await p().catch(rethrowIfDefect);'],
+  ])('accepts %s', async (_label, src) => {
+    const { lintCatches } = await lint();
+    expect(lintCatches('x.mjs', src).violations).toEqual([]);
+  });
+
+  it('counts promise handlers as examined, so the rule cannot go vacuous', async () => {
+    const { lintCatches } = await lint();
+    expect(lintCatches('x.mjs', 'await p().catch(() => {});').examined).toBe(1);
+  });
+
   it('does not report the word catch inside a string or a comment', async () => {
     const { lintCatches } = await lint();
     const src = 'const msg = "bare catch { } is banned";\n// catch { } in a comment\n';

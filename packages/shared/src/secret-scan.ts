@@ -111,10 +111,29 @@ export function maskExcerpt(match: string): string {
 }
 
 /** Literal credentials from the environment (§3.3). Empty and short values are ignored. */
+const CREDENTIAL_VARS = ['SITEFORGE_USER', 'SITEFORGE_PASS'] as const;
+/** Below this a literal matches everywhere and the scan is noise, not signal. */
+export const MIN_SCANNABLE_LENGTH = 4;
+
 export function credentialLiterals(env: Record<string, string | undefined>): string[] {
-  return ['SITEFORGE_USER', 'SITEFORGE_PASS']
+  return CREDENTIAL_VARS
     .map((k) => env[k])
-    .filter((v): v is string => typeof v === 'string' && v.length >= 4);
+    .filter((v): v is string => typeof v === 'string' && v.length >= MIN_SCANNABLE_LENGTH);
+}
+
+/**
+ * Credentials that are set but too short for the scan to look for.
+ *
+ * The length floor is right — a two-character literal matches every artifact —
+ * but skipping silently is not. That is a gate quietly not covering something
+ * while still reporting clean, and the operator has no way to know. Named here
+ * so the run can say so instead.
+ */
+export function unscannableCredentials(env: Record<string, string | undefined>): string[] {
+  return CREDENTIAL_VARS.filter((k) => {
+    const v = env[k];
+    return typeof v === 'string' && v.length > 0 && v.length < MIN_SCANNABLE_LENGTH;
+  });
 }
 
 const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -163,8 +182,19 @@ export function scanText(
   return findings;
 }
 
-/** The one file allowed to hold a session, and the mode it has to have. */
-export const STORAGE_STATE_SUFFIX = 'auth/storage-state.json';
+/**
+ * The one file allowed to hold a session, and the mode it has to have.
+ *
+ * An exact root-relative path, not a suffix. It was `endsWith`, which exempted
+ * *any* file whose path happened to end that way — `routes/r0/auth/storage-state.json`
+ * would have skipped the content scan entirely. The common case (one file, at
+ * the tree root) chose the matcher; applied anywhere else it silently opens a
+ * hole in the strongest gate in the repo. Same bug class as the unanchored
+ * `.gitignore` pattern and the bare-name ignore list, now in §3.4.
+ */
+export const STORAGE_STATE_PATH = 'auth/storage-state.json';
+/** @deprecated Kept as the old name; prefer the exact-path constant above. */
+export const STORAGE_STATE_SUFFIX = STORAGE_STATE_PATH;
 export const STORAGE_STATE_MODE = 0o600;
 
 /**
@@ -181,8 +211,16 @@ export function scanCaptureTree(
     expect?: ScanExpectation;
   } = {},
 ): SecretFinding[] {
-  const literals = credentialLiterals(options.env ?? process.env);
+  const env = options.env ?? process.env;
+  const literals = credentialLiterals(env);
   const findings: SecretFinding[] = [];
+
+  for (const name of unscannableCredentials(env)) {
+    findings.push({
+      file: '(environment)', rule: 'credential-unscannable', offset: 0, excerpt: name,
+      detail: `${name} is set but shorter than ${MIN_SCANNABLE_LENGTH} characters, so the scan cannot look for it without matching everything. §3.4 is not covering this credential — lengthen it or the gate is reporting clean on a value it never searched for.`,
+    });
+  }
 
   // `tree` profile: ignores nothing, by construction. There is no parameter
   // through which this walk could be given a skip list — §3.4's gate must not
@@ -196,7 +234,7 @@ export function scanCaptureTree(
   for (const abs of files) {
     const rel = relative(root, abs).split(sep).join('/');
 
-    if (rel.endsWith(STORAGE_STATE_SUFFIX)) {
+    if (rel === STORAGE_STATE_PATH) {
       // Exempt from the content scan — this file exists to hold the session
       // (§5) — but it has to prove it is protected, reported into the same
       // list so one gate covers both.

@@ -11,7 +11,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { afterAll, describe, expect, it } from 'vitest';
-import { SECRET_RULES, scanCaptureTree, scanText, credentialLiterals } from './secret-scan.js';
+import {
+  MIN_SCANNABLE_LENGTH, SECRET_RULES, credentialLiterals, scanCaptureTree, scanText,
+  unscannableCredentials,
+} from './secret-scan.js';
 
 /**
  * One planted credential per rule. The completeness assertion at the bottom
@@ -194,5 +197,59 @@ describe('the §3.4 secret gate fails the run on a planted credential', () => {
   it('never prints the credential it found', () => {
     const findings = scanText('f.har', 'Cookie: sid=sess_00000001supersecrettail');
     for (const f of findings) expect(f.excerpt).not.toContain('supersecrettail');
+  });
+});
+
+describe('the exemption is a path, not a suffix', () => {
+  it('scans a storage-state.json that is not the one at the tree root', () => {
+    // `endsWith('auth/storage-state.json')` exempted this file from §3.4's
+    // content scan entirely. The common case — one file, at the root — chose
+    // the matcher; anywhere else it was a silent hole in the strongest gate
+    // here. Same bug class as the unanchored .gitignore pattern.
+    const root = makeTree();
+    mkdirSync(join(root, 'routes', 'root--anon-desktop--i0', 'auth'), { recursive: true });
+    writeFileSync(
+      join(root, 'routes', 'root--anon-desktop--i0', 'auth', 'storage-state.json'),
+      JSON.stringify({ headers: { Cookie: 'sid=sess_00000001' } }),
+    );
+    const findings = scanCaptureTree(root, { env: {} });
+    // On the *rule*, not the filename. Under the old suffix match this file was
+    // still reported — for its mode, not its contents — so asserting that it
+    // appeared at all passed either way. The claim is that the cookie inside it
+    // was read.
+    const nested = findings.filter(
+      (f) => f.file === 'routes/root--anon-desktop--i0/auth/storage-state.json',
+    );
+    expect(nested.map((f) => f.rule)).toContain('cookie-header');
+  });
+
+  it('still exempts the real one and checks its mode instead', () => {
+    const findings = scanCaptureTree(makeTree(), { env: {} });
+    expect(findings).toEqual([]);
+  });
+});
+
+describe('a credential the scan cannot look for is announced, not skipped', () => {
+  it('reports a credential shorter than the scannable floor', () => {
+    const short = 'x'.repeat(MIN_SCANNABLE_LENGTH - 1);
+    const findings = scanCaptureTree(makeTree(), { env: { SITEFORGE_PASS: short } });
+    expect(findings.map((f) => f.rule)).toContain('credential-unscannable');
+    // The finding must not itself carry the secret.
+    expect(JSON.stringify(findings)).not.toContain(short);
+  });
+
+  it('says nothing when every credential is long enough to search for', () => {
+    const findings = scanCaptureTree(makeTree(), { env: { SITEFORGE_PASS: 'long-enough-value' } });
+    expect(findings.map((f) => f.rule)).not.toContain('credential-unscannable');
+  });
+
+  it('names which variable is uncovered', () => {
+    expect(unscannableCredentials({ SITEFORGE_PASS: 'ab' })).toEqual(['SITEFORGE_PASS']);
+    expect(unscannableCredentials({ SITEFORGE_PASS: 'long-enough' })).toEqual([]);
+    expect(unscannableCredentials({})).toEqual([]);
+  });
+
+  it('does not treat a short credential as scannable', () => {
+    expect(credentialLiterals({ SITEFORGE_PASS: 'ab' })).toEqual([]);
   });
 });
