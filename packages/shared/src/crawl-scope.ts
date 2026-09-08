@@ -23,7 +23,13 @@ export interface NavigationDecision {
   origin: string | null;
 }
 
-const originOf = (url: string): string | null => {
+/**
+ * The origin of a URL, or null when it has none (opaque `data:`/`blob:`, or an
+ * unparseable string). Exported because "is this subresource foreign?" is now
+ * asked by the rung gates too, and a second implementation would be a second
+ * opinion about `new URL('data:…').origin` — which returns the *string* "null".
+ */
+export const originOf = (url: string): string | null => {
   let parsed: URL;
   try {
     parsed = new URL(url);
