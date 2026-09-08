@@ -39,6 +39,12 @@ export const CoverageObservedSchema = z.strictObject({
   cssFontFaceRules: z.int().nonnegative(),
   /** HAR entries whose resource type is xhr or fetch. */
   harXhrEntries: z.int().nonnegative(),
+  /**
+   * Distinct HTTP methods seen in that traffic, counted from the raw method
+   * strings — no path normalization, no grouping, nothing the endpoint inferencer
+   * touches. Deliberately crude so a bug in inference cannot move both sides.
+   */
+  harDistinctMethods: z.int().nonnegative(),
   /** `scrollHeight / viewportHeight`. Above 2 means the page genuinely scrolls. */
   documentHeightRatio: z.number().nonnegative(),
   /** AX nodes with an interactive role, from CDP. */
@@ -62,6 +68,8 @@ export const CoverageExtractedSchema = z.strictObject({
   statesScroll: z.int().nonnegative(),
   fonts: z.int().nonnegative(),
   endpoints: z.int().nonnegative(),
+  /** Distinct methods across the inferred endpoint descriptors. */
+  endpointDistinctMethods: z.int().nonnegative(),
   scrollSteps: z.int().nonnegative(),
   interactionCandidates: z.int().nonnegative(),
   assets: z.int().nonnegative(),
@@ -114,6 +122,15 @@ export const COVERAGE_INVARIANTS: readonly CoverageInvariant[] = [
     description: 'XHR or fetch traffic must produce endpoint descriptors',
     vacuous: (o) => o.harXhrEntries === 0,
     holds: (_o, e) => e.endpoints > 0,
+  },
+  {
+    // Added after rung 3: 29 XHR exchanges across GET, PATCH and POST collapsed
+    // into a single GET endpoint, and `xhr-implies-endpoints` was satisfied by
+    // that one. Non-emptiness is not enough when the loss is partial.
+    id: 'methods-imply-endpoint-methods',
+    description: 'every HTTP method seen in XHR traffic must appear in some endpoint descriptor',
+    vacuous: (o) => o.harDistinctMethods === 0,
+    holds: (o, e) => e.endpointDistinctMethods >= o.harDistinctMethods,
   },
   {
     id: 'tall-document-implies-scroll-steps',

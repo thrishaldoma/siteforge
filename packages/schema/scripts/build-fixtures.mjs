@@ -827,6 +827,7 @@ const observed = {
   cssAttributeStateRules: flat.filter((e) => e.source === 'cssom' && e.stateSelectors.some((x) => x.startsWith('['))).length,
   cssFontFaceRules: 1,
   harXhrEntries: ENDPOINTS.filter((e) => e.observedCount > 0).length,
+  harDistinctMethods: new Set(ENDPOINTS.filter((e) => e.observedCount > 0).map((e) => e.method)).size,
   documentHeightRatio: 2100 / 800,
   axInteractiveRoles: capturedRoutes.reduce(
     (n, r) => n + findAll(r.root, (x) => x.interaction !== undefined).length, 0),
@@ -842,6 +843,7 @@ const extracted = {
   statesScroll: flat.filter((e) => e.source === 'scroll').length,
   fonts: 1,
   endpoints: ENDPOINTS.length,
+  endpointDistinctMethods: new Set(ENDPOINTS.map((e) => e.method)).size,
   scrollSteps: capturedRoutes.reduce((n, r) => n + r.spec.scrollSteps, 0),
   interactionCandidates: observed.axInteractiveRoles,
   assets: FILES.length,

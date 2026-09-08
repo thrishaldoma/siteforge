@@ -23,6 +23,7 @@
     "cssAttributeStateRules": 6,
     "cssFontFaceRules": 1,
     "harXhrEntries": 7,
+    "harDistinctMethods": 2,
     "documentHeightRatio": 2.625,
     "axInteractiveRoles": 49,
     "subresourceRequests": 8
@@ -35,6 +36,7 @@
     "statesScroll": 5,
     "fonts": 1,
     "endpoints": 8,
+    "endpointDistinctMethods": 3,
     "scrollSteps": 14,
     "interactionCandidates": 49,
     "assets": 8,
@@ -68,6 +70,12 @@
     {
       "id": "xhr-implies-endpoints",
       "description": "XHR or fetch traffic must produce endpoint descriptors",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "methods-imply-endpoint-methods",
+      "description": "every HTTP method seen in XHR traffic must appear in some endpoint descriptor",
       "vacuous": false,
       "holds": true
     },

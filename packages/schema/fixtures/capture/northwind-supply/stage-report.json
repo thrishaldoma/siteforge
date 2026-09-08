@@ -189,8 +189,8 @@
     },
     {
       "path": "coverage.json",
-      "sha256": "cd695101a0f9013a0afc50bee84d580e08fddb681e1fad3711d37f6a0632f7aa",
-      "bytes": 2616
+      "sha256": "61ebe6c721868da7f343faac8e9b8eda3e8cc855aab687dc8d90fc3b3976601f",
+      "bytes": 2884
     }
   ],
   "warnings": [
