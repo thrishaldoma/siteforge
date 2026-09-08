@@ -542,6 +542,19 @@ describe('capture contexts (decision 0004)', () => {
     expect(CaptureModelSchema.safeParse(m).success).toBe(true);
   });
 
+  it('rejects a manifest whose gap count disagrees with the stage report', () => {
+    // Not hypothetical: narrowing gaps were appended after the manifest was
+    // built, so the manifest said 3 while the report carried 4, and nothing
+    // compared them. One run, one number.
+    const m = model() as Record<string, unknown>;
+    const report = (m as { stageReport?: { gaps: unknown[] } }).stageReport;
+    const manifest = (m as { manifest: { counts: { gaps: number } } }).manifest;
+    manifest.counts.gaps = (report?.gaps.length ?? 0) + 1;
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('One run, one number');
+  });
+
   it('rejects a route referencing a context the manifest never declared', () => {
     const m = model() as Record<string, Record<string, Record<string, Record<string, unknown>>>>;
     m['routes']![MUG]!['meta']!['contextId'] = 'anon-tablet';

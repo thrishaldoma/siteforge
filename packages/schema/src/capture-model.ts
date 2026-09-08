@@ -371,6 +371,26 @@ export const CaptureModelSchema = z
         });
       }
     } else {
+      /*
+       * The count is derived, so it is recomputed rather than trusted (§13).
+       *
+       * `manifest.counts.gaps` and `stageReport.gaps` are the same quantity
+       * written into two artifacts, and they disagreed: narrowing gaps were
+       * appended after the manifest was built, so the manifest said 3 while the
+       * report carried 4. Nothing compared them. The runners assert it at
+       * runtime too, but a schema that accepts an incoherent model is a schema
+       * that will be handed one.
+       */
+      if (model.manifest.counts.gaps !== model.stageReport.gaps.length) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['manifest', 'counts', 'gaps'],
+          message:
+            `manifest counts ${model.manifest.counts.gaps} gap(s) but the stage report carries ` +
+            `${model.stageReport.gaps.length}. One run, one number — a gap added after the ` +
+            'manifest was built is a gap the manifest does not know about.',
+        });
+      }
       const defined = new Set(model.stageReport.gaps.map((g) => g.gapId));
       for (const [gapId, where] of referencedGaps) {
         if (!defined.has(gapId)) {
