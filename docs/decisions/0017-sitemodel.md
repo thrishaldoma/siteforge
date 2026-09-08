@@ -186,6 +186,11 @@ Schema rules worth naming, each of them a §13 rule applied here:
 - **`stateVariants` is always empty in the fixture.** The capture has six CSSOM
   state rules; mapping them onto component nodes needs the nodeId join the
   builder does not do yet.
-- The scored-field paths are coarse for two categories: `field-type` and
-  `narrowing` both read `entities.fields`, which is true but does not say which
-  leaf. Sharpening them needs the grader to exist.
+- **The `tooCoarse` rule has a blind spot at depth 2, and it is occupied.**
+  `field-type` and `narrowing` both claim `entities.fields`, which is true and
+  which covers every leaf under it — the exact failure `tooCoarse` was written
+  to catch, passing because the rule triggers on segment count rather than on
+  whether a claim discriminates. Nothing computes a wrong number yet, because
+  the grader does not exist. But this is a live hole in the gate, not a
+  deferral: the rule should ask whether two claims that cover identical leaf
+  sets are both doing work, and it does not.

@@ -223,28 +223,36 @@ export const UNCLAIMED_BY_DESIGN: readonly ModelPath[] = [
  * repo: "A derived field carries the evidence it was derived from, and the
  * schema rejects a value that evidence does not support."
  *
- * It would be an easy loophole, so it is narrow: each entry names the claim it
- * justifies **and the refinement that reads it**. Evidence nothing enforces is
- * not evidence, it is a field with a story attached — and it would sail through
- * the backward check while carrying exactly the kind of unread weight that
- * check exists to find.
+ * It would be an easy loophole, and the cheapest way to silence an unclaimed
+ * leaf, so it is the narrowest of the three claimants: each entry names the
+ * claim it justifies, **the file and refinement that read it**, and a test
+ * opens that file and checks the refinement actually mentions the field.
+ * Evidence nothing enforces is not evidence, it is a field with a story
+ * attached — and a story is all `enforcedBy` would be if it stayed prose.
  */
 export interface EvidenceClaim {
   readonly path: ModelPath;
   readonly justifies: ModelPath;
-  readonly enforcedBy: string;
+  /** File under `site-model/` whose refinement reads it. Checked, not trusted. */
+  readonly file: string;
+  readonly schema: string;
+  readonly why: string;
 }
 
 export const EVIDENCE_REQUIRED: readonly EvidenceClaim[] = [
   {
     path: 'components.evidence',
     justifies: 'components.kind',
-    enforcedBy: 'ComponentSchema: §7.2 extracts a component from a subtree seen at least 3 times',
+    file: 'presentation.ts',
+    schema: 'ComponentSchema',
+    why: '§7.2 extracts a component from a subtree seen at least 3 times',
   },
   {
     path: 'components.derivedFrom',
     justifies: 'components.evidence',
-    enforcedBy: 'ComponentSchema: a component cannot claim more distinct routes than it names',
+    file: 'presentation.ts',
+    schema: 'ComponentSchema',
+    why: 'a component cannot claim more distinct routes than it names',
   },
 ];
 

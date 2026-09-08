@@ -189,10 +189,26 @@ describe('every need traces to the operating manual', () => {
     }
   });
 
-  it('names a refinement for every evidence field, since unchecked evidence is not evidence', () => {
+  /**
+   * The evidence claimant is the cheapest way to make an unclaimed leaf go
+   * away, which makes it the one place the backward gate could be talked out
+   * of. `enforcedBy` as prose would be a story; this opens the file it names
+   * and checks the refinement really reads the field.
+   *
+   * Crude on purpose — it looks for the field's last segment inside the
+   * `superRefine` body. A false pass needs someone to mention the name without
+   * using it, which is a different and much smaller lie than the one this stops.
+   */
+  it('checks that every evidence field is actually read by the refinement it names', () => {
+    expect(EVIDENCE_REQUIRED.length).toBeGreaterThan(0);
     for (const claim of EVIDENCE_REQUIRED) {
-      expect(claim.enforcedBy).toMatch(/Schema:/);
-      expect(claim.justifies.length).toBeGreaterThan(0);
+      const source = readFileSync(join(HERE, claim.file), 'utf8');
+      expect(source, `${claim.path}: ${claim.file} has no ${claim.schema}`).toContain(claim.schema);
+      const body = source.slice(source.indexOf(`export const ${claim.schema}`));
+      const refinement = body.slice(body.indexOf('.superRefine('));
+      const field = claim.path.split('.').pop()!;
+      expect(refinement.slice(0, 2000), `${claim.schema} never reads ${field}`).toContain(`.${field}`);
+      expect(claim.why.length).toBeGreaterThan(20);
     }
   });
 });
