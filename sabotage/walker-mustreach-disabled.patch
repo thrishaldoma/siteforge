@@ -17,27 +17,3 @@ index 8904e81..43c5a06 100644
    return shortfalls;
  }
  
-diff --git a/sabotage/walker-mustreach-disabled.patch b/sabotage/walker-mustreach-disabled.patch
-index ab2cacd..e69de29 100644
---- a/sabotage/walker-mustreach-disabled.patch
-+++ b/sabotage/walker-mustreach-disabled.patch
-@@ -1,19 +0,0 @@
--diff --git a/packages/shared/src/scan-walker.ts b/packages/shared/src/scan-walker.ts
--index 5e9e18a..bd61874 100644
----- a/packages/shared/src/scan-walker.ts
--+++ b/packages/shared/src/scan-walker.ts
--@@ -160,14 +160,6 @@ export function walkFiles(options: {
--       `walked ${found.length} file(s) under ${root}, expected at least ${expect.minFiles}. A scan that matches nothing reports success.`,
--     );
--   }
---  for (const prefix of expect.mustReach) {
---    const under = parsePathPattern(`/${prefix}/**`);
---    if (!rel.some((r) => matchPath(r, under))) {
---      throw new VacuousScanError(
---        `the walk never reached ${prefix}/ — it is either missing, ignored, or filtered out by the ${profile} profile.`,
---      );
---    }
---  }
-- 
--   return { files: found, relative: rel, root, profile };
-- }
