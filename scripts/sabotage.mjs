@@ -80,6 +80,12 @@ const SABOTAGES = [
     expect: 'never reached',
   },
   {
+    id: 'gap-count-not-recomputed',
+    bug: 'the model stops recomputing manifest.counts.gaps against the stage report',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: 'One run, one number',
+  },
+  {
     id: 'catch-lint-promise-rule-removed',
     bug: 'the catch linter stops examining .catch(fn) handlers',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
