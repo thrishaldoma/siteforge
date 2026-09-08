@@ -21,10 +21,11 @@
  * rather than after one.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { workspacePackageDirs } from './scan-walker.js';
 
 const REPO = (() => {
   let dir = dirname(fileURLToPath(import.meta.url));
@@ -35,24 +36,15 @@ const REPO = (() => {
 const git = (...args: string[]): string =>
   execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8' });
 
-/** Directories the workspace globs actually resolve to. */
-const workspacePackages = (): string[] => {
-  const yaml = readFileSync(join(REPO, 'pnpm-workspace.yaml'), 'utf8');
-  const globs = [...yaml.matchAll(/^\s*-\s*['"]?([^'"\n]+)['"]?\s*$/gm)]
-    .map((m) => m[1]!.trim())
-    .filter((g) => g.includes('/*'));
-  const dirs: string[] = [];
-  for (const glob of globs) {
-    const base = glob.replace(/\/\*+$/, '');
-    if (!existsSync(join(REPO, base))) continue;
-    for (const entry of readdirSync(join(REPO, base), { withFileTypes: true })) {
-      if (entry.isDirectory() && existsSync(join(REPO, base, entry.name, 'package.json'))) {
-        dirs.push(`${base}/${entry.name}`);
-      }
-    }
-  }
-  return dirs.sort();
-};
+/**
+ * Directories the workspace globs actually resolve to.
+ *
+ * From `@siteforge/shared`'s walker module, not a fourth private copy — this
+ * test's own `readdirSync` loop was one of the implementations the scanner
+ * walker consolidated.
+ */
+const workspacePackages = (): string[] =>
+  workspacePackageDirs(REPO, readFileSync(join(REPO, 'pnpm-workspace.yaml'), 'utf8'));
 
 const isRepo = existsSync(join(REPO, '.git'));
 

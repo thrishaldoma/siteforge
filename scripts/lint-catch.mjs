@@ -18,48 +18,18 @@
  * wants to swallow must say so with `// operational:` and a reason — visible in
  * review, and greppable.
  *
- * Reports the number of catches examined, and the caller asserts it is non-zero.
- * A linter whose glob silently misses `.mjs` finds nothing and passes, which is
- * the vacuous-check failure this repo has now been bitten by three times.
+ * The walk, its ignore rules and its non-vacuity guarantee come from
+ * `@siteforge/shared`'s `walkFiles` — this file owns the catch rule and nothing
+ * else. Its own private walker was the third instance of a bare directory name
+ * hiding `packages/capture/` from a tool in this repo.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
-
-/**
- * Skipped by *name*, so only names that can never be source belong here.
- *
- * This list held `capture` and `envs` on its first run, to skip the artifact and
- * output directories — and skipped `packages/capture/` entirely, the third time
- * an unanchored name match has hidden the crawler from a tool in this repo. The
- * artifact directories are at the repo root and the roots below never descend
- * into them, so naming them here bought nothing and cost everything.
- */
-const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git', 'fixtures']);
-const EXTENSIONS = ['.ts', '.mts', '.mjs', '.js'];
-
-/** Every source file under `roots`, recursively. */
-export function sourceFiles(repo, roots) {
-  const found = [];
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        if (!IGNORED_DIRS.has(entry.name)) walk(join(dir, entry.name));
-        continue;
-      }
-      if (EXTENSIONS.some((ext) => entry.name.endsWith(ext))) found.push(join(dir, entry.name));
-    }
-  };
-  for (const root of roots) {
-    const abs = join(repo, root);
-    try {
-      if (statSync(abs).isDirectory()) walk(abs);
-    } catch {
-      // operational: a root that does not exist is not a lint failure; the
-      // caller chooses the roots and one may legitimately be absent.
-    }
-  }
-  return found.sort();
-}
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
+// From dist, like every other script here (`packages/capture/scripts` imports
+// `../../schema/dist/index.js`). `pnpm lint` builds shared first; a linter that
+// cannot load its walker must fail loudly rather than fall back to one of its
+// own, which is the duplication this import exists to end.
+import { REPO_SOURCE_EXPECTATION, walkFiles } from '../packages/shared/dist/index.js';
 
 /**
  * Blank out strings, template literals and comments, keeping every offset.
@@ -159,10 +129,13 @@ export function lintCatches(file, text) {
   return { examined, violations };
 }
 
-export function lintRepo(repo, roots = ['packages', 'scripts']) {
+export function lintRepo(repo, roots = ['packages', 'scripts'], expect = REPO_SOURCE_EXPECTATION) {
   let examined = 0;
   const violations = [];
-  const files = sourceFiles(repo, roots);
+  // The walker enforces "this scan reached the directories it claims to cover".
+  // It used to be an assertion in this file's test, which is exactly the kind of
+  // per-scanner habit that gets forgotten by the next scanner.
+  const { files } = walkFiles({ root: repo, within: roots, profile: 'source', expect });
   for (const file of files) {
     const result = lintCatches(relative(repo, file), readFileSync(file, 'utf8'));
     examined += result.examined;

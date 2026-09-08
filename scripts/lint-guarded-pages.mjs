@@ -18,7 +18,8 @@
  */
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
-import { blankNonCode, sourceFiles } from './lint-catch.mjs';
+import { blankNonCode } from './lint-catch.mjs';
+import { REPO_SOURCE_EXPECTATION, walkFiles } from '../packages/shared/dist/index.js';
 
 /** Code that must appear soon after the page is created, on the same variable. */
 const GUARD = 'installEscapeGuards';
@@ -66,10 +67,10 @@ export function lintGuardedPages(file, text) {
   return { examined, violations };
 }
 
-export function lintRepo(repo, roots = ['packages', 'scripts']) {
+export function lintRepo(repo, roots = ['packages', 'scripts'], expect = REPO_SOURCE_EXPECTATION) {
   let examined = 0;
   const violations = [];
-  const files = sourceFiles(repo, roots);
+  const { files } = walkFiles({ root: repo, within: roots, profile: 'source', expect });
   for (const file of files) {
     const result = lintGuardedPages(relative(repo, file), readFileSync(file, 'utf8'));
     examined += result.examined;

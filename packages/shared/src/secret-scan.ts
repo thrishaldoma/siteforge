@@ -34,7 +34,8 @@
  *     contain a credential has to prove it is protected.
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
+import { CAPTURE_TREE_EXPECTATION, walkFiles, type ScanExpectation } from './scan-walker.js';
 import { join, relative, sep } from 'node:path';
 
 /** A credential-shaped thing found in an artifact. */
@@ -174,46 +175,50 @@ export const STORAGE_STATE_MODE = 0o600;
  */
 export function scanCaptureTree(
   root: string,
-  options: { env?: Record<string, string | undefined> } = {},
+  options: {
+    env?: Record<string, string | undefined>;
+    /** Overridable only to let unit tests scan a deliberately minimal tree. */
+    expect?: ScanExpectation;
+  } = {},
 ): SecretFinding[] {
   const literals = credentialLiterals(options.env ?? process.env);
   const findings: SecretFinding[] = [];
 
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const abs = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(abs);
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      const rel = relative(root, abs).split(sep).join('/');
+  // `tree` profile: ignores nothing, by construction. There is no parameter
+  // through which this walk could be given a skip list — §3.4's gate must not
+  // depend on somebody having thought of the artifact that leaked.
+  const { files } = walkFiles({
+    root,
+    profile: 'tree',
+    expect: options.expect ?? CAPTURE_TREE_EXPECTATION,
+  });
 
-      if (rel.endsWith(STORAGE_STATE_SUFFIX)) {
-        // Exempt from the content scan — this file exists to hold the session
-        // (§5) — but it has to prove it is protected, reported into the same
-        // list so one gate covers both.
-        const mode = statSync(abs).mode & 0o777;
-        if (mode !== STORAGE_STATE_MODE) {
-          findings.push({
-            file: rel,
-            rule: 'storage-state-mode',
-            offset: 0,
-            excerpt: `0${mode.toString(8)}`,
-            detail: `the one artifact allowed to hold a credential must be mode 0${STORAGE_STATE_MODE.toString(8)}`,
-          });
-        }
-        continue;
-      }
+  for (const abs of files) {
+    const rel = relative(root, abs).split(sep).join('/');
 
-      // latin1, never utf8: a utf8 decode mangles PNG tEXt chunks and every
-      // other binary container into replacement characters, so a scanner that
-      // uses it passes the binary case in silence.
-      findings.push(...scanText(rel, readFileSync(abs).toString('latin1'), literals));
+    if (rel.endsWith(STORAGE_STATE_SUFFIX)) {
+      // Exempt from the content scan — this file exists to hold the session
+      // (§5) — but it has to prove it is protected, reported into the same
+      // list so one gate covers both.
+      const mode = statSync(abs).mode & 0o777;
+      if (mode !== STORAGE_STATE_MODE) {
+        findings.push({
+          file: rel,
+          rule: 'storage-state-mode',
+          offset: 0,
+          excerpt: `0${mode.toString(8)}`,
+          detail: `the one artifact allowed to hold a credential must be mode 0${STORAGE_STATE_MODE.toString(8)}`,
+        });
+      }
+      continue;
     }
-  };
 
-  walk(root);
+    // latin1, never utf8: a utf8 decode mangles PNG tEXt chunks and every
+    // other binary container into replacement characters, so a scanner that
+    // uses it passes the binary case in silence.
+    findings.push(...scanText(rel, readFileSync(abs).toString('latin1'), literals));
+  }
+
   return findings.sort((a, b) => a.file.localeCompare(b.file) || a.offset - b.offset);
 }
 

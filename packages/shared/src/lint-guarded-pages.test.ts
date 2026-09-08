@@ -33,9 +33,10 @@ describe('every page the crawler opens carries the escape guards', () => {
   });
 
   it('actually examined pages — a linter that finds nothing also passes', async () => {
+    // The walk's own coverage is REPO_SOURCE_EXPECTATION's job (see
+    // scan-walker.test.ts). This is the page-specific half.
     const { lintRepo } = await lint();
-    const { examined, files } = lintRepo(REPO);
-    expect(files).toBeGreaterThan(20);
+    const { examined } = lintRepo(REPO);
     // rung 3 opens four; the spike and the origin-guard test one each.
     expect(examined).toBeGreaterThanOrEqual(6);
   });

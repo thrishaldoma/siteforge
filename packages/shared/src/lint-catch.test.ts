@@ -31,17 +31,14 @@ describe('the catch taxonomy is linted, not remembered', () => {
     expect(out).toContain('every catch distinguishes');
   });
 
-  it('actually examined catches — a glob that misses everything passes too', async () => {
+  it('examined a non-zero number of catches', async () => {
+    // That the *walk* reached packages/capture/scripts is no longer asserted
+    // here: it is REPO_SOURCE_EXPECTATION, enforced inside walkFiles and
+    // sabotage-tested in scan-walker.test.ts. This assertion is the part that
+    // is specific to this linter — files can be found and still not parsed.
     const { lintRepo } = await lint();
-    const { files, examined } = lintRepo(REPO);
-    expect(files).toBeGreaterThan(20);
+    const { examined } = lintRepo(REPO);
     expect(examined).toBeGreaterThan(10);
-  });
-
-  it('sees the capture package, which its own ignore list used to hide', async () => {
-    const { sourceFiles } = await lint();
-    const files: string[] = sourceFiles(REPO, ['packages']);
-    expect(files.some((f) => f.includes(`packages${'/'}capture${'/'}scripts`))).toBe(true);
   });
 
   it.each([
