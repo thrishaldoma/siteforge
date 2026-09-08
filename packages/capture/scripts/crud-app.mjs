@@ -74,6 +74,12 @@ h1{font-size:28px;margin:0 0 20px}
 .title{flex:1}
 .filters{display:flex;gap:8px;margin-bottom:16px}
 .filters .btn[aria-pressed="true"]{background:var(--ink)}
+/* A state rule keyed on data-flagged. The Flag button also adds a bookkeeping
+   class "flag" that NOTHING here styles, so probing is the only way to see it.
+   The two names collide as substrings: the old detector asked whether the
+   joined selector text contained "flag", which this rule satisfies, and
+   concluded the class was already explained by CSS. It was not. */
+.todo[data-flagged="true"] .title{color:#b91c1c;font-weight:600}
 /* The panel's open state exists ONLY as an inline style set by JS. No class is
    toggled and no selector describes it, so the CSSOM pass genuinely cannot see
    it and probing is genuinely the only way to find it.
@@ -141,6 +147,7 @@ async function load() {
       <input type="checkbox" \${t.done ? 'checked' : ''} aria-label="Mark \${t.title} done">
       <span class="title">\${t.title}</span>
       <button class="btn secondary" type="button" data-bump="\${t.id}">Bump</button>
+      <button class="btn secondary" type="button" data-flag="\${t.id}">Flag</button>
     </div>\`).join('');
 }
 document.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
@@ -157,6 +164,17 @@ listEl.addEventListener('click', async (e) => {
       body: JSON.stringify({ priority: 1 }),
     });
     load();
+    return;
+  }
+  // Sets a CSS-described attribute AND a class no selector mentions. Only the
+  // class makes this a probed state: the probe's attribute tracking covers
+  // inline styles alone, so a detector that mistakes "flag" for part of
+  // "data-flagged" records nothing here and reports success.
+  const flag = e.target.closest('[data-flag]');
+  if (flag) {
+    const row = flag.closest('[data-todo]');
+    row.setAttribute('data-flagged', 'true');
+    row.classList.add('flag');
     return;
   }
   const box = e.target.closest('input[type=checkbox]');

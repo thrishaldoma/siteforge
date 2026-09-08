@@ -20,6 +20,7 @@ import { chromium } from 'playwright';
 import * as S from '../../schema/dist/index.js';
 import {
   assertPermitted, boundaryGaps, installEscapeGuards, installOriginGuard, scrub, scrubDeep,
+  selectorClassNames,
   scrubHarFile, sha256,
 } from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
@@ -293,7 +294,7 @@ for (const context of CONTEXTS) {
  * disposable context. Two callers, one probe: a second copy would drift, and the
  * whole point of firing logout is that it is an *ordinary* observation.
  */
-async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomText, destructive = false }) {
+async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, destructive = false }) {
   let ran = false;
   // §6: each probe runs in a fresh page context, so probes cannot contaminate
   // each other's preconditions.
@@ -389,10 +390,17 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomT
     // be invisible: a class the stylesheet does not describe, or an inline
     // style with no class involved at all.
     if (changed) {
+      // Both of these were substring tests against token sets. `before.classes`
+      // is every class on the page joined together, so `.includes('open')` was
+      // satisfied by an existing `is-open` and the new class looked old; and
+      // `cssomText` is every selector joined together, so `.includes('open')`
+      // was satisfied by `.is-open` and the new class looked explained. Both
+      // errors point the same way: fewer states observed than really changed.
+      const beforeClasses = new Set(before.classes.split('|').join(' ').split(/\s+/).filter(Boolean));
       const newClasses = before.classes === after.classes ? [] :
-        after.classes.split('|').join(' ').split(/\s+/)
-          .filter((c) => c && !before.classes.includes(c));
-      const unexplainedClasses = newClasses.filter((c) => !cssomText.includes(c));
+        [...new Set(after.classes.split('|').join(' ').split(/\s+/).filter(Boolean))]
+          .filter((c) => !beforeClasses.has(c));
+      const unexplainedClasses = newClasses.filter((c) => !cssomClasses.has(c));
 
       const attributeChanges = [];
       const width = Math.min(before.inlineStyles.length, after.inlineStyles.length);
@@ -521,7 +529,7 @@ if (authRoute) {
 
   // Which classes/attributes any extracted CSSOM rule already explains. §6 uses
   // probing only for the changes CSS cannot express, so this decides what needs one.
-  const cssomText = record.captured.stateRules.map((r) => r.selector).join(' ');
+  const cssomClasses = selectorClassNames(record.captured.stateRules.map((r) => r.selector));
 
   const probeCtx = await guardContext(await browser.newContext({
     viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
@@ -541,7 +549,7 @@ if (authRoute) {
     // the server-side session, and cloning storageState clones the *cookie*,
     // not the session. Deferred to a pass that gets its own login (0011 §2).
     if (hazard === 'session-destructive') {
-      sessionDestructive.push({ routeId, record, candidate, flowId, label, cssomText, matchedTerm, destructive: true });
+      sessionDestructive.push({ routeId, record, candidate, flowId, label, cssomClasses, matchedTerm, destructive: true });
       continue;
     }
 
@@ -554,7 +562,7 @@ if (authRoute) {
     // preconditions" is about the browser, not the server. Firing it inline
     // took statesProbed from 1 to 0 the first time this ran.
     if (hazard === 'target-destructive' && !declined) {
-      deferredDestructive.push({ routeId, record, candidate, flowId, label, cssomText, destructive: true });
+      deferredDestructive.push({ routeId, record, candidate, flowId, label, cssomClasses, destructive: true });
       continue;
     }
 
@@ -609,7 +617,7 @@ if (authRoute) {
       continue;
     }
 
-    if (await runProbe({ ctx: probeCtx, routeId, record, candidate, flowId, label, cssomText })) probed += 1;
+    if (await runProbe({ ctx: probeCtx, routeId, record, candidate, flowId, label, cssomClasses })) probed += 1;
   }
   await probeCtx.close();
   const skipped = [...flows.values()].filter((f) => f.outcome === 'skipped').length;

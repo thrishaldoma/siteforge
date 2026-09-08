@@ -38,6 +38,37 @@ export const INTERACTIVE_ROLES = new Set([
 const STATE_PSEUDOS = new Set(S.STATE_PSEUDO_CLASSES);
 
 /**
+ * The class names a set of selectors actually uses, parsed.
+ *
+ * `cssomText.includes(className)` was still here: the whole stylesheet's
+ * selectors joined into one string, substring-tested to decide whether a class
+ * the probe observed is already explained by CSS. It is round 8's bug exactly —
+ * `.is-open` in the sheet "explains" a new class `open`, `[data-open]` explains
+ * it too, and `.opened` explains it as well. Every false match hides a
+ * JS-driven state the probe just found, which is the one thing probing is for.
+ *
+ * Parsing the selectors gives the class *tokens*, so `open` and `is-open` are
+ * two names rather than one substring of the other.
+ */
+export function selectorClassNames(selectorTexts) {
+  const names = new Set();
+  for (const text of selectorTexts) {
+    try {
+      selectorParser((sel) => {
+        sel.walkClasses((node) => names.add(node.value));
+      }).processSync(text, { lossless: false });
+    } catch {
+      // operational: postcss throws on selectors real stylesheets contain.
+      // A selector that will not parse contributes no class names, which makes
+      // a class look *unexplained* rather than explained — the safe direction:
+      // an extra probed state is noise, a missed one is a silent drop.
+      continue;
+    }
+  }
+  return names;
+}
+
+/**
  * Classify one selector by **parsing** it.
  *
  * Returns the state markers it carries and the base selector to match against
