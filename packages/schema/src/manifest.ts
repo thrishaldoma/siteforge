@@ -20,7 +20,11 @@ import {
   SiteIdSchema,
 } from './primitives.js';
 import { artifactEnvelope } from './artifact.js';
-import { CaptureContextSchema } from './context.js';
+import {
+  CaptureContextSchema,
+  SessionProbePolicySchema,
+  deriveSessionProbePolicy,
+} from './context.js';
 import { UrlPatternSchema } from './route.js';
 
 /**
@@ -90,7 +94,23 @@ export const CrawlBudgetSchema = z
 export const CrawlConfigSchema = z.strictObject({
   budget: CrawlBudgetSchema,
   sameOriginOnly: z.literal(true),
+  /**
+   * Origins a main-frame navigation may reach. The crawl's own origin, plus
+   * anything the operator explicitly permitted (an auth provider, say).
+   *
+   * One source, consulted at one chokepoint. §6 was "same-origin only" enforced
+   * by not *following* off-origin links, which a control calling `window.open`
+   * walks straight past — and §6's behaviour probing clicks controls.
+   */
+  allowedOrigins: z.array(z.string().min(1)).min(1),
   allowDestructive: z.boolean(),
+  /**
+   * Whether session-destructive probing was unrestricted, and therefore what
+   * coverage was achievable at all. Recomputed from the contexts below: a
+   * coverage invariant must not hold an interactive capture to a credentialed
+   * one's standard.
+   */
+  sessionProbePolicy: SessionProbePolicySchema,
   /** Terms the destructive heuristic matches on (§6). */
   destructiveTerms: z.array(z.string().min(1)),
 });
@@ -163,6 +183,28 @@ export const CaptureManifestSchema = z.strictObject({
     flows: z.int().nonnegative(),
     gaps: z.int().nonnegative(),
   }),
+}).superRefine((manifest, ctx) => {
+  // Derived field, recomputed (decision 0011). The policy governs what probing
+  // was possible, so a manifest that misreports it would have a coverage
+  // invariant judge an interactive capture by a credentialed one's standard.
+  const derived = deriveSessionProbePolicy(manifest.contexts);
+  if (derived !== manifest.crawl.sessionProbePolicy) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['crawl', 'sessionProbePolicy'],
+      message:
+        `claims '${manifest.crawl.sessionProbePolicy}' but the declared contexts imply '${derived}'`,
+    });
+  }
+  // The crawl's own origin is always navigable; a manifest that omits it is
+  // describing a boundary the crawl could not have run inside.
+  if (!manifest.crawl.allowedOrigins.includes(manifest.target.origin)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['crawl', 'allowedOrigins'],
+      message: `must include the target origin ${manifest.target.origin}`,
+    });
+  }
 });
 
 export type DeterminismShim = z.infer<typeof DeterminismShimSchema>;

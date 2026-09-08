@@ -65,6 +65,51 @@ export const AuthContextSchema = z.discriminatedUnion('mode', [
   }),
 ]);
 
+/**
+ * Whether session-destructive probing is unrestricted.
+ *
+ * Named for what it governs, not for the auth mechanism: the question a consumer
+ * asks is never "how did we log in", it is "could we afford to throw this
+ * session away". §6 must fire logout — it is an ordinary endpoint §8 implements
+ * and §10's auth tasks depend on — and whether it may do so freely turns
+ * entirely on whether another session can be obtained without a human.
+ *
+ * Derived from `credentialSource` (§3.3) rather than declared beside it, so the
+ * two cannot disagree; `CaptureManifestSchema` recomputes it.
+ */
+export const SessionProbePolicySchema = z.enum([
+  /** Re-auth is non-interactive. Each session-destructive probe gets its own login. */
+  'credentialed',
+  /** Headful human login, unrepeatable. They run last, once, and the crawl ends. */
+  'interactive',
+  /** No authenticated context, so there is no session to spend. */
+  'not-applicable',
+]);
+
+export const POLICY_BY_CREDENTIAL_SOURCE = {
+  env: 'credentialed',
+  'os-keychain': 'credentialed',
+  'interactive-only': 'interactive',
+} as const satisfies Record<string, z.infer<typeof SessionProbePolicySchema>>;
+
+/**
+ * The policy a set of contexts implies.
+ *
+ * One `interactive-only` context makes the whole run interactive: the crawl has
+ * a single unrepeatable session whichever context spends it.
+ */
+export function deriveSessionProbePolicy(
+  contexts: readonly { auth: z.infer<typeof AuthContextSchema> }[],
+): z.infer<typeof SessionProbePolicySchema> {
+  const sources = contexts
+    .map((c) => (c.auth.mode === 'storage-state' ? c.auth.credentialSource : null))
+    .filter((s): s is NonNullable<typeof s> => s !== null);
+  if (sources.length === 0) return 'not-applicable';
+  return sources.some((s) => POLICY_BY_CREDENTIAL_SOURCE[s] === 'interactive')
+    ? 'interactive'
+    : 'credentialed';
+}
+
 export const CaptureContextSchema = z.strictObject({
   /**
    * Stable slug naming the combination, e.g. `anon-desktop`, `auth-mobile`.
@@ -80,6 +125,7 @@ export const CaptureContextSchema = z.strictObject({
   variant: VariantPinSchema.nullable(),
 });
 
+export type SessionProbePolicy = z.infer<typeof SessionProbePolicySchema>;
 export type Locale = z.infer<typeof LocaleSchema>;
 export type VariantPin = z.infer<typeof VariantPinSchema>;
 export type AuthContext = z.infer<typeof AuthContextSchema>;

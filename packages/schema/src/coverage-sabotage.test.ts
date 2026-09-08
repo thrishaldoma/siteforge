@@ -40,6 +40,8 @@ const HEALTHY_OBSERVED: CoverageObserved = {
   axInteractiveRoles: 22,
   subresourceRequests: 11,
   harCredentialedRequests: 36,
+  sessionProbePolicy: 'credentialed',
+  sessionDestructiveControls: 1,
 };
 
 const HEALTHY_EXTRACTED: CoverageExtracted = {
@@ -56,6 +58,7 @@ const HEALTHY_EXTRACTED: CoverageExtracted = {
   assets: 3,
   a11yNodes: 39,
   endpointsWithAuthEvidence: 3,
+  sessionDestructiveFired: 1,
 };
 
 /**
@@ -115,6 +118,12 @@ const SABOTAGE: Sabotage[] = [
     bug: 'auth evidence read from `request.headers()`, which omits cookies, so two of three endpoints recorded none',
     drop: { endpointsWithAuthEvidence: 1 },
     silence: { harCredentialedRequests: 0 },
+  },
+  {
+    id: 'session-destructive-controls-are-fired',
+    bug: '"Sign out" skipped as destructive, leaving POST /api/auth/logout uncaptured while §10 depends on it',
+    drop: { sessionDestructiveFired: 0 },
+    silence: { sessionDestructiveControls: 0 },
   },
   {
     id: 'tall-document-implies-scroll-steps',

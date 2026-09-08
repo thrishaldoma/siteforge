@@ -27,6 +27,8 @@
     "documentHeightRatio": 2.625,
     "axInteractiveRoles": 50,
     "subresourceRequests": 8,
+    "sessionProbePolicy": "credentialed",
+    "sessionDestructiveControls": 0,
     "harCredentialedRequests": 5
   },
   "extracted": {
@@ -42,6 +44,7 @@
     "interactionCandidates": 50,
     "assets": 8,
     "endpointsWithAuthEvidence": 7,
+    "sessionDestructiveFired": 0,
     "a11yNodes": 159
   },
   "invariants": [
@@ -85,6 +88,12 @@
       "id": "credentialed-traffic-implies-auth-evidence",
       "description": "when credentialed requests were seen, every endpoint must record the observations its auth verdict rests on",
       "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "session-destructive-controls-are-fired",
+      "description": "every session-destructive control must be fired when a replacement session can be obtained",
+      "vacuous": true,
       "holds": true
     },
     {

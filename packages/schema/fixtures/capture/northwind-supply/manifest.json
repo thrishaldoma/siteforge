@@ -111,6 +111,10 @@
       "maxDepth": 3
     },
     "sameOriginOnly": true,
+    "allowedOrigins": [
+      "https://example.com"
+    ],
+    "sessionProbePolicy": "credentialed",
     "allowDestructive": false,
     "destructiveTerms": [
       "delete",

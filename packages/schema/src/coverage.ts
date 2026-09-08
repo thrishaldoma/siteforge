@@ -26,6 +26,7 @@
  */
 import { z } from 'zod';
 import { RouteIdSchema, SiteIdSchema } from './primitives.js';
+import { SessionProbePolicySchema } from './context.js';
 import { artifactEnvelope } from './artifact.js';
 
 /** What the raw inputs contained, counted before extraction ran. */
@@ -57,6 +58,17 @@ export const CoverageObservedSchema = z.strictObject({
    * inferencer produces.
    */
   harCredentialedRequests: z.int().nonnegative(),
+  /**
+   * What probing was possible at all.
+   *
+   * Coverage is only comparable within a policy: an interactive capture has one
+   * session to spend and can fire at most one session-destructive control, so
+   * holding it to a credentialed capture's standard would fail a run that did
+   * everything it was able to.
+   */
+  sessionProbePolicy: SessionProbePolicySchema,
+  /** Controls classified session-destructive, counted at discovery. */
+  sessionDestructiveControls: z.int().nonnegative(),
 });
 
 /** What extraction produced from those inputs. */
@@ -88,6 +100,8 @@ export const CoverageExtractedSchema = z.strictObject({
    * per-endpoint drop.
    */
   endpointsWithAuthEvidence: z.int().nonnegative(),
+  /** Session-destructive controls actually fired. */
+  sessionDestructiveFired: z.int().nonnegative(),
 });
 
 export type CoverageObserved = z.infer<typeof CoverageObservedSchema>;
@@ -160,6 +174,21 @@ export const COVERAGE_INVARIANTS: readonly CoverageInvariant[] = [
     description: 'when credentialed requests were seen, every endpoint must record the observations its auth verdict rests on',
     vacuous: (o) => o.harCredentialedRequests === 0,
     holds: (_o, e) => e.endpointsWithAuthEvidence === e.endpoints,
+  },
+  {
+    // Added with decision 0012. A control whose only cost is our own session
+    // must be captured — logout is an ordinary endpoint §8 implements and §10's
+    // auth tasks depend on. Skipping one leaves a core auth flow uncaptured and
+    // filed as unreliable.
+    //
+    // Mode-aware on purpose: under `interactive` there is one unrepeatable
+    // session, so at most one can be fired and the invariant must not demand
+    // more. Comparing an interactive capture against a credentialed one as if
+    // they were equivalent is how a correct run gets failed.
+    id: 'session-destructive-controls-are-fired',
+    description: 'every session-destructive control must be fired when a replacement session can be obtained',
+    vacuous: (o) => o.sessionDestructiveControls === 0 || o.sessionProbePolicy !== 'credentialed',
+    holds: (o, e) => e.sessionDestructiveFired >= o.sessionDestructiveControls,
   },
   {
     id: 'tall-document-implies-scroll-steps',

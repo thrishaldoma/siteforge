@@ -918,6 +918,10 @@ write('manifest.json', S.CaptureManifestSchema, {
       maxDepth: 3,
     },
     sameOriginOnly: true,
+    allowedOrigins: [ORIGIN],
+    // Every authenticated context here reuses a session acquired from env
+    // credentials, so a replacement can be obtained without a human.
+    sessionProbePolicy: 'credentialed',
     allowDestructive: false,
     destructiveTerms: ['delete', 'remove', 'cancel subscription', 'deactivate'],
   },
@@ -965,6 +969,8 @@ const observed = {
   // the exact property the invariant exists to prevent. (In a real capture this
   // comes from raw header names on the wire, independent of the inferencer; a
   // synthetic fixture has no wire, so it is read back off the descriptors.)
+  sessionProbePolicy: 'credentialed',
+  sessionDestructiveControls: 0,
   harCredentialedRequests: ENDPOINTS
     .filter((e) => e.params.headers.some((h) => h.name === 'cookie'))
     .reduce((n, e) => n + e.observedCount, 0),
@@ -984,6 +990,10 @@ const extracted = {
   interactionCandidates: observed.axInteractiveRoles,
   assets: FILES.length,
   endpointsWithAuthEvidence: ENDPOINTS.filter((e) => e.authEvidence.length > 0).length,
+  // This fixture's only skipped control is target-destructive; it declares no
+  // session-destructive one, so the invariant is honestly vacuous rather than
+  // satisfied by a number nobody produced.
+  sessionDestructiveFired: 0,
   a11yNodes: capturedRoutes.reduce(
     (n, r) => n + findAll(r.root, (x) => x.a11y !== undefined).length, 0),
 };

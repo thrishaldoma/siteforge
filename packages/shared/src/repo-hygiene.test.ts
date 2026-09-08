@@ -82,6 +82,7 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
         encoding: 'utf8',
       });
     } catch {
+      // operational: git check-ignore exits 1 when nothing matches; that is the passing case
       matched = '';
     }
     expect(matched, `${pkg}/package.json is ignored by ${matched.trim()}`).toBe('');
@@ -115,6 +116,7 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
       try {
         execFileSync('git', ['-C', REPO, 'check-ignore', '-q', path]);
       } catch {
+        // operational: git check-ignore exits 1 to mean "not ignored", not a failure to run
         ignored = false;
       }
       expect(ignored, `${path} should still be ignored`).toBe(true);
