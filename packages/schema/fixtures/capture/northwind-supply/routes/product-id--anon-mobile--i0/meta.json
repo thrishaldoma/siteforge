@@ -1,0 +1,97 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "product-id--anon-mobile--i0",
+  "siteId": "northwind-supply",
+  "urlPattern": "/product/:id",
+  "contextId": "anon-mobile",
+  "instanceIndex": 0,
+  "url": "https://example.com/product/mug-blue-12oz",
+  "pathParams": {
+    "id": "mug-blue-12oz"
+  },
+  "canonicalUrl": "https://example.com/product/mug-blue-12oz",
+  "title": "Blue Enamel Mug, 12oz — Northwind Supply",
+  "status": 200,
+  "redirectChain": [],
+  "templateGuess": {
+    "name": "product-detail",
+    "confidence": 0.95,
+    "rationale": "Same template as the desktop capture; layout differs by media query only."
+  },
+  "requiresAuth": false,
+  "unauthenticatedBehavior": {
+    "kind": "accessible"
+  },
+  "depth": 1,
+  "discoveredFrom": {
+    "kind": "link",
+    "routeId": "root--anon-desktop--i0",
+    "nodeId": "n_e388664634465688"
+  },
+  "embeddedIn": [],
+  "content": {
+    "kind": "captured",
+    "contentHash": "75786c51d48f2413f71471c9ea26ebc7aa42bec4efacf3038ed4452e8f266787",
+    "renderedSize": {
+      "width": 390,
+      "height": 844
+    },
+    "screenshots": {
+      "full": {
+        "path": "shot.full.png",
+        "sha256": "48a47a23a7f36b49ffb93f3402cb5a05330f54e8380170084a347fd79cc70b66",
+        "width": 390,
+        "height": 1900
+      },
+      "scroll": [
+        {
+          "index": 0,
+          "scrollY": 0,
+          "shot": {
+            "path": "scroll/0000.png",
+            "sha256": "e186c2ec5bae2edefdeb94d7cc020b7b6ace671e2a4bb96b94aad1efc2387d74",
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "index": 1,
+          "scrollY": 422,
+          "shot": {
+            "path": "scroll/0001.png",
+            "sha256": "5824071833b9ef7eb1e257ee700e96471e335b5e888ef25b15dd9d0a9f2b160d",
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "index": 2,
+          "scrollY": 844,
+          "shot": {
+            "path": "scroll/0002.png",
+            "sha256": "4211f4e6d86260307e8342dc95b86817edd207aacf84808573aad27423d31a12",
+            "width": 390,
+            "height": 844
+          }
+        }
+      ]
+    },
+    "pageMetrics": {
+      "scrollHeight": 1900,
+      "scrollWidth": 390,
+      "scrollSteps": 3
+    }
+  },
+  "gapIds": [
+    "gap_1982e0d1e2fc",
+    "gap_34a4ad245bd3",
+    "gap_49bf24b14b1f"
+  ]
+}

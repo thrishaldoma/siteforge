@@ -90,6 +90,13 @@ consistent.
 
 ### 9. Auth state is a field on `RouteMeta`, not part of the route id
 
+> **SUPERSEDED by [0004](0004-capture-context.md).** Flagged below as "the
+> weakest call here", and it was: auth is now one dimension of a declared
+> `CaptureContext`, referenced by the route id. The review also found a second
+> problem this call had hidden — `manifest.auth` was singular, so the model could
+> not represent §6's two route sets in one run at all. Retained for the record.
+
+
 Decision 0002 made `routeId` a composite of pattern + instance + viewport. Auth
 was *not* added as a fourth axis; the id is long enough. Instead `RouteMeta`
 carries `authState` plus `unauthenticatedBehavior`
@@ -143,6 +150,13 @@ root `.gitignore` excludes it.
 
 ### 14. Identifier derivation lives in the contract, not in each producer
 
+> **Extended by [0005](0005-nodeid-is-structural-not-content.md).** The principle
+> stands and paid off immediately: because derivation was centralised, the review
+> could find and fix a second stability bug (data churn, not just restyling) in
+> one place. The note below about excluding `class` is now the narrower half of a
+> broader rule.
+
+
 `src/identity.ts` exports `deriveNodeId`, `deriveContentFingerprint`,
 `deriveStyleId`, `canonicalizeStyleDeclarations`, `deriveA11yRef`, and
 `deriveRouteId`.
@@ -160,6 +174,13 @@ one into an id would change every nodeId on the page whenever the site rebuilds.
 `styleId`.
 
 ### 15. An embedded route's viewport is the frame's content box
+
+> **OBSOLETE, see [0004](0004-capture-context.md).** This special case existed
+> only because viewport dimensions were spelled into the route id. With contexts,
+> an embedded route inherits its parent's context and records the frame box as
+> `content.renderedSize`; there is no undeclared-viewport exception to license.
+> Retained for the record.
+
 
 §11 recurses same-origin iframes as nested routes, which collides with decision
 0002: a frame renders at its content box, not at a browser viewport, so

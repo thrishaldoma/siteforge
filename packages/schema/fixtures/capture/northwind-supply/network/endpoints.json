@@ -120,14 +120,14 @@
             }
           ],
           "bytes": 608,
-          "observedOn": "root--i0--1280x800"
+          "observedOn": "root--anon-desktop--i0"
         }
       ],
       "isMutation": false,
       "requiresAuth": false,
       "observedCount": 1,
       "observedOn": [
-        "root--i0--1280x800"
+        "root--anon-desktop--i0"
       ]
     },
     {
@@ -234,7 +234,7 @@
             "imageUrl": "https://example.com/static/img/mug-blue.jpg"
           },
           "bytes": 203,
-          "observedOn": "product-id--i0--1280x800"
+          "observedOn": "product-id--anon-desktop--i0"
         },
         {
           "sampleId": "sample_d14a2338",
@@ -251,16 +251,16 @@
             "imageUrl": "https://example.com/static/img/notebook-a5.jpg"
           },
           "bytes": 201,
-          "observedOn": "product-id--i1--1280x800"
+          "observedOn": "product-id--anon-desktop--i1"
         }
       ],
       "isMutation": false,
       "requiresAuth": false,
       "observedCount": 3,
       "observedOn": [
-        "product-id--i0--1280x800",
-        "product-id--i1--1280x800",
-        "product-id--i0--390x844"
+        "product-id--anon-desktop--i0",
+        "product-id--anon-desktop--i1",
+        "product-id--anon-mobile--i0"
       ]
     },
     {
@@ -344,14 +344,14 @@
             "subtotal": 36
           },
           "bytes": 94,
-          "observedOn": "product-id--i0--1280x800"
+          "observedOn": "product-id--anon-desktop--i0"
         }
       ],
       "isMutation": false,
       "requiresAuth": false,
       "observedCount": 2,
       "observedOn": [
-        "product-id--i0--1280x800"
+        "product-id--anon-desktop--i0"
       ]
     },
     {
@@ -455,14 +455,14 @@
             "subtotal": 36
           },
           "bytes": 94,
-          "observedOn": "product-id--i0--1280x800"
+          "observedOn": "product-id--anon-desktop--i0"
         }
       ],
       "isMutation": true,
       "requiresAuth": false,
       "observedCount": 1,
       "observedOn": [
-        "product-id--i0--1280x800"
+        "product-id--anon-desktop--i0"
       ]
     },
     {
@@ -538,14 +538,14 @@
             "total": 30.5
           },
           "bytes": 53,
-          "observedOn": "product-id--i0--1280x800"
+          "observedOn": "product-id--anon-desktop--i0"
         }
       ],
       "isMutation": true,
       "requiresAuth": true,
       "observedCount": 1,
       "observedOn": [
-        "product-id--i0--1280x800"
+        "product-id--anon-desktop--i0"
       ]
     },
     {
@@ -625,14 +625,14 @@
             }
           ],
           "bytes": 189,
-          "observedOn": "account-orders--i0--1280x800"
+          "observedOn": "account-orders--auth-desktop--i0"
         }
       ],
       "isMutation": false,
       "requiresAuth": true,
       "observedCount": 1,
       "observedOn": [
-        "account-orders--i0--1280x800"
+        "account-orders--auth-desktop--i0"
       ]
     },
     {
@@ -718,14 +718,14 @@
             "displayName": "[REDACTED:NAME]"
           },
           "bytes": 53,
-          "observedOn": "account-orders--i0--1280x800"
+          "observedOn": "account-orders--auth-desktop--i0"
         }
       ],
       "isMutation": true,
       "requiresAuth": false,
       "observedCount": 2,
       "observedOn": [
-        "account-orders--i0--1280x800"
+        "account-orders--auth-desktop--i0"
       ]
     },
     {
@@ -751,7 +751,7 @@
       "requiresAuth": true,
       "observedCount": 0,
       "observedOn": [
-        "account-orders--i0--1280x800"
+        "account-orders--auth-desktop--i0"
       ],
       "stub": {
         "reason": "insufficient-observations",

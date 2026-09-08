@@ -13,6 +13,7 @@
  */
 import { z } from 'zod';
 import { FlowIdSchema, RouteIdSchema, SiteIdSchema } from './primitives.js';
+import { deriveRouteContentHash } from './artifact.js';
 import { CAPTURE_MODEL_VERSION } from './version.js';
 import { CaptureManifestSchema } from './manifest.js';
 import { RouteMetaSchema } from './route.js';
@@ -24,24 +25,65 @@ import { EndpointIndexSchema } from './endpoints.js';
 import { FlowTraceSchema } from './flows.js';
 import { StageReportSchema } from './stage-report.js';
 
-/** The four files under one `routes/<route-id>/` directory. */
+/**
+ * The files under one `routes/<route-id>/` directory.
+ *
+ * `dom` / `styles` / `states` are present exactly when `meta.content.kind` is
+ * `'captured'`. A `'shared'` route holds only `meta.json` and points at the route
+ * that stores the artifacts — see `RouteContentSchema`.
+ */
 export const RouteCaptureSchema = z
   .strictObject({
     meta: RouteMetaSchema,
-    dom: DomDocumentSchema,
-    styles: StyleSheetDocumentSchema,
-    states: StateDeltasDocumentSchema,
+    dom: DomDocumentSchema.optional(),
+    styles: StyleSheetDocumentSchema.optional(),
+    states: StateDeltasDocumentSchema.optional(),
   })
   .superRefine((route, ctx) => {
+    const shared = route.meta.content.kind === 'shared';
+    for (const key of ['dom', 'styles', 'states'] as const) {
+      if (shared && route[key] !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key}.json must not exist: this route shares content with ${
+            route.meta.content.kind === 'shared' ? route.meta.content.canonicalRouteId : ''
+          }`,
+        });
+      }
+      if (!shared && route[key] === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key}.json is missing from a captured route`,
+        });
+      }
+    }
+    if (shared) return;
     // Four files in one directory that disagree about which route they describe
     // is the exact drift §13 warns about. Catch it at load, not at codegen.
     const id = route.meta.routeId;
     for (const key of ['dom', 'styles', 'states'] as const) {
-      if (route[key].routeId !== id) {
+      const artifact = route[key];
+      if (artifact && artifact.routeId !== id) {
         ctx.addIssue({
           code: 'custom',
           path: [key, 'routeId'],
-          message: `${key}.json claims route ${route[key].routeId} but sits in ${id}`,
+          message: `${key}.json claims route ${artifact.routeId} but sits in ${id}`,
+        });
+      }
+    }
+    if (!route.dom || !route.styles) return;
+
+    // The recorded content hash must be the one the artifacts actually produce,
+    // or the shared-content pointer would deduplicate pages that are not equal.
+    if (route.states) {
+      const actual = deriveRouteContentHash({ dom: route.dom, styles: route.styles, states: route.states });
+      if (actual !== route.meta.content.contentHash) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['meta', 'content', 'contentHash'],
+          message: `recorded ${route.meta.content.contentHash.slice(0, 12)}… but the artifacts hash to ${actual.slice(0, 12)}…`,
         });
       }
     }
@@ -85,6 +127,171 @@ export const CaptureModelSchema = z
     stageReport: StageReportSchema.optional(),
   })
   .superRefine((model, ctx) => {
+    const contexts = new Map(model.manifest.contexts.map((c) => [c.contextId, c]));
+    const routes = Object.entries(model.routes);
+
+    // Every route resolves to a declared context, and its rendered size agrees
+    // with either that context's viewport or the frame box that embedded it.
+    for (const [routeId, route] of routes) {
+      const context = contexts.get(route.meta.contextId);
+      if (!context) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'contextId'],
+          message: `context ${route.meta.contextId} is not declared in the manifest`,
+        });
+        continue;
+      }
+      if (!routeId.includes(`--${route.meta.contextId}--`)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'contextId'],
+          message: `routeId does not encode context ${route.meta.contextId}`,
+        });
+      }
+      if (route.meta.content.kind !== 'captured') continue;
+      const { renderedSize } = route.meta.content;
+      const embed = route.meta.embeddedIn[0];
+      const expected = embed
+        ? { width: embed.contentBox.width, height: embed.contentBox.height }
+        : { width: context.viewport.width, height: context.viewport.height };
+      if (renderedSize.width !== expected.width || renderedSize.height !== expected.height) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'content', 'renderedSize'],
+          message: embed
+            ? 'an embedded route must render at its frame content box'
+            : `a top-level route must render at context ${context.contextId}'s viewport`,
+        });
+      }
+    }
+
+    // Shared content must point at a route that actually holds the artifacts,
+    // with the same hash, and must not chain.
+    for (const [routeId, route] of routes) {
+      if (route.meta.content.kind !== 'shared') continue;
+      const { canonicalRouteId, contentHash } = route.meta.content;
+      if (canonicalRouteId === routeId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'content', 'canonicalRouteId'],
+          message: 'a route cannot share content with itself',
+        });
+        continue;
+      }
+      const canonical = model.routes[canonicalRouteId];
+      if (!canonical) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'content', 'canonicalRouteId'],
+          message: `${canonicalRouteId} does not exist`,
+        });
+        continue;
+      }
+      if (canonical.meta.content.kind !== 'captured') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'content', 'canonicalRouteId'],
+          message: `${canonicalRouteId} is itself shared; pointers must not chain`,
+        });
+        continue;
+      }
+      if (canonical.meta.content.contentHash !== contentHash) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'content', 'contentHash'],
+          message: `does not match ${canonicalRouteId}, so the content is not actually shared`,
+        });
+      }
+      if (canonical.meta.url !== route.meta.url) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', routeId, 'meta', 'content', 'canonicalRouteId'],
+          message: 'shared content must come from the same URL',
+        });
+      }
+    }
+
+    // §6's caps, applied per context with a global ceiling (decision 0004).
+    const { budget } = model.manifest.crawl;
+    const perContext = new Map<string, number>();
+    const perPatternContext = new Map<string, number>();
+    for (const route of Object.values(model.routes)) {
+      const contextId = route.meta.contextId;
+      perContext.set(contextId, (perContext.get(contextId) ?? 0) + 1);
+      const key = `${route.meta.urlPattern}@${contextId}`;
+      perPatternContext.set(key, (perPatternContext.get(key) ?? 0) + 1);
+      if (route.meta.depth > budget.maxDepth) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routes', route.meta.routeId, 'meta', 'depth'],
+          message: `depth ${route.meta.depth} exceeds maxDepth ${budget.maxDepth}`,
+        });
+      }
+    }
+    for (const [key, count] of perPatternContext) {
+      if (count > budget.maxInstancesPerPattern) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['manifest', 'crawl', 'budget', 'maxInstancesPerPattern'],
+          message: `${key} has ${count} instances, over the cap of ${budget.maxInstancesPerPattern}`,
+        });
+      }
+    }
+    for (const [contextId, count] of perContext) {
+      if (count > budget.maxRoutesPerContext) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['manifest', 'crawl', 'budget', 'maxRoutesPerContext'],
+          message: `context ${contextId} captured ${count} routes, over the cap of ${budget.maxRoutesPerContext}`,
+        });
+      }
+    }
+    if (routes.length > budget.maxRoutesTotal) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['manifest', 'crawl', 'budget', 'maxRoutesTotal'],
+        message: `${routes.length} routes exceeds the global ceiling of ${budget.maxRoutesTotal}`,
+      });
+    }
+
+    // §1/§7: a gap that is referenced but never written is a gap that never
+    // reaches GAPS.md, which is the whole failure the gap machinery prevents.
+    if (model.stageReport) {
+      const defined = new Set(model.stageReport.gaps.map((g) => g.gapId));
+      const referenced = new Map<string, string>();
+      const note = (gapId: string | undefined, where: string): void => {
+        if (gapId) referenced.set(gapId, where);
+      };
+      for (const [routeId, route] of routes) {
+        for (const gapId of route.meta.gapIds) note(gapId, `routes/${routeId}/meta.json`);
+        const walkDom = (node: DomNode): void => {
+          if (node.nodeType !== 'element') return;
+          if (node.iframe && !node.iframe.sameOrigin) note(node.iframe.gapId, `routes/${routeId} iframe`);
+          if (node.shadowHost?.mode === 'closed') note(node.shadowHost.gapId, `routes/${routeId} closed shadow root`);
+          node.children.forEach(walkDom);
+        };
+        if (route.dom) walkDom(route.dom.root);
+      }
+      for (const flow of Object.values(model.flows)) {
+        for (const gapId of flow.gapIds) note(gapId, `flows/${flow.flowId}`);
+        note(flow.skipReason?.gapId, `flows/${flow.flowId} skipReason`);
+      }
+      for (const endpoint of model.endpoints.endpoints) {
+        note(endpoint.stub?.gapId, `endpoint ${endpoint.endpointId}`);
+      }
+      for (const origin of model.endpoints.thirdPartyOrigins) note(origin.gapId, `third-party ${origin.origin}`);
+      for (const [gapId, where] of referenced) {
+        if (!defined.has(gapId)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['stageReport', 'gaps'],
+            message: `${where} references ${gapId}, which the stage report never defines`,
+          });
+        }
+      }
+    }
+
     if (model.manifest.siteId !== model.siteId) {
       ctx.addIssue({
         code: 'custom',

@@ -1,0 +1,87 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "product-id--anon-desktop--i1",
+  "siteId": "northwind-supply",
+  "urlPattern": "/product/:id",
+  "contextId": "anon-desktop",
+  "instanceIndex": 1,
+  "url": "https://example.com/product/notebook-a5-dot",
+  "pathParams": {
+    "id": "notebook-a5-dot"
+  },
+  "canonicalUrl": "https://example.com/product/notebook-a5-dot",
+  "title": "A5 Dot-Grid Notebook — Northwind Supply",
+  "status": 200,
+  "redirectChain": [],
+  "templateGuess": {
+    "name": "product-detail",
+    "confidence": 0.97,
+    "rationale": "Structural hash matches instance i0 at 0.98 similarity."
+  },
+  "requiresAuth": false,
+  "unauthenticatedBehavior": {
+    "kind": "accessible"
+  },
+  "depth": 1,
+  "discoveredFrom": {
+    "kind": "link",
+    "routeId": "root--anon-desktop--i0",
+    "nodeId": "n_9954428940511b90"
+  },
+  "embeddedIn": [],
+  "content": {
+    "kind": "captured",
+    "contentHash": "316b845eb9fffa2b62ac1ecb4ffc4537c8fbee283ce003785abb629459e589c0",
+    "renderedSize": {
+      "width": 1280,
+      "height": 800
+    },
+    "screenshots": {
+      "full": {
+        "path": "shot.full.png",
+        "sha256": "3203032f6d5b22a04fcf2892d852eba185151adc420d488a3b15d29dfaa7e10d",
+        "width": 1280,
+        "height": 1400
+      },
+      "scroll": [
+        {
+          "index": 0,
+          "scrollY": 0,
+          "shot": {
+            "path": "scroll/0000.png",
+            "sha256": "9c0f0d60931b4380ee1441127deb63c66e19d71e064431b378f38e3fc5fb9f0a",
+            "width": 1280,
+            "height": 800
+          }
+        },
+        {
+          "index": 1,
+          "scrollY": 400,
+          "shot": {
+            "path": "scroll/0001.png",
+            "sha256": "9710cf9373d9373b73bcd27e6576c08b7ede96c0fcf038a6e479053b5c28168e",
+            "width": 1280,
+            "height": 800
+          }
+        }
+      ]
+    },
+    "pageMetrics": {
+      "scrollHeight": 1400,
+      "scrollWidth": 1280,
+      "scrollSteps": 2
+    }
+  },
+  "gapIds": [
+    "gap_1982e0d1e2fc",
+    "gap_34a4ad245bd3",
+    "gap_49bf24b14b1f"
+  ]
+}

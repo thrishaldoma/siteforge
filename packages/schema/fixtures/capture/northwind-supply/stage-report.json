@@ -13,154 +13,179 @@
   "inputs": [],
   "outputs": [
     {
-      "path": "routes/root--i0--1280x800/meta.json",
-      "sha256": "42c8aeb4f714fcde7c9dc2ed6a9a71cd9e715ed2b262a48a7b6dfd620ef372aa",
-      "bytes": 2549
+      "path": "routes/root--anon-desktop--i0/meta.json",
+      "sha256": "97f60428dbbf44e9891a7c8ebb2be42b0317067ded9af2dd18b14ca0b2ad0fd7",
+      "bytes": 2734
     },
     {
-      "path": "routes/root--i0--1280x800/dom.json",
-      "sha256": "031ba5044c89ab0dab2a5f141b06ec519e897c6ef9c1a8aa78a76afe4bc5e0b6",
-      "bytes": 47790
+      "path": "routes/root--anon-desktop--i0/dom.json",
+      "sha256": "f738a473db99d307ce5ca2a214f8cede398f53e52056a156be458de430fe943b",
+      "bytes": 50520
     },
     {
-      "path": "routes/root--i0--1280x800/styles.json",
-      "sha256": "442cd24340695f789e25db84e56defcca37fe600b2e2bae231938b55bbabdb45",
-      "bytes": 12801
+      "path": "routes/root--anon-desktop--i0/styles.json",
+      "sha256": "93a82267bd72417a35c03f3a3ecfc8a454195e16fdc2cf65f728ad409b820a21",
+      "bytes": 12805
     },
     {
-      "path": "routes/root--i0--1280x800/states.json",
-      "sha256": "5c57ad164b79bb7df2fda83cc2f866b90638c71a2275d95bb0d409b95aa1f728",
-      "bytes": 5256
+      "path": "routes/root--anon-desktop--i0/states.json",
+      "sha256": "8c4555669b40fcee450a8130b56344bc1898829bd8d7fa770669b74af27c0b01",
+      "bytes": 5260
     },
     {
-      "path": "routes/product-id--i0--1280x800/meta.json",
-      "sha256": "4fc651c4727682e56f32fe3fefafbece4690ecd0f25fa69e630e97323b8d3644",
-      "bytes": 2060
+      "path": "routes/product-id--anon-desktop--i0/meta.json",
+      "sha256": "84aa9fee79e3430d134c149c5a0a39100bdfeef57ad8aa5325cfec6cad9b3f0f",
+      "bytes": 2233
     },
     {
-      "path": "routes/product-id--i0--1280x800/dom.json",
-      "sha256": "4fc9d29a860e0210ca4dfed5b4811f174f4e07b1d05e63300abf8488403c349f",
-      "bytes": 45506
+      "path": "routes/product-id--anon-desktop--i0/dom.json",
+      "sha256": "683ec69dac17556e8d88db5347f330667568ef1dbd5d1b9e1a276bdcb9e93db7",
+      "bytes": 49223
     },
     {
-      "path": "routes/product-id--i0--1280x800/styles.json",
-      "sha256": "f14b163339e1d50daaa118aac615ed62311febe687229d9fc56022345157415c",
-      "bytes": 15292
+      "path": "routes/product-id--anon-desktop--i0/styles.json",
+      "sha256": "9ce1e656bc2ebb4bb4072e5a89e614513dc523345bad7a3dc845b666e2fc1fba",
+      "bytes": 15535
     },
     {
-      "path": "routes/product-id--i0--1280x800/states.json",
-      "sha256": "238d0f1b4743f7cae7632908a9a2a682ca9b860003e666a3a793c71068fe6cb1",
-      "bytes": 3979
+      "path": "routes/product-id--anon-desktop--i0/states.json",
+      "sha256": "acb8570696350535450cd445635651f0990caaa68e8b1c38223b5171e174d630",
+      "bytes": 3983
     },
     {
-      "path": "routes/product-id--i1--1280x800/meta.json",
-      "sha256": "3a13383f00716cc46d0c217061e9328116a3c9eb9a3597cb25cc2866fd5e74ee",
-      "bytes": 2065
+      "path": "routes/product-id--anon-desktop--i1/meta.json",
+      "sha256": "1ae84877b990f2d9dd3ea851ff01c1ced82c8c24988a23ec8346650c79653ca4",
+      "bytes": 2238
     },
     {
-      "path": "routes/product-id--i1--1280x800/dom.json",
-      "sha256": "23213d77ff4b0ffa57cb1704f1778b834bf1d40b04d04f1f7f1560a0dda37220",
-      "bytes": 45501
+      "path": "routes/product-id--anon-desktop--i1/dom.json",
+      "sha256": "d54700d9e4f2facfbea2663b85e310f27e54722a4a7e3983c2d38fb8e132dc53",
+      "bytes": 49218
     },
     {
-      "path": "routes/product-id--i1--1280x800/styles.json",
-      "sha256": "49ed0df81f07863186c2be53602eb8114dfa3873f01f520ef911b09a39f1db6f",
-      "bytes": 15292
+      "path": "routes/product-id--anon-desktop--i1/styles.json",
+      "sha256": "4ba175f6e72d8d5e59e70f60dca013aba6cb95c5bbc7d46aa4900315f3ded63d",
+      "bytes": 15535
     },
     {
-      "path": "routes/product-id--i1--1280x800/states.json",
-      "sha256": "19d233100d1d6cbaac85b2f44551b16edd5a06cf0a15d309f836d47f3e52cf6a",
-      "bytes": 3979
+      "path": "routes/product-id--anon-desktop--i1/states.json",
+      "sha256": "064f248bbfb72817e12bf03972bf5a7ccf6dba0efd596c8cd278bde9fdc22d62",
+      "bytes": 3983
     },
     {
-      "path": "routes/product-id--i0--390x844/meta.json",
-      "sha256": "161a3c6e6cf8f7de1183863604b9e9dd91302f132048be9c9dbc64f691f55b16",
-      "bytes": 2333
+      "path": "routes/product-id--anon-mobile--i0/meta.json",
+      "sha256": "7ce5e06d00f3ad4b5972442dd1dded7fc44d10b78ee55708f50c39e1676f7dc5",
+      "bytes": 2526
     },
     {
-      "path": "routes/product-id--i0--390x844/dom.json",
-      "sha256": "39a7d4eee86fed1d8296af5016a26be87dab034a66ac86bfad915a15e82f1555",
-      "bytes": 42912
+      "path": "routes/product-id--anon-mobile--i0/dom.json",
+      "sha256": "2e25774f65c8b51a5ae433bf9039f0bee5508dcc0788bd36b930331d1ebc9df0",
+      "bytes": 46445
     },
     {
-      "path": "routes/product-id--i0--390x844/styles.json",
-      "sha256": "35424621b32cf78b2f994461123c6666c6498845217e52568446e3d5f8e892be",
-      "bytes": 14276
+      "path": "routes/product-id--anon-mobile--i0/styles.json",
+      "sha256": "73d0c96424a364d236cd714bc22c9ded1ef9f5604cdb09917b847d2105541fd5",
+      "bytes": 14519
     },
     {
-      "path": "routes/product-id--i0--390x844/states.json",
-      "sha256": "75052c6d27d7421558656c1dc18bb1d2454792f6aedd0fd10804778f50db8b20",
-      "bytes": 3978
+      "path": "routes/product-id--anon-mobile--i0/states.json",
+      "sha256": "c37eff5569a56d2a1acb7f1e03ebbd6814850d4715005b2c1dffa1601a9ef9e0",
+      "bytes": 3982
     },
     {
-      "path": "routes/account-orders--i0--1280x800/meta.json",
-      "sha256": "e4a8133e8e06a1783fb9c4ede3ceade912397799ebe2b97f542414aed7d4ab0f",
-      "bytes": 1820
+      "path": "routes/embeds-size-guide--anon-desktop--i0/meta.json",
+      "sha256": "9b228ffedd0ed24e6f567b5d6325325ab1a83936f80f57f67ab518d72451e0eb",
+      "bytes": 2270
     },
     {
-      "path": "routes/account-orders--i0--1280x800/dom.json",
-      "sha256": "b85325c5e43fe50661349a60586b6ab350c8da60b0822e4e77afbe558594aa62",
-      "bytes": 46696
+      "path": "routes/embeds-size-guide--anon-desktop--i0/dom.json",
+      "sha256": "d962378e724299d0256fbc2fa08d7be9e87ef43528a4f1ea8ba5c7eaa85f94f5",
+      "bytes": 21362
     },
     {
-      "path": "routes/account-orders--i0--1280x800/styles.json",
-      "sha256": "fd5a30282edc79abc0899f5f2cc899c72d1b024d223c9f5c8ce71db3802e863a",
-      "bytes": 12205
+      "path": "routes/embeds-size-guide--anon-desktop--i0/styles.json",
+      "sha256": "7ff524e4aef022060d8243acafe426a79b65d9eec26a6f5620ef035d534e8f50",
+      "bytes": 4345
     },
     {
-      "path": "routes/account-orders--i0--1280x800/states.json",
-      "sha256": "290b666bd42d6982dfcfef98ceed6607130f7a8b0b3ddc57221bdf8c967217cb",
-      "bytes": 1680
+      "path": "routes/embeds-size-guide--anon-desktop--i0/states.json",
+      "sha256": "bafb95b3368b5a80c85dac1c5b6439d9e8fdaa464a94c62fb95e21ad3902e3ed",
+      "bytes": 359
     },
     {
-      "path": "routes/embeds-size-guide--i0--640x420/meta.json",
-      "sha256": "34588eb4cce13d132498f1414d3f977dd35833e23f415921e934e7f44fc21652",
-      "bytes": 2156
+      "path": "routes/about--anon-desktop--i0/meta.json",
+      "sha256": "78b660600fb27304750c608ba0195c47303c3c421b4bfe49b1ca5814c304f1b4",
+      "bytes": 1829
     },
     {
-      "path": "routes/embeds-size-guide--i0--640x420/dom.json",
-      "sha256": "1211f978c904f456aa35f2d076514f211b5e7190f49cf8186fd1cdb8978c544d",
-      "bytes": 19923
+      "path": "routes/about--anon-desktop--i0/dom.json",
+      "sha256": "6b948b9f2acdf8609183fd586c5506156bb6a0d9282ab4711ff0c6e56c569f58",
+      "bytes": 26909
     },
     {
-      "path": "routes/embeds-size-guide--i0--640x420/styles.json",
-      "sha256": "c3170541582698f3a52b419fb0f13c1ecb4ff47a4cf14a97379ecbf4f012a1ce",
-      "bytes": 4340
+      "path": "routes/about--anon-desktop--i0/styles.json",
+      "sha256": "beedf8155d7c69b31b24d13f6c8f92804bc33a837fd21b8fbbf57647dfb2bdb4",
+      "bytes": 8761
     },
     {
-      "path": "routes/embeds-size-guide--i0--640x420/states.json",
-      "sha256": "de5876bca2e5c8dec7e41f8694f74c42ceff624dc0adc98db4d9a2eab9314d14",
-      "bytes": 354
+      "path": "routes/about--anon-desktop--i0/states.json",
+      "sha256": "08b32d476522cf281e381813efee893bb24c724d7cc78d350351e32e39d7f46c",
+      "bytes": 1264
+    },
+    {
+      "path": "routes/about--auth-desktop--i0/meta.json",
+      "sha256": "b62808577eeff643092508198e4fc26cd1887d177c4e3902670b53be07345da4",
+      "bytes": 1180
+    },
+    {
+      "path": "routes/account-orders--auth-desktop--i0/meta.json",
+      "sha256": "541b30a16d960ede06f93af0b2630ad5bac577af7779cfbeab28224504657547",
+      "bytes": 1945
+    },
+    {
+      "path": "routes/account-orders--auth-desktop--i0/dom.json",
+      "sha256": "834a8b9bbab85549ed2af2c17e0ed3ff192876d50b01937db9281b83be42d224",
+      "bytes": 49580
+    },
+    {
+      "path": "routes/account-orders--auth-desktop--i0/styles.json",
+      "sha256": "11db32ab98e16687a4006a22fbc88ff4bd86d9c089d4a33ce01f1726c0024fee",
+      "bytes": 12209
+    },
+    {
+      "path": "routes/account-orders--auth-desktop--i0/states.json",
+      "sha256": "bf837a801f0e0fffb2a1247f234ab4b7818abff45f6d37ede2851327224f7530",
+      "bytes": 1684
     },
     {
       "path": "assets/index.json",
-      "sha256": "a5c6ebcb4a1bbfb6b25db07d135100ef55e0340ed8337778ce0f882215ad8634",
-      "bytes": 12044
+      "sha256": "824fffedc7f6ee4b4bd6d79e1bb895b4fb49becdb4bcd2e5c74b49934c78bd0e",
+      "bytes": 13282
     },
     {
       "path": "network/endpoints.json",
-      "sha256": "402fb4cf40e6e67858121fa8643538ee51fed08449f4138f90d2e24ce7fef54b",
-      "bytes": 19411
+      "sha256": "68a2d330c3477b908883c8eb34e45a7274f4d7f1f764f7246298645c07f46ed9",
+      "bytes": 19483
     },
     {
       "path": "flows/add-mug-to-cart.trace.json",
-      "sha256": "a420bb8c764ab1ca3813f5780f8a94fc7ead3d6bef9bcc1f4b75b96866273795",
-      "bytes": 11603
+      "sha256": "63f97a1dad2ab83ca62c2089e69c0ec295ca810007f7483c528128989d5f7066",
+      "bytes": 11631
     },
     {
       "path": "flows/toggle-product-details.trace.json",
-      "sha256": "c462ad4880be3ada93a8af9b94e20b71f30b6921b63398c0dbb82c7beb177faf",
-      "bytes": 7892
+      "sha256": "af1ac1eaeb07b823f0e2a57e8fa5665e34a9a62e78e1c38b82bedec8568c4a4a",
+      "bytes": 7904
     },
     {
       "path": "flows/delete-account.trace.json",
-      "sha256": "febff7d74e84a20279ad4e421da5762257d52f8f4a4fa77c5225d3cd6fd2ab50",
-      "bytes": 9128
+      "sha256": "a5c2950fdf249ac42e6d636e6b707f0fae865a6a18aedce4fc5b2dbc842119be",
+      "bytes": 9132
     },
     {
       "path": "manifest.json",
-      "sha256": "d0c0faf304c0e07451ae39eb26a586dccbfdaa30a0b9ad9f747f08d91216232b",
-      "bytes": 2922
+      "sha256": "9c2a384a9946821c1bdf0ecec0bf4a5a748084966c9b30e229aa899a96fe77f6",
+      "bytes": 4576
     }
   ],
   "warnings": [
@@ -213,7 +238,7 @@
       "category": "destructive-action-skipped",
       "severity": "degraded",
       "subject": {
-        "routeId": "account-orders--i0--1280x800",
+        "routeId": "account-orders--auth-desktop--i0",
         "flowId": "delete-account"
       },
       "summary": "Delete account was not probed (destructive heuristic matched \"delete\").",
@@ -251,6 +276,22 @@
       "detail": "§8 forbids outbound network from the clone. These requests are documented here and blocked by the undici agent; nothing in the generated app will attempt them.",
       "stub": {
         "kind": "none"
+      }
+    },
+    {
+      "gapId": "gap_49bf24b14b1f",
+      "stage": "capture",
+      "category": "shadow-dom",
+      "severity": "degraded",
+      "subject": {
+        "routeId": "product-id--anon-desktop--i0",
+        "url": "https://example.com/product/mug-blue-12oz"
+      },
+      "summary": "<nw-rating> uses a closed shadow root; its content is unreachable.",
+      "detail": "§11 pierces shadow roots via element.shadowRoot, which returns null for a closed root by design — there is no supported way to read one from page context. This is a permanent capability limit, not a missing feature. The host element and its computed style are captured; its subtree is not. The clone renders an empty element of the same box size.",
+      "stub": {
+        "kind": "omitted",
+        "detail": "Host element rendered at captured dimensions with no content."
       }
     }
   ]

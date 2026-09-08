@@ -1,0 +1,87 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "product-id--anon-desktop--i0",
+  "siteId": "northwind-supply",
+  "urlPattern": "/product/:id",
+  "contextId": "anon-desktop",
+  "instanceIndex": 0,
+  "url": "https://example.com/product/mug-blue-12oz",
+  "pathParams": {
+    "id": "mug-blue-12oz"
+  },
+  "canonicalUrl": "https://example.com/product/mug-blue-12oz",
+  "title": "Blue Enamel Mug, 12oz — Northwind Supply",
+  "status": 200,
+  "redirectChain": [],
+  "templateGuess": {
+    "name": "product-detail",
+    "confidence": 0.97,
+    "rationale": "Structural hash matches instance i1 at 0.98 similarity."
+  },
+  "requiresAuth": false,
+  "unauthenticatedBehavior": {
+    "kind": "accessible"
+  },
+  "depth": 1,
+  "discoveredFrom": {
+    "kind": "link",
+    "routeId": "root--anon-desktop--i0",
+    "nodeId": "n_e388664634465688"
+  },
+  "embeddedIn": [],
+  "content": {
+    "kind": "captured",
+    "contentHash": "d7d89c1c80b8a7eaf0b3f14070199fd6236cb91770c209280ccd7dedd8ad13e1",
+    "renderedSize": {
+      "width": 1280,
+      "height": 800
+    },
+    "screenshots": {
+      "full": {
+        "path": "shot.full.png",
+        "sha256": "97611eb37da19fc9d815d25b6be8cc03bc480cab17ba378ab829ab25b962189f",
+        "width": 1280,
+        "height": 1400
+      },
+      "scroll": [
+        {
+          "index": 0,
+          "scrollY": 0,
+          "shot": {
+            "path": "scroll/0000.png",
+            "sha256": "cf3c696608c71be994003598625e26eb4f91065522d58e2337eba6981464197b",
+            "width": 1280,
+            "height": 800
+          }
+        },
+        {
+          "index": 1,
+          "scrollY": 400,
+          "shot": {
+            "path": "scroll/0001.png",
+            "sha256": "f2f06e8ce6772962175ab01b8117803070ee6a9b58bc4fbf69ae5095b1329d64",
+            "width": 1280,
+            "height": 800
+          }
+        }
+      ]
+    },
+    "pageMetrics": {
+      "scrollHeight": 1400,
+      "scrollWidth": 1280,
+      "scrollSteps": 2
+    }
+  },
+  "gapIds": [
+    "gap_1982e0d1e2fc",
+    "gap_34a4ad245bd3",
+    "gap_49bf24b14b1f"
+  ]
+}

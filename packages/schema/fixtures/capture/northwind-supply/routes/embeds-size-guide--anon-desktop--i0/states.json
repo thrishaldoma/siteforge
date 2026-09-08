@@ -1,0 +1,17 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "state-deltas",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 780
+  },
+  "routeId": "embeds-size-guide--anon-desktop--i0",
+  "entries": [],
+  "stats": {
+    "cssomRules": 0,
+    "probedNodes": 0,
+    "scrollSteps": 0
+  }
+}

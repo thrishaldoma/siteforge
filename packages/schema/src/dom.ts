@@ -18,6 +18,7 @@ import {
   type NodeId,
 } from './primitives.js';
 import { artifactEnvelope } from './artifact.js';
+import { GapIdSchema } from './gap.js';
 
 /**
  * Attribute stamped on flattened shadow content.
@@ -72,13 +73,23 @@ export const InteractionCandidateSchema = z.strictObject({
 });
 
 /**
- * The two inputs to `nodeId` (§5), retained so that when an id changes between
- * crawls the diff can attribute the change to structure or to content.
+ * The three components of a node's identity, retained so a changed id can be
+ * attributed rather than merely noticed.
+ *
+ * `nodeId = hash(structuralPath | semanticKey)`. `contentFingerprint` is recorded
+ * but deliberately **excluded** from the id: on a live site prices, timestamps
+ * and counts churn between crawls, and folding them in would relocate every node
+ * beneath them. Two crawls agreeing on `nodeId` and differing here means "same
+ * node, new content", which is the distinction §5 wants diffs to make.
+ *
+ * See docs/decisions/0005-nodeid-is-structural-not-content.md.
  */
 export const NodeIdentitySchema = z.strictObject({
   /** e.g. `html/body/div[2]/main[1]/ul[1]/li[3]` */
   structuralPath: z.string().min(1),
-  /** Hash of the node's own text and identifying attributes. */
+  /** Authored, data-independent attributes. Framework-generated ids excluded. */
+  semanticKey: ShortHashSchema,
+  /** The node's own text and content-bearing attributes. Not part of `nodeId`. */
   contentFingerprint: ShortHashSchema,
 });
 
@@ -96,10 +107,25 @@ export const IframeRefSchema = z.discriminatedUnion('sameOrigin', [
     /** Static screenshot standing in for the third-party frame (§11). */
     placeholderAssetId: AssetIdSchema,
     /** Always paired with a gap. */
-    gapId: z.string().min(1),
+    gapId: GapIdSchema,
   }),
 ]);
 
+/**
+ * Shadow root marker.
+ *
+ * §11 pierces shadow roots and flattens their content inline. An **open** root
+ * yields its content. A **closed** root does not: `element.shadowRoot` is `null`
+ * from page context by design, and there is no supported way to reach inside one.
+ * That is a permanent capability gap, not a missing feature, so a closed root
+ * always carries the gap it wrote.
+ */
+export const ShadowHostSchema = z.discriminatedUnion('mode', [
+  z.strictObject({ mode: z.literal('open') }),
+  z.strictObject({ mode: z.literal('closed'), gapId: GapIdSchema }),
+]);
+
+export type ShadowHost = z.infer<typeof ShadowHostSchema>;
 export type DiscoverySource = z.infer<typeof DiscoverySourceSchema>;
 export type InteractionCandidate = z.infer<typeof InteractionCandidateSchema>;
 export type NodeIdentity = z.infer<typeof NodeIdentitySchema>;
@@ -127,8 +153,12 @@ export interface DomElementNode {
   a11y?: { ref: string; role: string; name: string } | undefined;
   boundingBox?: z.infer<typeof RectSchema> | undefined;
   interaction?: InteractionCandidate | undefined;
-  /** Present on a shadow host. Content is flattened inline into `children`. */
-  shadowHost?: { mode: 'open' | 'closed' } | undefined;
+  /**
+   * Present on a shadow host. An open root's content is flattened inline into
+   * `children`; a closed root's cannot be reached, so `children` is empty and a
+   * gap is named.
+   */
+  shadowHost?: { mode: 'open' } | { mode: 'closed'; gapId: string } | undefined;
   /** Present on flattened shadow content; points at the host. */
   withinShadowRootOf?: NodeId | undefined;
   iframe?: IframeRef | undefined;
@@ -158,7 +188,7 @@ export const DomNodeSchema: z.ZodType<DomNode> = z.lazy(() =>
         .optional(),
       boundingBox: RectSchema.optional(),
       interaction: InteractionCandidateSchema.optional(),
-      shadowHost: z.strictObject({ mode: z.enum(['open', 'closed']) }).optional(),
+      shadowHost: ShadowHostSchema.optional(),
       withinShadowRootOf: NodeIdSchema.optional(),
       iframe: IframeRefSchema.optional(),
       children: z.array(DomNodeSchema),

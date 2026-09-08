@@ -1,0 +1,1134 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "dom-document",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 620
+  },
+  "routeId": "account-orders--auth-desktop--i0",
+  "documentUrl": "https://example.com/account/orders",
+  "doctype": "html",
+  "lang": "en",
+  "normalization": {
+    "whitespace": "collapsed",
+    "commentsRemoved": true,
+    "inlineCodeOmitted": true,
+    "shadowDomFlattened": true,
+    "iframesRecursed": false
+  },
+  "root": {
+    "nodeType": "element",
+    "nodeId": "n_65456fac28ed307e",
+    "identity": {
+      "structuralPath": "html",
+      "semanticKey": "5c8f57aebc098a44",
+      "contentFingerprint": "7a096888b9337f3b"
+    },
+    "tag": "html",
+    "attributes": {
+      "lang": "en"
+    },
+    "styleId": "s_53dac453ef7ff41e",
+    "children": [
+      {
+        "nodeType": "element",
+        "nodeId": "n_2f694186af7b1165",
+        "identity": {
+          "structuralPath": "html/head[1]",
+          "semanticKey": "2fa4ef497bedf099",
+          "contentFingerprint": "7a096888b9337f3b"
+        },
+        "tag": "head",
+        "attributes": {},
+        "styleId": "s_0fbea6d6417bb68d",
+        "children": [
+          {
+            "nodeType": "element",
+            "nodeId": "n_f991e0b504c51f27",
+            "identity": {
+              "structuralPath": "html/head[1]/title[1]",
+              "semanticKey": "79f228fb7f37fa11",
+              "contentFingerprint": "737ebdd68b367be3"
+            },
+            "tag": "title",
+            "attributes": {},
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": [
+              {
+                "nodeType": "text",
+                "nodeId": "n_29cce778798990d9",
+                "value": "Your orders — Northwind Supply"
+              }
+            ]
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_7acb1282e9f0bc58",
+            "identity": {
+              "structuralPath": "html/head[1]/meta[1]",
+              "semanticKey": "81f00613ca37cbcf",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "meta",
+            "attributes": {
+              "charset": "utf-8"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_fd3df4fad2c1ce46",
+            "identity": {
+              "structuralPath": "html/head[1]/meta[2]",
+              "semanticKey": "3eebf6143cdf456b",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "meta",
+            "attributes": {
+              "name": "viewport",
+              "content": "width=device-width"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_0fcbf39e65390dad",
+            "identity": {
+              "structuralPath": "html/head[1]/link[1]",
+              "semanticKey": "366a2b295a11e509",
+              "contentFingerprint": "ad608281c25d7e6b"
+            },
+            "tag": "link",
+            "attributes": {
+              "rel": "stylesheet",
+              "href": "/static/app.css"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_8a10daf5667b192f",
+            "identity": {
+              "structuralPath": "html/head[1]/link[2]",
+              "semanticKey": "366a2b295a11e509",
+              "contentFingerprint": "00c5c967e9131e2d"
+            },
+            "tag": "link",
+            "attributes": {
+              "rel": "icon",
+              "href": "/static/logo.svg"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          }
+        ]
+      },
+      {
+        "nodeType": "element",
+        "nodeId": "n_e75c59e4ae6af9d7",
+        "identity": {
+          "structuralPath": "html/body[1]",
+          "semanticKey": "5f646d5f83176736",
+          "contentFingerprint": "7a096888b9337f3b"
+        },
+        "tag": "body",
+        "attributes": {},
+        "styleId": "s_937c56bf144c1234",
+        "children": [
+          {
+            "nodeType": "element",
+            "nodeId": "n_b453aadfff86967e",
+            "identity": {
+              "structuralPath": "html/body[1]/div[1]",
+              "semanticKey": "2209daeb1e0d68ee",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "div",
+            "attributes": {
+              "id": "app"
+            },
+            "styleId": "s_d2be9cfc6f10b07b",
+            "children": [
+              {
+                "nodeType": "element",
+                "nodeId": "n_84846e3a684e33b6",
+                "identity": {
+                  "structuralPath": "html/body[1]/div[1]/header[1]",
+                  "semanticKey": "53cc7d76d18ce089",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "header",
+                "attributes": {
+                  "class": "site-header"
+                },
+                "styleId": "s_ad35759ea23491b4",
+                "a11y": {
+                  "ref": "a11y_e594ba5bcb08",
+                  "role": "banner",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_5c852455835bd828",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/a[1]",
+                      "semanticKey": "1518686cb12ea0c0",
+                      "contentFingerprint": "3469e53585de0498"
+                    },
+                    "tag": "a",
+                    "attributes": {
+                      "class": "brand",
+                      "href": "/"
+                    },
+                    "styleId": "s_80f6e101a2b96534",
+                    "a11y": {
+                      "ref": "a11y_b7918029be8b",
+                      "role": "link",
+                      "name": "Northwind Supply"
+                    },
+                    "boundingBox": {
+                      "x": 32,
+                      "y": 16,
+                      "width": 132,
+                      "height": 28
+                    },
+                    "interaction": {
+                      "discoveredBy": [
+                        "a11y-tree",
+                        "event-listeners"
+                      ],
+                      "selector": "header.site-header > a.brand",
+                      "eventTypes": [
+                        "click"
+                      ],
+                      "stateDeltaObserved": false
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_35a513f0d694844a",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/header[1]/a[1]/img[1]",
+                          "semanticKey": "cbc67817f2da935c",
+                          "contentFingerprint": "37810db5e6d1f49d"
+                        },
+                        "tag": "img",
+                        "attributes": {
+                          "src": "/static/logo.svg",
+                          "alt": "Northwind Supply",
+                          "width": "132",
+                          "height": "28"
+                        },
+                        "styleId": "s_0f541cb959a61169",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_0aeb70d78a74c2e8",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/nw-search[1]",
+                      "semanticKey": "6cb32dc0ef52c6a9",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "nw-search",
+                    "attributes": {
+                      "class": "search"
+                    },
+                    "styleId": "s_d83696ff50da76b7",
+                    "shadowHost": {
+                      "mode": "open"
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_ccc1580b29a37bb0",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/header[1]/nw-search[1]/div[1]",
+                          "semanticKey": "6c039c63ce683e1e",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "div",
+                        "attributes": {
+                          "class": "shell",
+                          "data-siteforge-shadow": "nw-search"
+                        },
+                        "styleId": "s_a6a5943f926998cd",
+                        "withinShadowRootOf": "n_0aeb70d78a74c2e8",
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_a1eb7a0de30d37f9",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/header[1]/nw-search[1]/div[1]/input[1]",
+                              "semanticKey": "5405ae18ea4f0187",
+                              "contentFingerprint": "35d0d034d3c71078"
+                            },
+                            "tag": "input",
+                            "attributes": {
+                              "type": "search",
+                              "placeholder": "Search supplies",
+                              "aria-label": "Search supplies",
+                              "data-siteforge-shadow": "nw-search"
+                            },
+                            "styleId": "s_532ab1a5926a5765",
+                            "a11y": {
+                              "ref": "a11y_e3d4faf632b9",
+                              "role": "searchbox",
+                              "name": "Search supplies"
+                            },
+                            "boundingBox": {
+                              "x": 196,
+                              "y": 22,
+                              "width": 396,
+                              "height": 36
+                            },
+                            "interaction": {
+                              "discoveredBy": [
+                                "a11y-tree",
+                                "pseudo-class-rule"
+                              ],
+                              "selector": "nw-search >>> input[type=search]",
+                              "eventTypes": [
+                                "input",
+                                "focus",
+                                "keydown"
+                              ],
+                              "stateDeltaObserved": true
+                            },
+                            "withinShadowRootOf": "n_0aeb70d78a74c2e8",
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_c469dadb3423d816",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]",
+                      "semanticKey": "e4464146bdb8f517",
+                      "contentFingerprint": "0984e410d6fe62c5"
+                    },
+                    "tag": "nav",
+                    "attributes": {
+                      "aria-label": "Primary"
+                    },
+                    "styleId": "s_a64be764093552ca",
+                    "a11y": {
+                      "ref": "a11y_25e3d6c67239",
+                      "role": "navigation",
+                      "name": "Primary"
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_5d5e10ddd39f7f5c",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]",
+                          "semanticKey": "a2f651a8f9d70f41",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "ul",
+                        "attributes": {},
+                        "styleId": "s_cb4899d06be4523b",
+                        "a11y": {
+                          "ref": "a11y_cdc2fc2ba5f3",
+                          "role": "list",
+                          "name": ""
+                        },
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_b54b8009016cb33c",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[1]",
+                              "semanticKey": "2cba5aa6c2a9b1de",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "li",
+                            "attributes": {},
+                            "styleId": "s_6201498e054de802",
+                            "a11y": {
+                              "ref": "a11y_4e83b94c0198",
+                              "role": "listitem",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_e54b43df801a18f1",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[1]/a[1]",
+                                  "semanticKey": "1518686cb12ea0c0",
+                                  "contentFingerprint": "c007f7bda0e78ab5"
+                                },
+                                "tag": "a",
+                                "attributes": {
+                                  "href": "/shop"
+                                },
+                                "styleId": "s_81dba0f0b6f7afae",
+                                "a11y": {
+                                  "ref": "a11y_8cda7ed03f8b",
+                                  "role": "link",
+                                  "name": "Shop"
+                                },
+                                "boundingBox": {
+                                  "x": 700,
+                                  "y": 24,
+                                  "width": 38,
+                                  "height": 20
+                                },
+                                "interaction": {
+                                  "discoveredBy": [
+                                    "a11y-tree",
+                                    "event-listeners"
+                                  ],
+                                  "selector": "nav[aria-label=Primary] a[href=\"/shop\"]",
+                                  "eventTypes": [
+                                    "click"
+                                  ],
+                                  "stateDeltaObserved": false
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_71fdd173c7cc9f31",
+                                    "value": "Shop"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_a632f9a2231d4d3d",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[2]",
+                              "semanticKey": "2cba5aa6c2a9b1de",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "li",
+                            "attributes": {},
+                            "styleId": "s_6201498e054de802",
+                            "a11y": {
+                              "ref": "a11y_b8828f52358f",
+                              "role": "listitem",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_a4210f38eef07649",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[2]/a[1]",
+                                  "semanticKey": "1518686cb12ea0c0",
+                                  "contentFingerprint": "4a785409671368ba"
+                                },
+                                "tag": "a",
+                                "attributes": {
+                                  "href": "/about"
+                                },
+                                "styleId": "s_81dba0f0b6f7afae",
+                                "a11y": {
+                                  "ref": "a11y_6314ec5ab98c",
+                                  "role": "link",
+                                  "name": "About"
+                                },
+                                "boundingBox": {
+                                  "x": 758,
+                                  "y": 24,
+                                  "width": 42,
+                                  "height": 20
+                                },
+                                "interaction": {
+                                  "discoveredBy": [
+                                    "a11y-tree",
+                                    "event-listeners"
+                                  ],
+                                  "selector": "nav[aria-label=Primary] a[href=\"/about\"]",
+                                  "eventTypes": [
+                                    "click"
+                                  ],
+                                  "stateDeltaObserved": false
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_bc0ca3e067b155d5",
+                                    "value": "About"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_0fcd1a657c752962",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/button[1]",
+                      "semanticKey": "3eac27f657fa9a7e",
+                      "contentFingerprint": "0147f5e4258d7595"
+                    },
+                    "tag": "button",
+                    "attributes": {
+                      "class": "cart-button",
+                      "type": "button",
+                      "aria-label": "Cart, 0 items"
+                    },
+                    "styleId": "s_2cda4f9633842617",
+                    "a11y": {
+                      "ref": "a11y_f9a637b6dcb6",
+                      "role": "button",
+                      "name": "Cart, 0 items"
+                    },
+                    "boundingBox": {
+                      "x": 1140,
+                      "y": 16,
+                      "width": 108,
+                      "height": 36
+                    },
+                    "interaction": {
+                      "discoveredBy": [
+                        "a11y-tree",
+                        "event-listeners"
+                      ],
+                      "selector": "button.cart-button",
+                      "eventTypes": [
+                        "click"
+                      ],
+                      "stateDeltaObserved": true
+                    },
+                    "children": [
+                      {
+                        "nodeType": "text",
+                        "nodeId": "n_5df1240d16a95ed5",
+                        "value": "Cart (0)"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "nodeType": "element",
+                "nodeId": "n_a2303eec6306b8b4",
+                "identity": {
+                  "structuralPath": "html/body[1]/div[1]/main[1]",
+                  "semanticKey": "25c3e8b21bcc8772",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "main",
+                "attributes": {},
+                "styleId": "s_02831320aafa7ece",
+                "a11y": {
+                  "ref": "a11y_f499c023c08f",
+                  "role": "main",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_ba97a69d09bc6807",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/main[1]/h1[1]",
+                      "semanticKey": "107b95fdd4e19827",
+                      "contentFingerprint": "2190b46bda3657ca"
+                    },
+                    "tag": "h1",
+                    "attributes": {},
+                    "styleId": "s_916c9839bd2e24c7",
+                    "a11y": {
+                      "ref": "a11y_0e0856ef082d",
+                      "role": "heading",
+                      "name": "Your orders"
+                    },
+                    "children": [
+                      {
+                        "nodeType": "text",
+                        "nodeId": "n_e9e3403f3cd2e535",
+                        "value": "Your orders"
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_c84abad2fb34de11",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/main[1]/table[1]",
+                      "semanticKey": "27c59c923fda9f1e",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "table",
+                    "attributes": {},
+                    "styleId": "s_3726905419f76846",
+                    "a11y": {
+                      "ref": "a11y_20e97a385a3a",
+                      "role": "table",
+                      "name": "Your orders"
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_495abe9107071578",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/thead[1]",
+                          "semanticKey": "48dc2c4a7fe2a9d0",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "thead",
+                        "attributes": {},
+                        "styleId": "s_4dab2545a7ad9999",
+                        "a11y": {
+                          "ref": "a11y_a66bc4e85425",
+                          "role": "rowgroup",
+                          "name": ""
+                        },
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_af3f8bfc0a4f4a60",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/thead[1]/tr[1]",
+                              "semanticKey": "f58053fe9f774f99",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "tr",
+                            "attributes": {},
+                            "styleId": "s_d758d0e1c2e685ad",
+                            "a11y": {
+                              "ref": "a11y_5e4ff13f043d",
+                              "role": "row",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_1bd962281fe095af",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/thead[1]/tr[1]/th[1]",
+                                  "semanticKey": "c2b118eff2c0be84",
+                                  "contentFingerprint": "3555a45c8d4b5d46"
+                                },
+                                "tag": "th",
+                                "attributes": {
+                                  "scope": "col"
+                                },
+                                "styleId": "s_0ae7c10058548347",
+                                "a11y": {
+                                  "ref": "a11y_ccf2aba8f403",
+                                  "role": "columnheader",
+                                  "name": "Order"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_86453e27843b6d91",
+                                    "value": "Order"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_6dea092e032af8b4",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/thead[1]/tr[1]/th[2]",
+                                  "semanticKey": "c2b118eff2c0be84",
+                                  "contentFingerprint": "8b7902356c2c4eb9"
+                                },
+                                "tag": "th",
+                                "attributes": {
+                                  "scope": "col"
+                                },
+                                "styleId": "s_0ae7c10058548347",
+                                "a11y": {
+                                  "ref": "a11y_f274ab2a6f1d",
+                                  "role": "columnheader",
+                                  "name": "Placed"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_9787bf78ca32fa64",
+                                    "value": "Placed"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_20e66bca2af1a64f",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/thead[1]/tr[1]/th[3]",
+                                  "semanticKey": "c2b118eff2c0be84",
+                                  "contentFingerprint": "144e27c303b60cc7"
+                                },
+                                "tag": "th",
+                                "attributes": {
+                                  "scope": "col"
+                                },
+                                "styleId": "s_0ae7c10058548347",
+                                "a11y": {
+                                  "ref": "a11y_d558327b002c",
+                                  "role": "columnheader",
+                                  "name": "Status"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_756de1ae539a2195",
+                                    "value": "Status"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_1c77d5d980d56f69",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/thead[1]/tr[1]/th[4]",
+                                  "semanticKey": "c2b118eff2c0be84",
+                                  "contentFingerprint": "8006eb109e4e6d67"
+                                },
+                                "tag": "th",
+                                "attributes": {
+                                  "scope": "col"
+                                },
+                                "styleId": "s_0ae7c10058548347",
+                                "a11y": {
+                                  "ref": "a11y_f470a921e394",
+                                  "role": "columnheader",
+                                  "name": "Total"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_b06df235661867fa",
+                                    "value": "Total"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_003af52d900076ac",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]",
+                          "semanticKey": "57e92cba163746a4",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "tbody",
+                        "attributes": {},
+                        "styleId": "s_e0cc9875fc6d4726",
+                        "a11y": {
+                          "ref": "a11y_644053cf7741",
+                          "role": "rowgroup",
+                          "name": ""
+                        },
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_93ed01181a7aa9b3",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[1]",
+                              "semanticKey": "f58053fe9f774f99",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "tr",
+                            "attributes": {},
+                            "styleId": "s_d758d0e1c2e685ad",
+                            "a11y": {
+                              "ref": "a11y_0fdfd8beb6e9",
+                              "role": "row",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_30ebcd92a9d8a9a3",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[1]/td[1]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "752df91118d8ea60"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_e736d130bf05",
+                                  "role": "cell",
+                                  "name": "NW-10428"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_58e9ae82da8df8a5",
+                                    "value": "NW-10428"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_0cc76942dd85e01b",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[1]/td[2]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "388c37c39c79a3af"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_311f3e4b01ef",
+                                  "role": "cell",
+                                  "name": "2026-08-14"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_e7a204c01c897ace",
+                                    "value": "2026-08-14"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_0739c4b0dd55bfc7",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[1]/td[3]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "ec275f84b3dd0225"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_eff88c8e54f2",
+                                  "role": "cell",
+                                  "name": "Delivered"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_fa86c4b1d0d3ffd8",
+                                    "value": "Delivered"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_2a1d4d18f4935766",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[1]/td[4]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "6089e625e9373780"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_913a80f4b579",
+                                  "role": "cell",
+                                  "name": "$30.50"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_dc7fffacccfb84f2",
+                                    "value": "$30.50"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_07bdd99b380e4d84",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[2]",
+                              "semanticKey": "f58053fe9f774f99",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "tr",
+                            "attributes": {},
+                            "styleId": "s_d758d0e1c2e685ad",
+                            "a11y": {
+                              "ref": "a11y_74c91ede2b8f",
+                              "role": "row",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_107dd6fc6445356b",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[2]/td[1]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "43003d5552abb243"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_87e7b20f62e2",
+                                  "role": "cell",
+                                  "name": "NW-10391"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_5220a9d74efe6763",
+                                    "value": "NW-10391"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_eb87eba6524fc0b8",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[2]/td[2]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "bba5a43ef264ce3c"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_3312c724b9ed",
+                                  "role": "cell",
+                                  "name": "2026-07-02"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_dd99accb29d29ce5",
+                                    "value": "2026-07-02"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_9c75051222a03b80",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[2]/td[3]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "ec275f84b3dd0225"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_5686deb85870",
+                                  "role": "cell",
+                                  "name": "Delivered"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_70892f65b3f9e7cc",
+                                    "value": "Delivered"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_05aacc7135144d5a",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/table[1]/tbody[1]/tr[2]/td[4]",
+                                  "semanticKey": "72f4e8eb004f0f0f",
+                                  "contentFingerprint": "71e3d18ef5156d84"
+                                },
+                                "tag": "td",
+                                "attributes": {},
+                                "styleId": "s_36dc272a34f2e3b7",
+                                "a11y": {
+                                  "ref": "a11y_de077b83436d",
+                                  "role": "cell",
+                                  "name": "$18.00"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_94f233bd32c17055",
+                                    "value": "$18.00"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_a935645c56476452",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/main[1]/section[1]",
+                      "semanticKey": "54bacf009a563b5e",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "section",
+                    "attributes": {
+                      "class": "danger-zone"
+                    },
+                    "styleId": "s_6a54757a772ba338",
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_44e830d626761254",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/section[1]/h2[1]",
+                          "semanticKey": "c4bbb4e82335ff7a",
+                          "contentFingerprint": "50358645d56f4d81"
+                        },
+                        "tag": "h2",
+                        "attributes": {},
+                        "styleId": "s_87e9156637defa39",
+                        "a11y": {
+                          "ref": "a11y_0333f755c03b",
+                          "role": "heading",
+                          "name": "Danger zone"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_0f393c270972a073",
+                            "value": "Danger zone"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_da219963007efd4a",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/section[1]/button[1]",
+                          "semanticKey": "3eac27f657fa9a7e",
+                          "contentFingerprint": "50cf04b3029a6993"
+                        },
+                        "tag": "button",
+                        "attributes": {
+                          "class": "btn btn-danger",
+                          "type": "button"
+                        },
+                        "styleId": "s_df7254546857f158",
+                        "a11y": {
+                          "ref": "a11y_d4bd05fa7dd4",
+                          "role": "button",
+                          "name": "Delete account"
+                        },
+                        "boundingBox": {
+                          "x": 32,
+                          "y": 700,
+                          "width": 160,
+                          "height": 40
+                        },
+                        "interaction": {
+                          "discoveredBy": [
+                            "a11y-tree",
+                            "event-listeners"
+                          ],
+                          "selector": "button.btn-danger",
+                          "eventTypes": [
+                            "click"
+                          ],
+                          "stateDeltaObserved": false,
+                          "destructive": {
+                            "matchedTerm": "delete",
+                            "skipped": true
+                          }
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_316f2f2f83f8e4f4",
+                            "value": "Delete account"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "nodeType": "element",
+                "nodeId": "n_cad40206eab03227",
+                "identity": {
+                  "structuralPath": "html/body[1]/div[1]/footer[1]",
+                  "semanticKey": "105306c75399a244",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "footer",
+                "attributes": {},
+                "styleId": "s_cb634fbd842f1c32",
+                "a11y": {
+                  "ref": "a11y_4c903152c8a0",
+                  "role": "contentinfo",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_dea3fb37b7fdc3d5",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/footer[1]/p[1]",
+                      "semanticKey": "b42e5f5b6d8598a4",
+                      "contentFingerprint": "c5cdf1cc2c6720c1"
+                    },
+                    "tag": "p",
+                    "attributes": {},
+                    "styleId": "s_fa342e97e6395514",
+                    "children": [
+                      {
+                        "nodeType": "text",
+                        "nodeId": "n_dac563b329912eeb",
+                        "value": "Northwind Supply — a fictional storefront used as a siteforge fixture."
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_85b3fe5b355f1a2b",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/footer[1]/iframe[1]",
+                      "semanticKey": "cf9cd4a6d63aee63",
+                      "contentFingerprint": "69aab6f512e8db6e"
+                    },
+                    "tag": "iframe",
+                    "attributes": {
+                      "src": "https://widgets.example.net/reviews?site=northwind",
+                      "title": "Customer reviews",
+                      "loading": "lazy"
+                    },
+                    "styleId": "s_49663b33b58e970a",
+                    "iframe": {
+                      "sameOrigin": false,
+                      "src": "https://widgets.example.net/reviews?site=northwind",
+                      "placeholderAssetId": "140e2850d6a6587a24a55b302efa0878094570717c9d9594ec934c05b21e0ecb",
+                      "gapId": "gap_1982e0d1e2fc"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "nodeCount": 68,
+  "domHash": "a50bd8fd42f88c4f"
+}

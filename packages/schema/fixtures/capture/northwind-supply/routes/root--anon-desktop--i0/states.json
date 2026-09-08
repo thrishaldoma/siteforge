@@ -1,0 +1,231 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "state-deltas",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 780
+  },
+  "routeId": "root--anon-desktop--i0",
+  "entries": [
+    {
+      "source": "cssom",
+      "selector": ".btn-primary:hover",
+      "stateSelectors": [
+        ":hover"
+      ],
+      "declarations": {
+        "background-color": "rgb(29, 78, 216)"
+      },
+      "matchedNodeIds": [
+        "n_fc571e0786a98eae",
+        "n_263a93fcc34c9a06",
+        "n_265cb1957d50284f"
+      ],
+      "origin": {
+        "stylesheetHref": "https://example.com/static/app.css",
+        "sheetIndex": 0,
+        "ruleIndex": 0
+      }
+    },
+    {
+      "source": "cssom",
+      "selector": ".btn-primary:disabled",
+      "stateSelectors": [
+        ":disabled"
+      ],
+      "declarations": {
+        "opacity": "0.5",
+        "cursor": "not-allowed"
+      },
+      "matchedNodeIds": [
+        "n_fc571e0786a98eae",
+        "n_263a93fcc34c9a06",
+        "n_265cb1957d50284f"
+      ],
+      "origin": {
+        "stylesheetHref": "https://example.com/static/app.css",
+        "sheetIndex": 0,
+        "ruleIndex": 1
+      }
+    },
+    {
+      "source": "cssom",
+      "selector": ".btn-primary:focus-visible",
+      "stateSelectors": [
+        ":focus-visible"
+      ],
+      "declarations": {
+        "outline-width": "2px",
+        "outline-style": "solid",
+        "outline-color": "rgb(37, 99, 235)",
+        "outline-offset": "2px"
+      },
+      "matchedNodeIds": [
+        "n_fc571e0786a98eae",
+        "n_263a93fcc34c9a06",
+        "n_265cb1957d50284f"
+      ],
+      "origin": {
+        "stylesheetHref": "https://example.com/static/app.css",
+        "sheetIndex": 0,
+        "ruleIndex": 2
+      }
+    },
+    {
+      "source": "cssom",
+      "selector": ".card-link:focus-visible",
+      "stateSelectors": [
+        ":focus-visible"
+      ],
+      "declarations": {
+        "outline-width": "2px",
+        "outline-style": "solid",
+        "outline-color": "rgb(37, 99, 235)"
+      },
+      "matchedNodeIds": [
+        "n_e388664634465688",
+        "n_9954428940511b90",
+        "n_9f75e751e274de50"
+      ],
+      "origin": {
+        "stylesheetHref": "https://example.com/static/app.css",
+        "sheetIndex": 0,
+        "ruleIndex": 3
+      }
+    },
+    {
+      "source": "cssom",
+      "selector": ".product-card:hover .card-img",
+      "stateSelectors": [
+        ":hover"
+      ],
+      "declarations": {
+        "transform": "scale(1.02)"
+      },
+      "matchedNodeIds": [
+        "n_e388664634465688",
+        "n_9954428940511b90",
+        "n_9f75e751e274de50"
+      ],
+      "origin": {
+        "stylesheetHref": "https://example.com/static/app.css",
+        "sheetIndex": 0,
+        "ruleIndex": 4
+      }
+    },
+    {
+      "source": "cssom",
+      "selector": "input[type=\"search\"]:focus",
+      "stateSelectors": [
+        ":focus"
+      ],
+      "declarations": {
+        "background-color": "rgb(255, 255, 255)",
+        "outline-width": "2px",
+        "outline-style": "solid",
+        "outline-color": "rgb(37, 99, 235)"
+      },
+      "matchedNodeIds": [
+        "n_a1eb7a0de30d37f9"
+      ],
+      "origin": {
+        "sheetIndex": 1,
+        "ruleIndex": 0
+      }
+    },
+    {
+      "source": "probed",
+      "nodeId": "n_0fcd1a657c752962",
+      "trigger": "click",
+      "reason": "absent-from-cssom",
+      "styleChanges": [],
+      "attributeChanges": [
+        {
+          "attribute": "aria-expanded",
+          "from": null,
+          "to": "true"
+        }
+      ],
+      "classChanges": {
+        "added": [
+          "is-open"
+        ],
+        "removed": []
+      },
+      "subtreeChanged": true
+    },
+    {
+      "source": "scroll",
+      "scrollStep": 1,
+      "scrollY": 400,
+      "effect": "lazy-load",
+      "addedNodeIds": [],
+      "changedNodeIds": [
+        "n_cffe24f85e5f9978",
+        "n_ef7a9e0577203ad4",
+        "n_a370cbcd597ef27d"
+      ],
+      "styleChanges": [
+        {
+          "nodeId": "n_cffe24f85e5f9978",
+          "changes": [
+            {
+              "property": "opacity",
+              "from": "0",
+              "to": "1"
+            }
+          ]
+        },
+        {
+          "nodeId": "n_ef7a9e0577203ad4",
+          "changes": [
+            {
+              "property": "opacity",
+              "from": "0",
+              "to": "1"
+            }
+          ]
+        },
+        {
+          "nodeId": "n_a370cbcd597ef27d",
+          "changes": [
+            {
+              "property": "opacity",
+              "from": "0",
+              "to": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "scroll",
+      "scrollStep": 1,
+      "scrollY": 400,
+      "effect": "sticky-transition",
+      "addedNodeIds": [],
+      "changedNodeIds": [
+        "n_84846e3a684e33b6"
+      ],
+      "styleChanges": [
+        {
+          "nodeId": "n_84846e3a684e33b6",
+          "changes": [
+            {
+              "property": "box-shadow",
+              "from": "none",
+              "to": "rgba(0, 0, 0, 0.06) 0px 1px 3px 0px"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "cssomRules": 6,
+    "probedNodes": 1,
+    "scrollSteps": 2
+  }
+}

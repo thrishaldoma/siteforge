@@ -13,13 +13,14 @@
 import { z } from 'zod';
 import {
   AbsoluteUrlSchema,
+  ContextIdSchema,
   FlowIdSchema,
   RouteIdSchema,
   Sha256Schema,
   SiteIdSchema,
-  ViewportSchema,
 } from './primitives.js';
 import { artifactEnvelope } from './artifact.js';
+import { CaptureContextSchema } from './context.js';
 import { UrlPatternSchema } from './route.js';
 
 /**
@@ -65,29 +66,29 @@ export const PermissionBasisSchema = z.discriminatedUnion('source', [
 ]);
 
 /**
- * How the crawl authenticated. Credentials never appear here — §3.3 restricts
- * them to `SITEFORGE_USER` / `SITEFORGE_PASS` or the OS keychain.
+ * §6 crawl frontier limits, made context-aware.
+ *
+ * Contexts multiply captures: N contexts over one site is up to N times the
+ * routes. §6's caps are therefore *per context*, with a global ceiling so a run
+ * that declares six contexts cannot quietly cost six times as much.
  */
-export const AuthConfigSchema = z.discriminatedUnion('mode', [
-  z.strictObject({ mode: z.literal('anonymous') }),
-  z.strictObject({
-    mode: z.literal('storage-state'),
-    /** Path only. The file itself is gitignored and chmod 600 (§5). */
-    storageStatePath: z.literal('auth/storage-state.json'),
-    /** §6: `--auth` launches headful and waits for a hand sign-in. */
-    acquiredBy: z.enum(['interactive-headful', 'reused-existing']),
-    /** So a run can report "your session expired" rather than silently crawling logged out. */
-    expiresAt: z.iso.datetime().nullable(),
-    credentialSource: z.enum(['env', 'os-keychain', 'interactive-only']),
-  }),
-]);
+export const CrawlBudgetSchema = z
+  .strictObject({
+    /** §5/§6: "a cap of 3 instances per pattern" — now per (pattern, context). */
+    maxInstancesPerPattern: z.int().positive(),
+    /** §6's `--max-routes` (default 40), applied within each context. */
+    maxRoutesPerContext: z.int().positive(),
+    /** Hard ceiling across every context. What stops contexts multiplying without bound. */
+    maxRoutesTotal: z.int().positive(),
+    maxDepth: z.int().nonnegative(),
+  })
+  .refine((b) => b.maxRoutesTotal >= b.maxRoutesPerContext, {
+    message: 'maxRoutesTotal must be at least maxRoutesPerContext',
+    path: ['maxRoutesTotal'],
+  });
 
-/** §6 crawl frontier limits. */
 export const CrawlConfigSchema = z.strictObject({
-  maxRoutes: z.int().positive(),
-  maxDepth: z.int().nonnegative(),
-  /** §5/§6: "a cap of 3 instances per pattern". */
-  maxInstancesPerPattern: z.int().positive(),
+  budget: CrawlBudgetSchema,
   sameOriginOnly: z.literal(true),
   allowDestructive: z.boolean(),
   /** Terms the destructive heuristic matches on (§6). */
@@ -99,7 +100,7 @@ export const RoutePatternSummarySchema = z.strictObject({
   urlPattern: UrlPatternSchema,
   /** Distinct URLs seen for this pattern, before the instance cap was applied. */
   observedUrlCount: z.int().positive(),
-  /** Route directories actually written. */
+  /** Route directories actually written, across every context. */
   routeIds: z.array(RouteIdSchema).min(1),
 });
 
@@ -114,12 +115,17 @@ export const CaptureManifestSchema = z.strictObject({
   }),
   permission: PermissionBasisSchema,
 
-  /** §6 setup. `--responsive` adds the second entry. */
-  viewports: z.array(ViewportSchema).min(1),
+  /**
+   * Every set of conditions the site was captured under (§6's anonymous and
+   * authenticated sets, `--responsive`'s viewports, §11's pinned variants).
+   *
+   * Adding a capture dimension means adding a context here — never widening
+   * `RouteIdSchema`. See docs/decisions/0004.
+   */
+  contexts: z.array(CaptureContextSchema).min(1),
   userAgent: z.string().min(1),
   determinism: DeterminismShimSchema,
   crawl: CrawlConfigSchema,
-  auth: AuthConfigSchema,
 
   /** Pinned so a re-crawl on a different Chromium is not mistaken for a real diff. */
   toolVersions: z.strictObject({
@@ -146,7 +152,11 @@ export const CaptureManifestSchema = z.strictObject({
   contentHash: Sha256Schema,
 
   counts: z.strictObject({
+    contexts: z.int().positive(),
+    /** Route directories written, including shared-content pointers. */
     routes: z.int().nonnegative(),
+    /** Directories that actually hold artifacts. The rest point at these. */
+    capturedRoutes: z.int().nonnegative(),
     patterns: z.int().nonnegative(),
     assets: z.int().nonnegative(),
     endpoints: z.int().nonnegative(),
@@ -157,7 +167,7 @@ export const CaptureManifestSchema = z.strictObject({
 
 export type DeterminismShim = z.infer<typeof DeterminismShimSchema>;
 export type PermissionBasis = z.infer<typeof PermissionBasisSchema>;
-export type AuthConfig = z.infer<typeof AuthConfigSchema>;
+export type CrawlBudget = z.infer<typeof CrawlBudgetSchema>;
 export type CrawlConfig = z.infer<typeof CrawlConfigSchema>;
 export type RoutePatternSummary = z.infer<typeof RoutePatternSummarySchema>;
 export type CaptureManifest = z.infer<typeof CaptureManifestSchema>;

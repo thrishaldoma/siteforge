@@ -1,0 +1,74 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "about--anon-desktop--i0",
+  "siteId": "northwind-supply",
+  "urlPattern": "/about",
+  "contextId": "anon-desktop",
+  "instanceIndex": 0,
+  "url": "https://example.com/about",
+  "pathParams": {},
+  "canonicalUrl": "https://example.com/about",
+  "title": "About — Northwind Supply",
+  "status": 200,
+  "redirectChain": [],
+  "templateGuess": {
+    "name": "prose",
+    "confidence": 0.88,
+    "rationale": "Shell plus a heading and two paragraphs; no data regions."
+  },
+  "requiresAuth": false,
+  "unauthenticatedBehavior": {
+    "kind": "accessible"
+  },
+  "depth": 1,
+  "discoveredFrom": {
+    "kind": "link",
+    "routeId": "root--anon-desktop--i0",
+    "nodeId": "n_a4210f38eef07649"
+  },
+  "embeddedIn": [],
+  "content": {
+    "kind": "captured",
+    "contentHash": "533cf6c1f12b8216d98fd1b9737d583bd6f8f711746b6970a1fe2da7cd3bbcb4",
+    "renderedSize": {
+      "width": 1280,
+      "height": 800
+    },
+    "screenshots": {
+      "full": {
+        "path": "shot.full.png",
+        "sha256": "096a116ee8ebac374cc2bd066517e3dea0c76fcff6c16a60374ac3c1ac6294ec",
+        "width": 1280,
+        "height": 900
+      },
+      "scroll": [
+        {
+          "index": 0,
+          "scrollY": 0,
+          "shot": {
+            "path": "scroll/0000.png",
+            "sha256": "9e79daed4f1e26ed09314134870e40ddaf5f5587ef739ff06db720e000a562ac",
+            "width": 1280,
+            "height": 800
+          }
+        }
+      ]
+    },
+    "pageMetrics": {
+      "scrollHeight": 900,
+      "scrollWidth": 1280,
+      "scrollSteps": 1
+    }
+  },
+  "gapIds": [
+    "gap_1982e0d1e2fc",
+    "gap_34a4ad245bd3"
+  ]
+}

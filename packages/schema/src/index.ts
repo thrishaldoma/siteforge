@@ -17,6 +17,7 @@ export { CAPTURE_MODEL_VERSION, SITE_MODEL_VERSION } from './version.js';
 
 export * from './primitives.js';
 export * from './identity.js';
+export * from './context.js';
 export * from './artifact.js';
 export * from './json-schema.js';
 export * from './a11y.js';

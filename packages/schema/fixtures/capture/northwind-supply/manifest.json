@@ -16,20 +16,77 @@
     "source": "allowlist",
     "matchedEntry": "example.com"
   },
-  "viewports": [
+  "contexts": [
     {
-      "width": 1280,
-      "height": 800,
-      "deviceScaleFactor": 1,
-      "isMobile": false,
-      "hasTouch": false
+      "contextId": "anon-desktop",
+      "label": "Anonymous · 1280×800 · en-US · hero=control",
+      "auth": {
+        "mode": "anonymous"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1,
+        "isMobile": false,
+        "hasTouch": false
+      },
+      "locale": {
+        "language": "en-US",
+        "timezone": "UTC"
+      },
+      "variant": {
+        "experiment": "homepage-hero",
+        "variant": "control",
+        "pinnedBy": "cookie",
+        "bestEffort": false
+      }
     },
     {
-      "width": 390,
-      "height": 844,
-      "deviceScaleFactor": 3,
-      "isMobile": true,
-      "hasTouch": true
+      "contextId": "anon-mobile",
+      "label": "Anonymous · 390×844 · en-US · hero=control",
+      "auth": {
+        "mode": "anonymous"
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 3,
+        "isMobile": true,
+        "hasTouch": true
+      },
+      "locale": {
+        "language": "en-US",
+        "timezone": "UTC"
+      },
+      "variant": {
+        "experiment": "homepage-hero",
+        "variant": "control",
+        "pinnedBy": "cookie",
+        "bestEffort": false
+      }
+    },
+    {
+      "contextId": "auth-desktop",
+      "label": "Signed in · 1280×800 · en-US · no experiment",
+      "auth": {
+        "mode": "storage-state",
+        "storageStatePath": "auth/storage-state.json",
+        "acquiredBy": "interactive-headful",
+        "expiresAt": "2026-09-15T11:24:07.000Z",
+        "credentialSource": "os-keychain"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1,
+        "isMobile": false,
+        "hasTouch": false
+      },
+      "locale": {
+        "language": "en-US",
+        "timezone": "UTC"
+      },
+      "variant": null
     }
   ],
   "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 siteforge/0.1.0",
@@ -47,9 +104,12 @@
     "prefersReducedMotion": "reduce"
   },
   "crawl": {
-    "maxRoutes": 40,
-    "maxDepth": 3,
-    "maxInstancesPerPattern": 3,
+    "budget": {
+      "maxInstancesPerPattern": 3,
+      "maxRoutesPerContext": 40,
+      "maxRoutesTotal": 100,
+      "maxDepth": 3
+    },
     "sameOriginOnly": true,
     "allowDestructive": false,
     "destructiveTerms": [
@@ -58,13 +118,6 @@
       "cancel subscription",
       "deactivate"
     ]
-  },
-  "auth": {
-    "mode": "storage-state",
-    "storageStatePath": "auth/storage-state.json",
-    "acquiredBy": "interactive-headful",
-    "expiresAt": "2026-09-15T11:24:07.000Z",
-    "credentialSource": "os-keychain"
   },
   "toolVersions": {
     "siteforge": "0.1.0",
@@ -76,53 +129,65 @@
       "urlPattern": "/",
       "observedUrlCount": 1,
       "routeIds": [
-        "root--i0--1280x800"
+        "root--anon-desktop--i0"
       ]
     },
     {
       "urlPattern": "/product/:id",
       "observedUrlCount": 12,
       "routeIds": [
-        "product-id--i0--1280x800",
-        "product-id--i1--1280x800",
-        "product-id--i0--390x844"
+        "product-id--anon-desktop--i0",
+        "product-id--anon-desktop--i1",
+        "product-id--anon-mobile--i0"
+      ]
+    },
+    {
+      "urlPattern": "/about",
+      "observedUrlCount": 1,
+      "routeIds": [
+        "about--anon-desktop--i0",
+        "about--auth-desktop--i0"
       ]
     },
     {
       "urlPattern": "/account/orders",
       "observedUrlCount": 1,
       "routeIds": [
-        "account-orders--i0--1280x800"
+        "account-orders--auth-desktop--i0"
       ]
     },
     {
       "urlPattern": "/embeds/size-guide",
       "observedUrlCount": 1,
       "routeIds": [
-        "embeds-size-guide--i0--640x420"
+        "embeds-size-guide--anon-desktop--i0"
       ]
     }
   ],
   "routeIds": [
-    "root--i0--1280x800",
-    "product-id--i0--1280x800",
-    "product-id--i1--1280x800",
-    "product-id--i0--390x844",
-    "account-orders--i0--1280x800",
-    "embeds-size-guide--i0--640x420"
+    "root--anon-desktop--i0",
+    "product-id--anon-desktop--i0",
+    "product-id--anon-desktop--i1",
+    "product-id--anon-mobile--i0",
+    "embeds-size-guide--anon-desktop--i0",
+    "about--anon-desktop--i0",
+    "about--auth-desktop--i0",
+    "account-orders--auth-desktop--i0"
   ],
   "flowIds": [
     "add-mug-to-cart",
     "toggle-product-details",
     "delete-account"
   ],
-  "contentHash": "373be36f27ec384bc177cefab5c7e5a67374c9096d5939f2fa05042200a69f88",
+  "contentHash": "95932d4f47444746a925af9a3498f1d931c666c3025448c376e0e550551ebbfb",
   "counts": {
-    "routes": 6,
-    "patterns": 4,
+    "contexts": 3,
+    "routes": 8,
+    "capturedRoutes": 7,
+    "patterns": 5,
     "assets": 8,
     "endpoints": 8,
     "flows": 3,
-    "gaps": 5
+    "gaps": 6
   }
 }

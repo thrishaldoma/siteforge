@@ -1,0 +1,1070 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "dom-document",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 620
+  },
+  "routeId": "product-id--anon-mobile--i0",
+  "documentUrl": "https://example.com/product/mug-blue-12oz",
+  "doctype": "html",
+  "lang": "en",
+  "normalization": {
+    "whitespace": "collapsed",
+    "commentsRemoved": true,
+    "inlineCodeOmitted": true,
+    "shadowDomFlattened": true,
+    "iframesRecursed": false
+  },
+  "root": {
+    "nodeType": "element",
+    "nodeId": "n_65456fac28ed307e",
+    "identity": {
+      "structuralPath": "html",
+      "semanticKey": "5c8f57aebc098a44",
+      "contentFingerprint": "7a096888b9337f3b"
+    },
+    "tag": "html",
+    "attributes": {
+      "lang": "en"
+    },
+    "styleId": "s_53dac453ef7ff41e",
+    "children": [
+      {
+        "nodeType": "element",
+        "nodeId": "n_2f694186af7b1165",
+        "identity": {
+          "structuralPath": "html/head[1]",
+          "semanticKey": "2fa4ef497bedf099",
+          "contentFingerprint": "7a096888b9337f3b"
+        },
+        "tag": "head",
+        "attributes": {},
+        "styleId": "s_0fbea6d6417bb68d",
+        "children": [
+          {
+            "nodeType": "element",
+            "nodeId": "n_f991e0b504c51f27",
+            "identity": {
+              "structuralPath": "html/head[1]/title[1]",
+              "semanticKey": "79f228fb7f37fa11",
+              "contentFingerprint": "f5a7b443622556ef"
+            },
+            "tag": "title",
+            "attributes": {},
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": [
+              {
+                "nodeType": "text",
+                "nodeId": "n_2e6421fed7dcd078",
+                "value": "Blue Enamel Mug, 12oz — Northwind Supply"
+              }
+            ]
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_7acb1282e9f0bc58",
+            "identity": {
+              "structuralPath": "html/head[1]/meta[1]",
+              "semanticKey": "81f00613ca37cbcf",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "meta",
+            "attributes": {
+              "charset": "utf-8"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_fd3df4fad2c1ce46",
+            "identity": {
+              "structuralPath": "html/head[1]/meta[2]",
+              "semanticKey": "3eebf6143cdf456b",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "meta",
+            "attributes": {
+              "name": "viewport",
+              "content": "width=device-width, initial-scale=1"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_0fcbf39e65390dad",
+            "identity": {
+              "structuralPath": "html/head[1]/link[1]",
+              "semanticKey": "366a2b295a11e509",
+              "contentFingerprint": "ad608281c25d7e6b"
+            },
+            "tag": "link",
+            "attributes": {
+              "rel": "stylesheet",
+              "href": "/static/app.css"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_8a10daf5667b192f",
+            "identity": {
+              "structuralPath": "html/head[1]/link[2]",
+              "semanticKey": "366a2b295a11e509",
+              "contentFingerprint": "00c5c967e9131e2d"
+            },
+            "tag": "link",
+            "attributes": {
+              "rel": "icon",
+              "href": "/static/logo.svg"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          }
+        ]
+      },
+      {
+        "nodeType": "element",
+        "nodeId": "n_e75c59e4ae6af9d7",
+        "identity": {
+          "structuralPath": "html/body[1]",
+          "semanticKey": "5f646d5f83176736",
+          "contentFingerprint": "7a096888b9337f3b"
+        },
+        "tag": "body",
+        "attributes": {},
+        "styleId": "s_937c56bf144c1234",
+        "children": [
+          {
+            "nodeType": "element",
+            "nodeId": "n_b453aadfff86967e",
+            "identity": {
+              "structuralPath": "html/body[1]/div[1]",
+              "semanticKey": "2209daeb1e0d68ee",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "div",
+            "attributes": {
+              "id": "app"
+            },
+            "styleId": "s_d2be9cfc6f10b07b",
+            "children": [
+              {
+                "nodeType": "element",
+                "nodeId": "n_84846e3a684e33b6",
+                "identity": {
+                  "structuralPath": "html/body[1]/div[1]/header[1]",
+                  "semanticKey": "53cc7d76d18ce089",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "header",
+                "attributes": {
+                  "class": "site-header"
+                },
+                "styleId": "s_086066c2de9d6404",
+                "a11y": {
+                  "ref": "a11y_e594ba5bcb08",
+                  "role": "banner",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_5c852455835bd828",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/a[1]",
+                      "semanticKey": "1518686cb12ea0c0",
+                      "contentFingerprint": "3469e53585de0498"
+                    },
+                    "tag": "a",
+                    "attributes": {
+                      "class": "brand",
+                      "href": "/"
+                    },
+                    "styleId": "s_80f6e101a2b96534",
+                    "a11y": {
+                      "ref": "a11y_b7918029be8b",
+                      "role": "link",
+                      "name": "Northwind Supply"
+                    },
+                    "boundingBox": {
+                      "x": 32,
+                      "y": 16,
+                      "width": 132,
+                      "height": 28
+                    },
+                    "interaction": {
+                      "discoveredBy": [
+                        "a11y-tree",
+                        "event-listeners"
+                      ],
+                      "selector": "header.site-header > a.brand",
+                      "eventTypes": [
+                        "click"
+                      ],
+                      "stateDeltaObserved": false
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_35a513f0d694844a",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/header[1]/a[1]/img[1]",
+                          "semanticKey": "cbc67817f2da935c",
+                          "contentFingerprint": "37810db5e6d1f49d"
+                        },
+                        "tag": "img",
+                        "attributes": {
+                          "src": "/static/logo.svg",
+                          "alt": "Northwind Supply",
+                          "width": "132",
+                          "height": "28"
+                        },
+                        "styleId": "s_0f541cb959a61169",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_0aeb70d78a74c2e8",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/nw-search[1]",
+                      "semanticKey": "6cb32dc0ef52c6a9",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "nw-search",
+                    "attributes": {
+                      "class": "search"
+                    },
+                    "styleId": "s_d83696ff50da76b7",
+                    "shadowHost": {
+                      "mode": "open"
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_ccc1580b29a37bb0",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/header[1]/nw-search[1]/div[1]",
+                          "semanticKey": "6c039c63ce683e1e",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "div",
+                        "attributes": {
+                          "class": "shell",
+                          "data-siteforge-shadow": "nw-search"
+                        },
+                        "styleId": "s_a6a5943f926998cd",
+                        "withinShadowRootOf": "n_0aeb70d78a74c2e8",
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_a1eb7a0de30d37f9",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/header[1]/nw-search[1]/div[1]/input[1]",
+                              "semanticKey": "5405ae18ea4f0187",
+                              "contentFingerprint": "35d0d034d3c71078"
+                            },
+                            "tag": "input",
+                            "attributes": {
+                              "type": "search",
+                              "placeholder": "Search supplies",
+                              "aria-label": "Search supplies",
+                              "data-siteforge-shadow": "nw-search"
+                            },
+                            "styleId": "s_532ab1a5926a5765",
+                            "a11y": {
+                              "ref": "a11y_e3d4faf632b9",
+                              "role": "searchbox",
+                              "name": "Search supplies"
+                            },
+                            "boundingBox": {
+                              "x": 196,
+                              "y": 22,
+                              "width": 396,
+                              "height": 36
+                            },
+                            "interaction": {
+                              "discoveredBy": [
+                                "a11y-tree",
+                                "pseudo-class-rule"
+                              ],
+                              "selector": "nw-search >>> input[type=search]",
+                              "eventTypes": [
+                                "input",
+                                "focus",
+                                "keydown"
+                              ],
+                              "stateDeltaObserved": true
+                            },
+                            "withinShadowRootOf": "n_0aeb70d78a74c2e8",
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_c469dadb3423d816",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]",
+                      "semanticKey": "e4464146bdb8f517",
+                      "contentFingerprint": "0984e410d6fe62c5"
+                    },
+                    "tag": "nav",
+                    "attributes": {
+                      "aria-label": "Primary"
+                    },
+                    "styleId": "s_a64be764093552ca",
+                    "a11y": {
+                      "ref": "a11y_25e3d6c67239",
+                      "role": "navigation",
+                      "name": "Primary"
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_5d5e10ddd39f7f5c",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]",
+                          "semanticKey": "a2f651a8f9d70f41",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "ul",
+                        "attributes": {},
+                        "styleId": "s_cb4899d06be4523b",
+                        "a11y": {
+                          "ref": "a11y_cdc2fc2ba5f3",
+                          "role": "list",
+                          "name": ""
+                        },
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_b54b8009016cb33c",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[1]",
+                              "semanticKey": "2cba5aa6c2a9b1de",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "li",
+                            "attributes": {},
+                            "styleId": "s_6201498e054de802",
+                            "a11y": {
+                              "ref": "a11y_4e83b94c0198",
+                              "role": "listitem",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_e54b43df801a18f1",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[1]/a[1]",
+                                  "semanticKey": "1518686cb12ea0c0",
+                                  "contentFingerprint": "c007f7bda0e78ab5"
+                                },
+                                "tag": "a",
+                                "attributes": {
+                                  "href": "/shop"
+                                },
+                                "styleId": "s_81dba0f0b6f7afae",
+                                "a11y": {
+                                  "ref": "a11y_8cda7ed03f8b",
+                                  "role": "link",
+                                  "name": "Shop"
+                                },
+                                "boundingBox": {
+                                  "x": 700,
+                                  "y": 24,
+                                  "width": 38,
+                                  "height": 20
+                                },
+                                "interaction": {
+                                  "discoveredBy": [
+                                    "a11y-tree",
+                                    "event-listeners"
+                                  ],
+                                  "selector": "nav[aria-label=Primary] a[href=\"/shop\"]",
+                                  "eventTypes": [
+                                    "click"
+                                  ],
+                                  "stateDeltaObserved": false
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_71fdd173c7cc9f31",
+                                    "value": "Shop"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_a632f9a2231d4d3d",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[2]",
+                              "semanticKey": "2cba5aa6c2a9b1de",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "li",
+                            "attributes": {},
+                            "styleId": "s_6201498e054de802",
+                            "a11y": {
+                              "ref": "a11y_b8828f52358f",
+                              "role": "listitem",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_a4210f38eef07649",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/header[1]/nav[1]/ul[1]/li[2]/a[1]",
+                                  "semanticKey": "1518686cb12ea0c0",
+                                  "contentFingerprint": "4a785409671368ba"
+                                },
+                                "tag": "a",
+                                "attributes": {
+                                  "href": "/about"
+                                },
+                                "styleId": "s_81dba0f0b6f7afae",
+                                "a11y": {
+                                  "ref": "a11y_6314ec5ab98c",
+                                  "role": "link",
+                                  "name": "About"
+                                },
+                                "boundingBox": {
+                                  "x": 758,
+                                  "y": 24,
+                                  "width": 42,
+                                  "height": 20
+                                },
+                                "interaction": {
+                                  "discoveredBy": [
+                                    "a11y-tree",
+                                    "event-listeners"
+                                  ],
+                                  "selector": "nav[aria-label=Primary] a[href=\"/about\"]",
+                                  "eventTypes": [
+                                    "click"
+                                  ],
+                                  "stateDeltaObserved": false
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_bc0ca3e067b155d5",
+                                    "value": "About"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_0fcd1a657c752962",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/header[1]/button[1]",
+                      "semanticKey": "3eac27f657fa9a7e",
+                      "contentFingerprint": "0147f5e4258d7595"
+                    },
+                    "tag": "button",
+                    "attributes": {
+                      "class": "cart-button",
+                      "type": "button",
+                      "aria-label": "Cart, 0 items"
+                    },
+                    "styleId": "s_2cda4f9633842617",
+                    "a11y": {
+                      "ref": "a11y_f9a637b6dcb6",
+                      "role": "button",
+                      "name": "Cart, 0 items"
+                    },
+                    "boundingBox": {
+                      "x": 1140,
+                      "y": 16,
+                      "width": 108,
+                      "height": 36
+                    },
+                    "interaction": {
+                      "discoveredBy": [
+                        "a11y-tree",
+                        "event-listeners"
+                      ],
+                      "selector": "button.cart-button",
+                      "eventTypes": [
+                        "click"
+                      ],
+                      "stateDeltaObserved": true
+                    },
+                    "children": [
+                      {
+                        "nodeType": "text",
+                        "nodeId": "n_5df1240d16a95ed5",
+                        "value": "Cart (0)"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "nodeType": "element",
+                "nodeId": "n_a2303eec6306b8b4",
+                "identity": {
+                  "structuralPath": "html/body[1]/div[1]/main[1]",
+                  "semanticKey": "25c3e8b21bcc8772",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "main",
+                "attributes": {},
+                "styleId": "s_d89d641fbcec5b4c",
+                "a11y": {
+                  "ref": "a11y_f499c023c08f",
+                  "role": "main",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_ef83cf360e24c387",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/main[1]/nav[1]",
+                      "semanticKey": "e4464146bdb8f517",
+                      "contentFingerprint": "5ae94bc57146a2d0"
+                    },
+                    "tag": "nav",
+                    "attributes": {
+                      "aria-label": "Breadcrumb"
+                    },
+                    "styleId": "s_a58a01b29200f4df",
+                    "a11y": {
+                      "ref": "a11y_41a48ad30f40",
+                      "role": "navigation",
+                      "name": "Breadcrumb"
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_f17b509ef01cc59a",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/nav[1]/ol[1]",
+                          "semanticKey": "338e0f04848f0bab",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "ol",
+                        "attributes": {},
+                        "styleId": "s_9a6737e595d482ad",
+                        "a11y": {
+                          "ref": "a11y_22670ccedf6d",
+                          "role": "list",
+                          "name": ""
+                        },
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_c52234caea50b4d9",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/nav[1]/ol[1]/li[1]",
+                              "semanticKey": "2cba5aa6c2a9b1de",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "li",
+                            "attributes": {},
+                            "styleId": "s_6201498e054de802",
+                            "a11y": {
+                              "ref": "a11y_40f2ca86c1ca",
+                              "role": "listitem",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_c2c24c2df9632743",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/nav[1]/ol[1]/li[1]/a[1]",
+                                  "semanticKey": "1518686cb12ea0c0",
+                                  "contentFingerprint": "25eaa29b1019833b"
+                                },
+                                "tag": "a",
+                                "attributes": {
+                                  "href": "/"
+                                },
+                                "styleId": "s_81dba0f0b6f7afae",
+                                "a11y": {
+                                  "ref": "a11y_766b02f2890c",
+                                  "role": "link",
+                                  "name": "Home"
+                                },
+                                "boundingBox": {
+                                  "x": 32,
+                                  "y": 96,
+                                  "width": 36,
+                                  "height": 18
+                                },
+                                "interaction": {
+                                  "discoveredBy": [
+                                    "a11y-tree",
+                                    "event-listeners"
+                                  ],
+                                  "selector": "nav[aria-label=Breadcrumb] a[href=\"/\"]",
+                                  "eventTypes": [
+                                    "click"
+                                  ],
+                                  "stateDeltaObserved": false
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_d05aeffc4b142982",
+                                    "value": "Home"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_3b958647152efcd8",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/nav[1]/ol[1]/li[2]",
+                              "semanticKey": "2cba5aa6c2a9b1de",
+                              "contentFingerprint": "ed2e550d841730d1"
+                            },
+                            "tag": "li",
+                            "attributes": {},
+                            "styleId": "s_6201498e054de802",
+                            "a11y": {
+                              "ref": "a11y_8187e3c1d45d",
+                              "role": "listitem",
+                              "name": ""
+                            },
+                            "children": [
+                              {
+                                "nodeType": "text",
+                                "nodeId": "n_0cbaabbd792d1f3d",
+                                "value": "Blue Enamel Mug, 12oz"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_35410f80ce99c007",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/main[1]/div[1]",
+                      "semanticKey": "6c039c63ce683e1e",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "div",
+                    "attributes": {
+                      "class": "product-detail"
+                    },
+                    "styleId": "s_d87fbc647bb19648",
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_12ba270d6e246526",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/img[1]",
+                          "semanticKey": "cbc67817f2da935c",
+                          "contentFingerprint": "91dce40bb217e837"
+                        },
+                        "tag": "img",
+                        "attributes": {
+                          "src": "/static/img/mug-blue.jpg",
+                          "alt": "Blue Enamel Mug, 12oz",
+                          "width": "640",
+                          "height": "640"
+                        },
+                        "styleId": "s_b469ac2c74c9d322",
+                        "children": []
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_b5be5b2669e7226b",
+                        "identity": {
+                          "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]",
+                          "semanticKey": "6c039c63ce683e1e",
+                          "contentFingerprint": "7a096888b9337f3b"
+                        },
+                        "tag": "div",
+                        "attributes": {
+                          "class": "buy-panel"
+                        },
+                        "styleId": "s_5dd3b61eadd0a228",
+                        "children": [
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_4be9c6ec1dffd9c6",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/h1[1]",
+                              "semanticKey": "107b95fdd4e19827",
+                              "contentFingerprint": "ed2e550d841730d1"
+                            },
+                            "tag": "h1",
+                            "attributes": {},
+                            "styleId": "s_7ee3f9710cc2d38d",
+                            "a11y": {
+                              "ref": "a11y_901bb163f51a",
+                              "role": "heading",
+                              "name": "Blue Enamel Mug, 12oz"
+                            },
+                            "children": [
+                              {
+                                "nodeType": "text",
+                                "nodeId": "n_0c2ec8b964afd1cc",
+                                "value": "Blue Enamel Mug, 12oz"
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_01f3ca67f570954d",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/p[1]",
+                              "semanticKey": "b42e5f5b6d8598a4",
+                              "contentFingerprint": "71e3d18ef5156d84"
+                            },
+                            "tag": "p",
+                            "attributes": {
+                              "class": "price"
+                            },
+                            "styleId": "s_47ea9ddd9d750d0d",
+                            "children": [
+                              {
+                                "nodeType": "text",
+                                "nodeId": "n_51207a61a8592928",
+                                "value": "$18.00"
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_9d219f471c58fedb",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/nw-rating[1]",
+                              "semanticKey": "241a2545e6b65eef",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "nw-rating",
+                            "attributes": {
+                              "class": "rating",
+                              "data-value": "4.5"
+                            },
+                            "styleId": "s_a0dbb59b82410a4c",
+                            "shadowHost": {
+                              "mode": "closed",
+                              "gapId": "gap_49bf24b14b1f"
+                            },
+                            "children": []
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_f20ccd474e2457e5",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]",
+                              "semanticKey": "6c039c63ce683e1e",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "div",
+                            "attributes": {
+                              "class": "qty-row"
+                            },
+                            "styleId": "s_269f4332ec5ab5d0",
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_d55589f8ae657ae6",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/label[1]",
+                                  "semanticKey": "37410f38976f7445",
+                                  "contentFingerprint": "9e5d9bbba259416f"
+                                },
+                                "tag": "label",
+                                "attributes": {
+                                  "for": "qty"
+                                },
+                                "styleId": "s_07cef1bb823af56a",
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_e40e6896359b348a",
+                                    "value": "Quantity"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_ee781c1c631b76a6",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/div[1]/input[1]",
+                                  "semanticKey": "e01f4a180b7126cd",
+                                  "contentFingerprint": "3eb7701ec799e965"
+                                },
+                                "tag": "input",
+                                "attributes": {
+                                  "id": "qty",
+                                  "name": "qty",
+                                  "type": "number",
+                                  "value": "1",
+                                  "min": "1",
+                                  "max": "10"
+                                },
+                                "styleId": "s_0605f249b152af2b",
+                                "a11y": {
+                                  "ref": "a11y_2ca39559193b",
+                                  "role": "spinbutton",
+                                  "name": "Quantity"
+                                },
+                                "boundingBox": {
+                                  "x": 108,
+                                  "y": 300,
+                                  "width": 72,
+                                  "height": 38
+                                },
+                                "interaction": {
+                                  "discoveredBy": [
+                                    "a11y-tree",
+                                    "pseudo-class-rule"
+                                  ],
+                                  "selector": "#qty",
+                                  "eventTypes": [
+                                    "input",
+                                    "change",
+                                    "focus"
+                                  ],
+                                  "stateDeltaObserved": true
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_5161342d126e3f94",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/button[1]",
+                              "semanticKey": "3eac27f657fa9a7e",
+                              "contentFingerprint": "6ffa27c55d79bebf"
+                            },
+                            "tag": "button",
+                            "attributes": {
+                              "class": "btn btn-primary",
+                              "type": "button",
+                              "data-sku": "MUG-BLUE-12OZ"
+                            },
+                            "styleId": "s_f474de1356471009",
+                            "a11y": {
+                              "ref": "a11y_0b0e8e5c7861",
+                              "role": "button",
+                              "name": "Add Blue Enamel Mug, 12oz to cart"
+                            },
+                            "boundingBox": {
+                              "x": 16,
+                              "y": 356,
+                              "width": 358,
+                              "height": 40
+                            },
+                            "interaction": {
+                              "discoveredBy": [
+                                "a11y-tree",
+                                "event-listeners"
+                              ],
+                              "selector": ".buy-panel button.btn-primary",
+                              "eventTypes": [
+                                "click"
+                              ],
+                              "stateDeltaObserved": true
+                            },
+                            "children": [
+                              {
+                                "nodeType": "text",
+                                "nodeId": "n_7a89829e622a81df",
+                                "value": "Add to cart"
+                              }
+                            ]
+                          },
+                          {
+                            "nodeType": "element",
+                            "nodeId": "n_1d4b3e8af58d421b",
+                            "identity": {
+                              "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/div[2]",
+                              "semanticKey": "6c039c63ce683e1e",
+                              "contentFingerprint": "7a096888b9337f3b"
+                            },
+                            "tag": "div",
+                            "attributes": {
+                              "class": "accordion",
+                              "data-state": "closed"
+                            },
+                            "styleId": "s_cd3abb2757681c0b",
+                            "children": [
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_d078638531fe095b",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/div[2]/button[1]",
+                                  "semanticKey": "3eac27f657fa9a7e",
+                                  "contentFingerprint": "0b345ac74c2e54f1"
+                                },
+                                "tag": "button",
+                                "attributes": {
+                                  "class": "accordion-trigger",
+                                  "type": "button",
+                                  "aria-expanded": "false",
+                                  "aria-controls": "details-panel"
+                                },
+                                "styleId": "s_ee603f5689cd6cd0",
+                                "a11y": {
+                                  "ref": "a11y_41f0dd5da03e",
+                                  "role": "button",
+                                  "name": "Product details"
+                                },
+                                "boundingBox": {
+                                  "x": 16,
+                                  "y": 428,
+                                  "width": 358,
+                                  "height": 36
+                                },
+                                "interaction": {
+                                  "discoveredBy": [
+                                    "a11y-tree",
+                                    "event-listeners",
+                                    "pseudo-class-rule"
+                                  ],
+                                  "selector": "button.accordion-trigger",
+                                  "eventTypes": [
+                                    "click"
+                                  ],
+                                  "stateDeltaObserved": true
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_ad9172e7a2496bdf",
+                                    "value": "Product details"
+                                  }
+                                ]
+                              },
+                              {
+                                "nodeType": "element",
+                                "nodeId": "n_57fd75664e04c086",
+                                "identity": {
+                                  "structuralPath": "html/body[1]/div[1]/main[1]/div[1]/div[1]/div[2]/div[1]",
+                                  "semanticKey": "019834ce6f446c15",
+                                  "contentFingerprint": "a0fb64de0c068a39"
+                                },
+                                "tag": "div",
+                                "attributes": {
+                                  "id": "details-panel",
+                                  "hidden": ""
+                                },
+                                "styleId": "s_dcc749c4ee2779e2",
+                                "a11y": {
+                                  "ref": "a11y_1feb473ab1a1",
+                                  "role": "region",
+                                  "name": "Product details"
+                                },
+                                "children": [
+                                  {
+                                    "nodeType": "text",
+                                    "nodeId": "n_dc5f376455cb68d7",
+                                    "value": "Vitreous enamel over steel. Dishwasher safe. Not for microwave use."
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "nodeType": "element",
+                "nodeId": "n_cad40206eab03227",
+                "identity": {
+                  "structuralPath": "html/body[1]/div[1]/footer[1]",
+                  "semanticKey": "105306c75399a244",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "footer",
+                "attributes": {},
+                "styleId": "s_cb634fbd842f1c32",
+                "a11y": {
+                  "ref": "a11y_4c903152c8a0",
+                  "role": "contentinfo",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_dea3fb37b7fdc3d5",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/footer[1]/p[1]",
+                      "semanticKey": "b42e5f5b6d8598a4",
+                      "contentFingerprint": "c5cdf1cc2c6720c1"
+                    },
+                    "tag": "p",
+                    "attributes": {},
+                    "styleId": "s_fa342e97e6395514",
+                    "children": [
+                      {
+                        "nodeType": "text",
+                        "nodeId": "n_dac563b329912eeb",
+                        "value": "Northwind Supply — a fictional storefront used as a siteforge fixture."
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_85b3fe5b355f1a2b",
+                    "identity": {
+                      "structuralPath": "html/body[1]/div[1]/footer[1]/iframe[1]",
+                      "semanticKey": "cf9cd4a6d63aee63",
+                      "contentFingerprint": "69aab6f512e8db6e"
+                    },
+                    "tag": "iframe",
+                    "attributes": {
+                      "src": "https://widgets.example.net/reviews?site=northwind",
+                      "title": "Customer reviews",
+                      "loading": "lazy"
+                    },
+                    "styleId": "s_49663b33b58e970a",
+                    "iframe": {
+                      "sameOrigin": false,
+                      "src": "https://widgets.example.net/reviews?site=northwind",
+                      "placeholderAssetId": "140e2850d6a6587a24a55b302efa0878094570717c9d9594ec934c05b21e0ecb",
+                      "gapId": "gap_1982e0d1e2fc"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "nodeCount": 57,
+  "domHash": "916c603b27fa2181"
+}

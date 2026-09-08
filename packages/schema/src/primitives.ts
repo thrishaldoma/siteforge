@@ -33,22 +33,36 @@ export const SlugSchema = z
 export const SiteIdSchema = SlugSchema;
 
 /**
+ * Identifies one capture context: the browser conditions a route was captured
+ * under (auth, viewport, locale, pinned variant). Declared once in the manifest,
+ * referenced by every routeId. See `./context.js`.
+ */
+export const ContextIdSchema = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'expected a lowercase kebab-case context id');
+
+/**
  * Identifies one captured route artifact directory.
  *
- * Composite key: `<pattern-slug>--i<instance>--<width>x<height>`
- * See docs/decisions/0002-route-instance-and-viewport-multiplicity.md.
+ * Composite key: `<pattern-slug>--<context-id>--i<instance>`
+ * See docs/decisions/0002 and 0004.
  *
- * One URL pattern yields up to `maxInstancesPerPattern` × `viewports.length`
- * of these. The pattern itself lives in `RouteMeta.urlPattern`, which is the
- * grouping key — "route identity is the pattern" (§5) survives as a field.
+ * The context is a *reference*, not an encoding — adding locale or a pinned
+ * variant declares a new context rather than widening this id. That is the whole
+ * point: an earlier version spelled the viewport into the id as `1280x800`, which
+ * made every new capture dimension a schema change.
  *
- * e.g. `product-id--i1--1280x800`
+ * One URL pattern yields up to `budget.maxInstancesPerPattern` of these *per
+ * context*. The pattern lives in `RouteMeta.urlPattern`, which is the grouping
+ * key — "route identity is the pattern" (§5) survives as a field.
+ *
+ * e.g. `product-id--anon-desktop--i1`
  */
 export const RouteIdSchema = z
   .string()
   .regex(
-    /^[a-z0-9]+(?:-[a-z0-9]+)*--i\d+--\d+x\d+$/,
-    'expected <pattern-slug>--i<instance>--<width>x<height>',
+    /^[a-z0-9]+(?:-[a-z0-9]+)*--[a-z0-9]+(?:-[a-z0-9]+)*--i\d+$/,
+    'expected <pattern-slug>--<context-id>--i<instance>',
   );
 
 /**
@@ -133,6 +147,7 @@ export type IsoTimestamp = z.infer<typeof IsoTimestampSchema>;
 export type AbsoluteUrl = z.infer<typeof AbsoluteUrlSchema>;
 export type Slug = z.infer<typeof SlugSchema>;
 export type SiteId = z.infer<typeof SiteIdSchema>;
+export type ContextId = z.infer<typeof ContextIdSchema>;
 export type RouteId = z.infer<typeof RouteIdSchema>;
 export type NodeId = z.infer<typeof NodeIdSchema>;
 export type StyleId = z.infer<typeof StyleIdSchema>;

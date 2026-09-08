@@ -18,9 +18,10 @@
  *    is written". `scrubbed: true` is a literal, so an artifact that was never
  *    scrubbed cannot be represented in this type system at all.
  */
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { CAPTURE_MODEL_VERSION } from './version.js';
-import { IsoTimestampSchema } from './primitives.js';
+import { IsoTimestampSchema, type Sha256 } from './primitives.js';
 
 /**
  * Keys excluded from the idempotency hash. Single source of truth — the capture
@@ -68,6 +69,55 @@ export function artifactEnvelope<K extends z.infer<typeof ArtifactKindSchema>>(k
     scrubbed: z.literal(true),
     provenance: ProvenanceSchema,
   };
+}
+
+/**
+ * Deterministic JSON with keys sorted at every level.
+ *
+ * Two artifacts that differ only in property order must hash equal, or M1's
+ * idempotency check reports a diff every time a producer reorders a field.
+ */
+export function canonicalize(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalize).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalize(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+const sha256Hex = (input: string): Sha256 => createHash('sha256').update(input, 'utf8').digest('hex');
+
+/** Hash of an artifact with its volatile fields removed. The unit of M1's check. */
+export function stableArtifactHash(artifact: object): Sha256 {
+  const copy: Record<string, unknown> = { ...(artifact as Record<string, unknown>) };
+  for (const key of VOLATILE_ARTIFACT_KEYS) delete copy[key];
+  return sha256Hex(canonicalize(copy));
+}
+
+/**
+ * Hash of what a route actually *rendered*, independent of which route directory
+ * it landed in.
+ *
+ * `routeId` is stripped along with `provenance`, so the same page captured under
+ * two contexts — the common case, since most routes are identical logged in and
+ * out — produces one hash and can be stored once. See `RouteMeta.content`.
+ */
+export function deriveRouteContentHash(artifacts: {
+  dom: object;
+  styles: object;
+  states: object;
+}): Sha256 {
+  const strip = (artifact: object): string => {
+    const copy: Record<string, unknown> = { ...(artifact as Record<string, unknown>) };
+    for (const key of VOLATILE_ARTIFACT_KEYS) delete copy[key];
+    delete copy['routeId'];
+    return canonicalize(copy);
+  };
+  return sha256Hex([strip(artifacts.dom), strip(artifacts.styles), strip(artifacts.states)].join('\n'));
 }
 
 export type RunId = z.infer<typeof RunIdSchema>;

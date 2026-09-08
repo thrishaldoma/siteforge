@@ -14,7 +14,9 @@ import { createHash } from 'node:crypto';
 import {
   deriveA11yRef,
   deriveContentFingerprint,
+  deriveDocumentA11yRef,
   deriveNodeId,
+  deriveSemanticKey,
   deriveStyleId,
   shortHash,
 } from '../dist/index.js';
@@ -38,7 +40,7 @@ export function txt(value) {
 /**
  * Walk the DSL tree and emit { root, nodeCount, domHash, table, assignments, a11yRoot, a11yHash }.
  */
-export function materialize(tree, { routeId, pageTitle }) {
+export function materialize(tree, { documentUrl, pageTitle }) {
   /** styleId -> { declarations, refCount } */
   const styles = new Map();
   /** nodeId -> styleId */
@@ -80,8 +82,9 @@ export function materialize(tree, { routeId, pageTitle }) {
       .filter((c) => c.kind === 'txt')
       .map((c) => c.value)
       .join(' ');
+    const semanticKey = deriveSemanticKey({ tag, attributes: attrs });
     const contentFingerprint = deriveContentFingerprint({ tag, attributes: attrs, text: ownText });
-    const nodeId = deriveNodeId(path, contentFingerprint);
+    const nodeId = deriveNodeId(path, semanticKey);
 
     const styleId = styleIdFor(opts.style ?? {});
     assignments[nodeId] = styleId;
@@ -89,7 +92,7 @@ export function materialize(tree, { routeId, pageTitle }) {
     let a11y;
     let myRef = a11yParentRef;
     if (opts.role) {
-      const ref = deriveA11yRef(routeId, nodeId);
+      const ref = deriveA11yRef(nodeId);
       a11y = { ref, role: opts.role, name: opts.name ?? '' };
       const record = {
         ref,
@@ -117,7 +120,7 @@ export function materialize(tree, { routeId, pageTitle }) {
     return {
       nodeType: 'element',
       nodeId,
-      identity: { structuralPath: path, contentFingerprint },
+      identity: { structuralPath: path, semanticKey, contentFingerprint },
       tag,
       attributes: attrs,
       styleId,
@@ -138,7 +141,7 @@ export function materialize(tree, { routeId, pageTitle }) {
     return { ...rec, children: (a11yChildrenOf.get(ref) ?? []).map(assemble) };
   };
   const a11yRoot = {
-    ref: deriveA11yRef(routeId, deriveNodeId('#document', shortHash(routeId))),
+    ref: deriveDocumentA11yRef(documentUrl),
     role: 'RootWebArea',
     name: pageTitle,
     children: (a11yChildrenOf.get('ROOT') ?? []).map(assemble),

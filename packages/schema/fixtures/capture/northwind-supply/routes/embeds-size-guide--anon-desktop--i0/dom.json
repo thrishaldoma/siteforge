@@ -1,0 +1,559 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "dom-document",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 620
+  },
+  "routeId": "embeds-size-guide--anon-desktop--i0",
+  "documentUrl": "https://example.com/embeds/size-guide",
+  "doctype": "html",
+  "lang": "en",
+  "normalization": {
+    "whitespace": "collapsed",
+    "commentsRemoved": true,
+    "inlineCodeOmitted": true,
+    "shadowDomFlattened": true,
+    "iframesRecursed": false
+  },
+  "root": {
+    "nodeType": "element",
+    "nodeId": "n_65456fac28ed307e",
+    "identity": {
+      "structuralPath": "html",
+      "semanticKey": "5c8f57aebc098a44",
+      "contentFingerprint": "7a096888b9337f3b"
+    },
+    "tag": "html",
+    "attributes": {
+      "lang": "en"
+    },
+    "styleId": "s_53dac453ef7ff41e",
+    "children": [
+      {
+        "nodeType": "element",
+        "nodeId": "n_2f694186af7b1165",
+        "identity": {
+          "structuralPath": "html/head[1]",
+          "semanticKey": "2fa4ef497bedf099",
+          "contentFingerprint": "7a096888b9337f3b"
+        },
+        "tag": "head",
+        "attributes": {},
+        "styleId": "s_0fbea6d6417bb68d",
+        "children": [
+          {
+            "nodeType": "element",
+            "nodeId": "n_f991e0b504c51f27",
+            "identity": {
+              "structuralPath": "html/head[1]/title[1]",
+              "semanticKey": "79f228fb7f37fa11",
+              "contentFingerprint": "884f33d310eca1e3"
+            },
+            "tag": "title",
+            "attributes": {},
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": [
+              {
+                "nodeType": "text",
+                "nodeId": "n_76006fe9b1f9c0dc",
+                "value": "Size guide"
+              }
+            ]
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_7acb1282e9f0bc58",
+            "identity": {
+              "structuralPath": "html/head[1]/meta[1]",
+              "semanticKey": "81f00613ca37cbcf",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "meta",
+            "attributes": {
+              "charset": "utf-8"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_fd3df4fad2c1ce46",
+            "identity": {
+              "structuralPath": "html/head[1]/meta[2]",
+              "semanticKey": "3eebf6143cdf456b",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "meta",
+            "attributes": {
+              "name": "viewport",
+              "content": "width=device-width"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_0fcbf39e65390dad",
+            "identity": {
+              "structuralPath": "html/head[1]/link[1]",
+              "semanticKey": "366a2b295a11e509",
+              "contentFingerprint": "ad608281c25d7e6b"
+            },
+            "tag": "link",
+            "attributes": {
+              "rel": "stylesheet",
+              "href": "/static/app.css"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          },
+          {
+            "nodeType": "element",
+            "nodeId": "n_8a10daf5667b192f",
+            "identity": {
+              "structuralPath": "html/head[1]/link[2]",
+              "semanticKey": "366a2b295a11e509",
+              "contentFingerprint": "00c5c967e9131e2d"
+            },
+            "tag": "link",
+            "attributes": {
+              "rel": "icon",
+              "href": "/static/logo.svg"
+            },
+            "styleId": "s_0fbea6d6417bb68d",
+            "children": []
+          }
+        ]
+      },
+      {
+        "nodeType": "element",
+        "nodeId": "n_e75c59e4ae6af9d7",
+        "identity": {
+          "structuralPath": "html/body[1]",
+          "semanticKey": "5f646d5f83176736",
+          "contentFingerprint": "7a096888b9337f3b"
+        },
+        "tag": "body",
+        "attributes": {},
+        "styleId": "s_e7b966090129f21d",
+        "children": [
+          {
+            "nodeType": "element",
+            "nodeId": "n_182a8254006920fb",
+            "identity": {
+              "structuralPath": "html/body[1]/table[1]",
+              "semanticKey": "27c59c923fda9f1e",
+              "contentFingerprint": "7a096888b9337f3b"
+            },
+            "tag": "table",
+            "attributes": {},
+            "styleId": "s_3726905419f76846",
+            "a11y": {
+              "ref": "a11y_49666356fcd3",
+              "role": "table",
+              "name": "Dimensions"
+            },
+            "children": [
+              {
+                "nodeType": "element",
+                "nodeId": "n_3c5ca5f6a000d5ac",
+                "identity": {
+                  "structuralPath": "html/body[1]/table[1]/thead[1]",
+                  "semanticKey": "48dc2c4a7fe2a9d0",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "thead",
+                "attributes": {},
+                "styleId": "s_4dab2545a7ad9999",
+                "a11y": {
+                  "ref": "a11y_9b0f2c9056f9",
+                  "role": "rowgroup",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_dc10aa43f1a90eef",
+                    "identity": {
+                      "structuralPath": "html/body[1]/table[1]/thead[1]/tr[1]",
+                      "semanticKey": "f58053fe9f774f99",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "tr",
+                    "attributes": {},
+                    "styleId": "s_d758d0e1c2e685ad",
+                    "a11y": {
+                      "ref": "a11y_82bf1e637b4b",
+                      "role": "row",
+                      "name": ""
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_742a818f23fefb97",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/thead[1]/tr[1]/th[1]",
+                          "semanticKey": "c2b118eff2c0be84",
+                          "contentFingerprint": "80194bdaa2764951"
+                        },
+                        "tag": "th",
+                        "attributes": {
+                          "scope": "col"
+                        },
+                        "styleId": "s_0ae7c10058548347",
+                        "a11y": {
+                          "ref": "a11y_e9f0a7b8ffe8",
+                          "role": "columnheader",
+                          "name": "Item"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_ee164b86ef8c5a1d",
+                            "value": "Item"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_808cd8249cd97dba",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/thead[1]/tr[1]/th[2]",
+                          "semanticKey": "c2b118eff2c0be84",
+                          "contentFingerprint": "64f066d87b29d3dc"
+                        },
+                        "tag": "th",
+                        "attributes": {
+                          "scope": "col"
+                        },
+                        "styleId": "s_0ae7c10058548347",
+                        "a11y": {
+                          "ref": "a11y_8c8e63dfd2d9",
+                          "role": "columnheader",
+                          "name": "Height"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_05d819e7db8e7d18",
+                            "value": "Height"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_097ebaf76bc487f2",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/thead[1]/tr[1]/th[3]",
+                          "semanticKey": "c2b118eff2c0be84",
+                          "contentFingerprint": "07628fb32361f6db"
+                        },
+                        "tag": "th",
+                        "attributes": {
+                          "scope": "col"
+                        },
+                        "styleId": "s_0ae7c10058548347",
+                        "a11y": {
+                          "ref": "a11y_b8ac572a5300",
+                          "role": "columnheader",
+                          "name": "Diameter"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_bd8bd0957e8c4a93",
+                            "value": "Diameter"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_5de3fd94cfe9aa90",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/thead[1]/tr[1]/th[4]",
+                          "semanticKey": "c2b118eff2c0be84",
+                          "contentFingerprint": "7b82bcb022cf4094"
+                        },
+                        "tag": "th",
+                        "attributes": {
+                          "scope": "col"
+                        },
+                        "styleId": "s_0ae7c10058548347",
+                        "a11y": {
+                          "ref": "a11y_483115980085",
+                          "role": "columnheader",
+                          "name": "Capacity"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_4eaf8637b7afa6d1",
+                            "value": "Capacity"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "nodeType": "element",
+                "nodeId": "n_152f181c20592c0f",
+                "identity": {
+                  "structuralPath": "html/body[1]/table[1]/tbody[1]",
+                  "semanticKey": "57e92cba163746a4",
+                  "contentFingerprint": "7a096888b9337f3b"
+                },
+                "tag": "tbody",
+                "attributes": {},
+                "styleId": "s_e0cc9875fc6d4726",
+                "a11y": {
+                  "ref": "a11y_1f1e505f1868",
+                  "role": "rowgroup",
+                  "name": ""
+                },
+                "children": [
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_23075095af3e7a07",
+                    "identity": {
+                      "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[1]",
+                      "semanticKey": "f58053fe9f774f99",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "tr",
+                    "attributes": {},
+                    "styleId": "s_d758d0e1c2e685ad",
+                    "a11y": {
+                      "ref": "a11y_1d0f54e0e364",
+                      "role": "row",
+                      "name": ""
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_ce5be2a59a232836",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[1]/td[1]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "7d831ebfc1e258ca"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_efbf369b36f8",
+                          "role": "cell",
+                          "name": "12oz mug"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_6b8ad5c841d7405a",
+                            "value": "12oz mug"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_d34d354b0f59e2ba",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[1]/td[2]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "6d8ca1afe7640a2c"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_45ab71e29869",
+                          "role": "cell",
+                          "name": "95 mm"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_e5befcc2044d1322",
+                            "value": "95 mm"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_3dd597cde83edc96",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[1]/td[3]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "e6228baee1365b5b"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_9ed59841c835",
+                          "role": "cell",
+                          "name": "82 mm"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_7b8acf84a4051e47",
+                            "value": "82 mm"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_945ce23b53985d61",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[1]/td[4]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "8047dd923853a4d8"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_2700408a5e76",
+                          "role": "cell",
+                          "name": "340 ml"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_1c6a483d6ff5b4ea",
+                            "value": "340 ml"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "nodeType": "element",
+                    "nodeId": "n_1f237e59deea02e5",
+                    "identity": {
+                      "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[2]",
+                      "semanticKey": "f58053fe9f774f99",
+                      "contentFingerprint": "7a096888b9337f3b"
+                    },
+                    "tag": "tr",
+                    "attributes": {},
+                    "styleId": "s_d758d0e1c2e685ad",
+                    "a11y": {
+                      "ref": "a11y_310da085c2be",
+                      "role": "row",
+                      "name": ""
+                    },
+                    "children": [
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_51f091566ee6ca5b",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[2]/td[1]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "1fef9c2812e36079"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_cb6ecbbd94ac",
+                          "role": "cell",
+                          "name": "A5 notebook"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_2ee172d11257a230",
+                            "value": "A5 notebook"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_33eed670ed17cc0e",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[2]/td[2]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "bf6ec9abcf86e41a"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_8ed738dd84c2",
+                          "role": "cell",
+                          "name": "210 mm"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_bdfeb33c407b3b7f",
+                            "value": "210 mm"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_03d49bc1bb5bb444",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[2]/td[3]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "ccfddcc0e176a00f"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_b3bc08ee99b0",
+                          "role": "cell",
+                          "name": "148 mm"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_66bb53d2e73868fd",
+                            "value": "148 mm"
+                          }
+                        ]
+                      },
+                      {
+                        "nodeType": "element",
+                        "nodeId": "n_f21aff55f37c3aa7",
+                        "identity": {
+                          "structuralPath": "html/body[1]/table[1]/tbody[1]/tr[2]/td[4]",
+                          "semanticKey": "72f4e8eb004f0f0f",
+                          "contentFingerprint": "53a5f491a4cd1249"
+                        },
+                        "tag": "td",
+                        "attributes": {},
+                        "styleId": "s_36dc272a34f2e3b7",
+                        "a11y": {
+                          "ref": "a11y_fea662c1889d",
+                          "role": "cell",
+                          "name": "—"
+                        },
+                        "children": [
+                          {
+                            "nodeType": "text",
+                            "nodeId": "n_8555ab4aef86053f",
+                            "value": "—"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "nodeCount": 39,
+  "domHash": "9e55012fa661f432"
+}

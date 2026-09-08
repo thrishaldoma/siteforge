@@ -75,9 +75,13 @@ siteforge/
 
 ---
 
-## 5. The SiteModel
+## 5. The CaptureModel
 
 `packages/schema` is the spine of the project. Define it first, in zod, and export the inferred TS types. Everything downstream imports from here. Changing this schema is a breaking change — version it with `modelVersion`.
+
+`SiteModel` is **infer's output**, not this. It is defined at the start of M2,
+derived backwards from what codegen consumes. Do not define it by
+forward-transforming `CaptureModel`.
 
 ```
 capture/<site-id>/
@@ -315,6 +319,6 @@ Milestone gates. Do not start a milestone before the previous one's gate is gree
 
 ## 14. Start here
 
-Do not begin at capture. Begin at `packages/schema` — define the full `SiteModel` in zod, with example fixtures for each type. Then build `packages/capture` against those fixtures. Everything else follows from a schema that is right.
+Do not begin at capture. Begin at `packages/schema` — define the full `CaptureModel` in zod, with example fixtures for each type. Then build `packages/capture` against those fixtures. Everything else follows from a schema that is right.
 
 If the schema feels wrong while writing a later stage, stop and fix the schema. Do not work around it.

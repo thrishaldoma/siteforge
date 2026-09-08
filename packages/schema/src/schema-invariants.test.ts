@@ -36,14 +36,20 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'ca
 const load = <T,>(rel: string): T => JSON.parse(readFileSync(join(ROOT, rel), 'utf8')) as T;
 const clone = <T,>(v: T): T => structuredClone(v);
 
-const MUG = 'product-id--i0--1280x800';
+const MUG = 'product-id--anon-desktop--i0';
 const routeMeta = load<Record<string, unknown>>(`routes/${MUG}/meta.json`);
 const routeDom = load<Record<string, unknown>>(`routes/${MUG}/dom.json`);
 const routeStyles = load<Record<string, unknown>>(`routes/${MUG}/styles.json`);
 const routeStates = load<Record<string, unknown>>(`routes/${MUG}/states.json`);
 const manifest = load<Record<string, unknown>>('manifest.json');
+const report = load<Record<string, unknown>>('stage-report.json');
 const endpoints = load<Record<string, unknown>>('network/endpoints.json');
 const addToCart = load<Record<string, unknown>>('flows/add-mug-to-cart.trace.json');
+const aboutAnon = load<Record<string, unknown>>('routes/about--anon-desktop--i0/meta.json');
+const aboutAuth = load<Record<string, unknown>>('routes/about--auth-desktop--i0/meta.json');
+const aboutDom = load<Record<string, unknown>>('routes/about--anon-desktop--i0/dom.json');
+const aboutStyles = load<Record<string, unknown>>('routes/about--anon-desktop--i0/styles.json');
+const aboutStates = load<Record<string, unknown>>('routes/about--anon-desktop--i0/states.json');
 const deleteAccount = load<Record<string, unknown>>('flows/delete-account.trace.json');
 
 /* --------------------------------------------------------------- envelope */
@@ -81,13 +87,16 @@ describe('the artifact envelope', () => {
 
 describe('identifier shapes', () => {
   it.each([
-    ['product-id--i0--1280x800', true],
-    ['root--i0--390x844', true],
+    ['product-id--anon-desktop--i0', true],
+    ['root--auth-mobile-de--i2', true],
     ['product-id', false],
-    ['product-id--1280x800', false],
+    ['product-id--anon-desktop', false],
     ['product-id--i0', false],
-    ['Product-Id--i0--1280x800', false],
-    ['product-id--i0--1280×800', false],
+    // The old scheme spelled the viewport into the id; it must no longer parse,
+    // or a stale capture would be silently readable as a current one.
+    ['product-id--i0--1280x800', false],
+    ['Product-Id--anon-desktop--i0', false],
+    ['product-id--anon_desktop--i0', false],
   ])('routeId %s -> %s', (id, ok) => {
     expect(RouteIdSchema.safeParse(id).success).toBe(ok);
   });
@@ -308,6 +317,206 @@ describe('cross-file drift is caught at load', () => {
       flows: {},
     });
     expect(result.success).toBe(false); // …but not in place.
+  });
+});
+
+/* ------------------------------------------------------- contexts and budget */
+
+describe('capture contexts (decision 0004)', () => {
+  const model = (overrides: Record<string, unknown> = {}): unknown => ({
+    modelVersion: CAPTURE_MODEL_VERSION,
+    siteId: 'northwind-supply',
+    manifest: clone(manifest),
+    routes: {
+      [MUG]: { meta: clone(routeMeta), dom: clone(routeDom), styles: clone(routeStyles), states: clone(routeStates) },
+    },
+    assets: load('assets/index.json'),
+    endpoints: clone(endpoints),
+    flows: {},
+    ...overrides,
+  });
+
+  it('accepts a route whose context the manifest declares', () => {
+    const m = model();
+    (m as Record<string, unknown>)['manifest'] = clone(manifest);
+    // Trim the manifest's route list to the single route we pass in.
+    ((m as Record<string, Record<string, unknown>>)['manifest'])['routeIds'] = [MUG];
+    ((m as Record<string, Record<string, unknown>>)['manifest'])['patterns'] = [
+      { urlPattern: '/product/:id', observedUrlCount: 1, routeIds: [MUG] },
+    ];
+    expect(CaptureModelSchema.safeParse(m).success).toBe(true);
+  });
+
+  it('rejects a route referencing a context the manifest never declared', () => {
+    const m = model() as Record<string, Record<string, Record<string, Record<string, unknown>>>>;
+    m['routes']![MUG]!['meta']!['contextId'] = 'anon-tablet';
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('not declared in the manifest');
+  });
+
+  it('rejects a top-level route that did not render at its context viewport', () => {
+    const m = model() as Record<string, Record<string, Record<string, Record<string, Record<string, unknown>>>>>;
+    m['routes']![MUG]!['meta']!['content']!['renderedSize'] = { width: 999, height: 800 };
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain("viewport");
+  });
+
+  it('rejects a budget whose global ceiling is below its per-context cap', () => {
+    const m = clone(manifest) as Record<string, Record<string, Record<string, number>>>;
+    m['crawl']!['budget']!['maxRoutesTotal'] = 5;
+    m['crawl']!['budget']!['maxRoutesPerContext'] = 40;
+    expect(CaptureManifestSchema.safeParse(m).success).toBe(false);
+  });
+
+  it('rejects a capture that blew the per-(pattern, context) instance cap', () => {
+    const m = model() as Record<string, Record<string, unknown>>;
+    (m['manifest'] as Record<string, Record<string, Record<string, number>>>)['crawl']!['budget']!['maxInstancesPerPattern'] = 0;
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('over the cap of 0');
+  });
+
+  it('rejects a capture that blew the global route ceiling', () => {
+    const m = model() as Record<string, Record<string, unknown>>;
+    (m['manifest'] as Record<string, Record<string, Record<string, number>>>)['crawl']!['budget']!['maxRoutesTotal'] = 0;
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('global ceiling');
+  });
+});
+
+describe('shared content pointers (decision 0004)', () => {
+  const twoRoutes = (mutate: (anon: Record<string, unknown>, auth: Record<string, unknown>) => void = () => {}) => {
+    const anon = clone(aboutAnon);
+    const auth = clone(aboutAuth);
+    mutate(anon, auth);
+    const m = clone(manifest) as Record<string, unknown>;
+    m['routeIds'] = ['about--anon-desktop--i0', 'about--auth-desktop--i0'];
+    m['patterns'] = [{
+      urlPattern: '/about', observedUrlCount: 1,
+      routeIds: ['about--anon-desktop--i0', 'about--auth-desktop--i0'],
+    }];
+    return {
+      modelVersion: CAPTURE_MODEL_VERSION,
+      siteId: 'northwind-supply',
+      manifest: m,
+      routes: {
+        'about--anon-desktop--i0': { meta: anon, dom: clone(aboutDom), styles: clone(aboutStyles), states: clone(aboutStates) },
+        'about--auth-desktop--i0': { meta: auth },
+      },
+      assets: load('assets/index.json'),
+      endpoints: clone(endpoints),
+      flows: {},
+    };
+  };
+
+  it('accepts a pointer whose hash matches its canonical route', () => {
+    expect(CaptureModelSchema.safeParse(twoRoutes()).success).toBe(true);
+  });
+
+  it('rejects a shared route that also stores artifacts', () => {
+    const m = twoRoutes() as Record<string, Record<string, Record<string, unknown>>>;
+    m['routes']!['about--auth-desktop--i0']!['dom'] = clone(aboutDom);
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('must not exist');
+  });
+
+  it('rejects a captured route that is missing its artifacts', () => {
+    const m = twoRoutes() as Record<string, Record<string, Record<string, unknown>>>;
+    delete m['routes']!['about--anon-desktop--i0']!['styles'];
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('missing from a captured route');
+  });
+
+  it('rejects a pointer whose hash disagrees with its canonical route', () => {
+    const m = twoRoutes((_anon, auth) => {
+      (auth['content'] as Record<string, string>)['contentHash'] = 'f'.repeat(64);
+    });
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('not actually shared');
+  });
+
+  it('rejects a pointer at a route that does not exist', () => {
+    const m = twoRoutes((_anon, auth) => {
+      (auth['content'] as Record<string, string>)['canonicalRouteId'] = 'ghost--anon-desktop--i0';
+    });
+    expect(CaptureModelSchema.safeParse(m).success).toBe(false);
+  });
+
+  it('rejects a pointer at another pointer (no chains)', () => {
+    const m = twoRoutes((anon, auth) => {
+      anon['content'] = {
+        kind: 'shared',
+        contentHash: (auth['content'] as Record<string, string>)['contentHash'],
+        canonicalRouteId: 'about--auth-desktop--i0',
+      };
+    }) as Record<string, Record<string, Record<string, unknown>>>;
+    delete m['routes']!['about--anon-desktop--i0']!['dom'];
+    delete m['routes']!['about--anon-desktop--i0']!['styles'];
+    delete m['routes']!['about--anon-desktop--i0']!['states'];
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('must not chain');
+  });
+
+  it('rejects a content hash that the artifacts do not actually produce', () => {
+    const m = twoRoutes((anon) => {
+      (anon['content'] as Record<string, string>)['contentHash'] = '0'.repeat(64);
+    });
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('the artifacts hash to');
+  });
+});
+
+describe('closed shadow roots are a permanent gap (§11)', () => {
+  it('rejects a closed root that names no gap', () => {
+    const bad = clone(routeDom);
+    let touched = 0;
+    const walk = (n: Record<string, unknown>): void => {
+      if (n['nodeType'] !== 'element') return;
+      const host = n['shadowHost'] as Record<string, unknown> | undefined;
+      if (host && host['mode'] === 'closed') {
+        delete host['gapId'];
+        touched += 1;
+      }
+      (n['children'] as Record<string, unknown>[]).forEach(walk);
+    };
+    walk(bad['root'] as Record<string, unknown>);
+    expect(touched, 'fixture no longer contains a closed shadow root').toBeGreaterThan(0);
+    expect(DomDocumentSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('rejects a gapId that the stage report never defines', () => {
+    const m = {
+      modelVersion: CAPTURE_MODEL_VERSION,
+      siteId: 'northwind-supply',
+      manifest: (() => {
+        const x = clone(manifest) as Record<string, unknown>;
+        x['routeIds'] = [MUG];
+        x['patterns'] = [{ urlPattern: '/product/:id', observedUrlCount: 1, routeIds: [MUG] }];
+        return x;
+      })(),
+      routes: {
+        [MUG]: { meta: clone(routeMeta), dom: clone(routeDom), styles: clone(routeStyles), states: clone(routeStates) },
+      },
+      assets: load('assets/index.json'),
+      endpoints: clone(endpoints),
+      flows: {},
+      stageReport: (() => {
+        const r = clone(report) as Record<string, unknown[]>;
+        r['gaps'] = [];
+        return r;
+      })(),
+    };
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('never defines');
   });
 });
 

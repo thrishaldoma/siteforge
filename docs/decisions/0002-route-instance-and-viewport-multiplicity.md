@@ -1,6 +1,10 @@
 # DECISION 0002 — one route pattern maps to many captured artifacts
 
 **Status:** ACCEPTED (operator ruling, M0) — Option A: composite route-id, flat directories
+**Revised by:** [0004](0004-capture-context.md). The composite-key and
+flat-directory decisions stand. The *contents* of the key changed: the viewport is
+no longer spelled into the id as `1280x800`, but referenced as a declared capture
+context, so `<pattern>--i0--1280x800` became `<pattern>--anon-desktop--i0`.
 **Raised:** M0, while defining the route-level schemas
 **Affects:** `meta.json`, `dom.json`, `styles.json`, `states.json`, `scroll/`, `shot.full.png`
 

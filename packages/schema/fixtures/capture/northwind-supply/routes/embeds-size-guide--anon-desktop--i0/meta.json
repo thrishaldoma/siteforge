@@ -1,0 +1,94 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "embeds-size-guide--anon-desktop--i0",
+  "siteId": "northwind-supply",
+  "urlPattern": "/embeds/size-guide",
+  "contextId": "anon-desktop",
+  "instanceIndex": 0,
+  "url": "https://example.com/embeds/size-guide",
+  "pathParams": {},
+  "canonicalUrl": "https://example.com/embeds/size-guide",
+  "title": "Size guide",
+  "status": 200,
+  "redirectChain": [],
+  "templateGuess": {
+    "name": "embed-table",
+    "confidence": 0.72,
+    "rationale": "Standalone document with no shared shell; single table body."
+  },
+  "requiresAuth": false,
+  "unauthenticatedBehavior": {
+    "kind": "accessible"
+  },
+  "depth": 2,
+  "discoveredFrom": {
+    "kind": "iframe",
+    "routeId": "product-id--anon-desktop--i0",
+    "nodeId": "n_260898e81bafd786"
+  },
+  "embeddedIn": [
+    {
+      "routeId": "product-id--anon-desktop--i0",
+      "nodeId": "n_260898e81bafd786",
+      "contentBox": {
+        "x": 32,
+        "y": 620,
+        "width": 640,
+        "height": 420
+      }
+    },
+    {
+      "routeId": "product-id--anon-desktop--i1",
+      "nodeId": "n_260898e81bafd786",
+      "contentBox": {
+        "x": 32,
+        "y": 620,
+        "width": 640,
+        "height": 420
+      }
+    }
+  ],
+  "content": {
+    "kind": "captured",
+    "contentHash": "e6ffee58ec59f512b5b22e3176525c70c9a13c3a070e3c3f8d08badffa500d8d",
+    "renderedSize": {
+      "width": 640,
+      "height": 420
+    },
+    "screenshots": {
+      "full": {
+        "path": "shot.full.png",
+        "sha256": "19dec363a3082e3c061d17185906444f2167ede4790f46b41255ecf6703d4b45",
+        "width": 640,
+        "height": 420
+      },
+      "scroll": [
+        {
+          "index": 0,
+          "scrollY": 0,
+          "shot": {
+            "path": "scroll/0000.png",
+            "sha256": "aea73e7c33fe9962f90cb2114f56b1973fcf2a85edc18fa3c1cf917a6affea61",
+            "width": 640,
+            "height": 420
+          }
+        }
+      ]
+    },
+    "pageMetrics": {
+      "scrollHeight": 420,
+      "scrollWidth": 640,
+      "scrollSteps": 1
+    }
+  },
+  "gapIds": [
+    "gap_34a4ad245bd3"
+  ]
+}

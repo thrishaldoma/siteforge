@@ -1,0 +1,108 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "root--anon-desktop--i0",
+  "siteId": "northwind-supply",
+  "urlPattern": "/",
+  "contextId": "anon-desktop",
+  "instanceIndex": 0,
+  "url": "https://example.com/",
+  "pathParams": {},
+  "canonicalUrl": "https://example.com/",
+  "title": "Northwind Supply — everyday supplies, honestly priced",
+  "status": 200,
+  "redirectChain": [
+    {
+      "from": "http://example.com/",
+      "to": "https://example.com/",
+      "status": 301
+    }
+  ],
+  "templateGuess": {
+    "name": "home",
+    "confidence": 0.94,
+    "rationale": "Unique layout at the origin root; no sibling shares its structure."
+  },
+  "requiresAuth": false,
+  "unauthenticatedBehavior": {
+    "kind": "accessible"
+  },
+  "depth": 0,
+  "discoveredFrom": {
+    "kind": "entry"
+  },
+  "embeddedIn": [],
+  "content": {
+    "kind": "captured",
+    "contentHash": "6831395c50bdfec525a25dd024f7caa4775b3f052e7adfa5b20a6588b62108a0",
+    "renderedSize": {
+      "width": 1280,
+      "height": 800
+    },
+    "screenshots": {
+      "full": {
+        "path": "shot.full.png",
+        "sha256": "be79a2986e0d30eb7c58edf24cedef004f32c76f9e7333a99add5e8c148bcc45",
+        "width": 1280,
+        "height": 2100
+      },
+      "scroll": [
+        {
+          "index": 0,
+          "scrollY": 0,
+          "shot": {
+            "path": "scroll/0000.png",
+            "sha256": "1c5dac81bd1d4465c5bf6b11041401cacf6a3d24bf5e599b5bf389854c8f65c2",
+            "width": 1280,
+            "height": 800
+          }
+        },
+        {
+          "index": 1,
+          "scrollY": 400,
+          "shot": {
+            "path": "scroll/0001.png",
+            "sha256": "afb4a591764fc7115ac905f7bf5bafd3dc5f6843f7da96d6519b74850ff5b7d1",
+            "width": 1280,
+            "height": 800
+          }
+        },
+        {
+          "index": 2,
+          "scrollY": 800,
+          "shot": {
+            "path": "scroll/0002.png",
+            "sha256": "4072fd975de627489744f92542462947332fef7fdc8aa79e94e1738e95b18e96",
+            "width": 1280,
+            "height": 800
+          }
+        },
+        {
+          "index": 3,
+          "scrollY": 1200,
+          "shot": {
+            "path": "scroll/0003.png",
+            "sha256": "5f7b78ebacde9589ebce7a088fc5e05dfbcee4690a24cb675a45e7a591492615",
+            "width": 1280,
+            "height": 800
+          }
+        }
+      ]
+    },
+    "pageMetrics": {
+      "scrollHeight": 2100,
+      "scrollWidth": 1280,
+      "scrollSteps": 4
+    }
+  },
+  "gapIds": [
+    "gap_1982e0d1e2fc",
+    "gap_34a4ad245bd3"
+  ]
+}

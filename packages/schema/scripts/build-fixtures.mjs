@@ -21,7 +21,7 @@ import { materialize, sha256, short16, short12 } from './lib-dom.mjs';
 import {
   ASSET, GAP, ORIGIN, PRODUCTS, SITE_ID,
   SIZE_GUIDE_BOX, SIZE_GUIDE_ROUTE_ID,
-  accountOrdersPage, homePage, productPage, sizeGuidePage,
+  aboutPage, accountOrdersPage, homePage, productPage, sizeGuidePage,
 } from './lib-site.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -40,18 +40,39 @@ const envelope = (artifact, durationMs) => ({
 
 const DESKTOP = { width: 1280, height: 800, deviceScaleFactor: 1, isMobile: false, hasTouch: false };
 const MOBILE = { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
+const LOCALE = { language: 'en-US', timezone: 'UTC' };
+const HERO_VARIANT = { experiment: 'homepage-hero', variant: 'control', pinnedBy: 'cookie', bestEffort: false };
+
+/**
+ * Three capture contexts (decision 0004). §6 requires the anonymous and
+ * authenticated sets to be crawled separately; `--responsive` adds the mobile
+ * viewport; §11's pinned variant rides along on the same mechanism.
+ */
+const CONTEXTS = [
+  { contextId: 'anon-desktop', label: 'Anonymous · 1280×800 · en-US · hero=control',
+    auth: { mode: 'anonymous' }, viewport: DESKTOP, locale: LOCALE, variant: HERO_VARIANT },
+  { contextId: 'anon-mobile', label: 'Anonymous · 390×844 · en-US · hero=control',
+    auth: { mode: 'anonymous' }, viewport: MOBILE, locale: LOCALE, variant: HERO_VARIANT },
+  { contextId: 'auth-desktop', label: 'Signed in · 1280×800 · en-US · no experiment',
+    auth: {
+      mode: 'storage-state', storageStatePath: 'auth/storage-state.json',
+      acquiredBy: 'interactive-headful', expiresAt: '2026-09-15T11:24:07.000Z',
+      credentialSource: 'os-keychain',
+    },
+    viewport: DESKTOP, locale: LOCALE, variant: null },
+];
+const contextById = new Map(CONTEXTS.map((c) => [c.contextId, c]));
 
 const ROUTE = {
-  home: 'root--i0--1280x800',
-  mug: 'product-id--i0--1280x800',
-  notebook: 'product-id--i1--1280x800',
-  mugMobile: 'product-id--i0--390x844',
-  orders: 'account-orders--i0--1280x800',
-  // Nested route: captured inside the product page's same-origin iframe, so its
-  // "viewport" is the frame's content box rather than a browser viewport.
+  home: 'root--anon-desktop--i0',
+  mug: 'product-id--anon-desktop--i0',
+  notebook: 'product-id--anon-desktop--i1',
+  mugMobile: 'product-id--anon-mobile--i0',
   sizeGuide: SIZE_GUIDE_ROUTE_ID,
+  aboutAnon: 'about--anon-desktop--i0',
+  aboutAuth: 'about--auth-desktop--i0',
+  orders: 'account-orders--auth-desktop--i0',
 };
-const FRAME_VIEWPORT = { width: 640, height: 420, deviceScaleFactor: 1, isMobile: false, hasTouch: false };
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -106,51 +127,72 @@ function write(relPath, schema, value) {
 /* ------------------------------------------------------------------- routes */
 
 const PAGES = [
-  { routeId: ROUTE.home, page: homePage(), urlPattern: '/', url: `${ORIGIN}/`, pathParams: {}, viewport: DESKTOP, instanceIndex: 0,
+  { routeId: ROUTE.home, page: homePage(), urlPattern: '/', url: `${ORIGIN}/`, pathParams: {},
+    contextId: 'anon-desktop', instanceIndex: 0,
     template: { name: 'home', confidence: 0.94, rationale: 'Unique layout at the origin root; no sibling shares its structure.' },
-    auth: 'anonymous', requiresAuth: false, unauth: { kind: 'accessible' }, depth: 0,
+    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 0,
     discoveredFrom: { kind: 'entry' }, scrollHeight: 2100, scrollSteps: 4,
     redirectChain: [{ from: 'http://example.com/', to: `${ORIGIN}/`, status: 301 }] },
 
   { routeId: ROUTE.mug, page: productPage(PRODUCTS[0], { mobile: false }), urlPattern: '/product/:id',
-    url: `${ORIGIN}/product/mug-blue-12oz`, pathParams: { id: 'mug-blue-12oz' }, viewport: DESKTOP, instanceIndex: 0,
+    url: `${ORIGIN}/product/mug-blue-12oz`, pathParams: { id: 'mug-blue-12oz' },
+    contextId: 'anon-desktop', instanceIndex: 0,
     template: { name: 'product-detail', confidence: 0.97, rationale: 'Structural hash matches instance i1 at 0.98 similarity.' },
-    auth: 'anonymous', requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
-    discoveredFromRoute: ROUTE.home, discoveredFromSel: (r) => findOne(r.root, (n) => n.attributes.href === '/product/mug-blue-12oz').nodeId,
+    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    discoveredFromRoute: ROUTE.home, discoveredFromHref: '/product/mug-blue-12oz',
     scrollHeight: 1400, scrollSteps: 2 },
 
   { routeId: ROUTE.notebook, page: productPage(PRODUCTS[1], { mobile: false }), urlPattern: '/product/:id',
-    url: `${ORIGIN}/product/notebook-a5-dot`, pathParams: { id: 'notebook-a5-dot' }, viewport: DESKTOP, instanceIndex: 1,
+    url: `${ORIGIN}/product/notebook-a5-dot`, pathParams: { id: 'notebook-a5-dot' },
+    contextId: 'anon-desktop', instanceIndex: 1,
     template: { name: 'product-detail', confidence: 0.97, rationale: 'Structural hash matches instance i0 at 0.98 similarity.' },
-    auth: 'anonymous', requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
-    discoveredFromRoute: ROUTE.home, discoveredFromSel: (r) => findOne(r.root, (n) => n.attributes.href === '/product/notebook-a5-dot').nodeId,
+    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    discoveredFromRoute: ROUTE.home, discoveredFromHref: '/product/notebook-a5-dot',
     scrollHeight: 1400, scrollSteps: 2 },
 
   { routeId: ROUTE.mugMobile, page: productPage(PRODUCTS[0], { mobile: true }), urlPattern: '/product/:id',
-    url: `${ORIGIN}/product/mug-blue-12oz`, pathParams: { id: 'mug-blue-12oz' }, viewport: MOBILE, instanceIndex: 0,
-    template: { name: 'product-detail', confidence: 0.95, rationale: 'Same template as the 1280x800 capture; layout differs by media query only.' },
-    auth: 'anonymous', requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
-    discoveredFromRoute: ROUTE.home, discoveredFromSel: (r) => findOne(r.root, (n) => n.attributes.href === '/product/mug-blue-12oz').nodeId,
+    url: `${ORIGIN}/product/mug-blue-12oz`, pathParams: { id: 'mug-blue-12oz' },
+    contextId: 'anon-mobile', instanceIndex: 0,
+    template: { name: 'product-detail', confidence: 0.95, rationale: 'Same template as the desktop capture; layout differs by media query only.' },
+    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    discoveredFromRoute: ROUTE.home, discoveredFromHref: '/product/mug-blue-12oz',
     scrollHeight: 1900, scrollSteps: 3 },
 
-  { routeId: ROUTE.orders, page: accountOrdersPage(), urlPattern: '/account/orders', url: `${ORIGIN}/account/orders`,
-    pathParams: {}, viewport: DESKTOP, instanceIndex: 0,
-    template: { name: 'account-table', confidence: 0.81, rationale: 'Shares the shell with every route; body is a single data table.' },
-    auth: 'authenticated', requiresAuth: true, unauth: { kind: 'redirect', to: '/login', status: 302 }, depth: 1,
-    discoveredFromRoute: ROUTE.home, discoveredFromSel: null, scrollHeight: 900, scrollSteps: 1 },
-
   { routeId: ROUTE.sizeGuide, page: sizeGuidePage(), urlPattern: '/embeds/size-guide',
-    url: `${ORIGIN}/embeds/size-guide`, pathParams: {}, viewport: FRAME_VIEWPORT, instanceIndex: 0,
+    url: `${ORIGIN}/embeds/size-guide`, pathParams: {},
+    contextId: 'anon-desktop', instanceIndex: 0,
     template: { name: 'embed-table', confidence: 0.72, rationale: 'Standalone document with no shared shell; single table body.' },
-    auth: 'anonymous', requiresAuth: false, unauth: { kind: 'accessible' }, depth: 2,
+    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 2,
     embedded: true, scrollHeight: 420, scrollSteps: 1 },
+
+  // Captured in two contexts. The page does not depend on the session, so the
+  // second capture stores a pointer rather than a duplicate (decision 0004).
+  { routeId: ROUTE.aboutAnon, page: aboutPage(), urlPattern: '/about', url: `${ORIGIN}/about`, pathParams: {},
+    contextId: 'anon-desktop', instanceIndex: 0,
+    template: { name: 'prose', confidence: 0.88, rationale: 'Shell plus a heading and two paragraphs; no data regions.' },
+    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    discoveredFromRoute: ROUTE.home, discoveredFromHref: '/about',
+    scrollHeight: 900, scrollSteps: 1 },
+
+  { routeId: ROUTE.aboutAuth, page: aboutPage(), urlPattern: '/about', url: `${ORIGIN}/about`, pathParams: {},
+    contextId: 'auth-desktop', instanceIndex: 0,
+    template: { name: 'prose', confidence: 0.88, rationale: 'Shell plus a heading and two paragraphs; no data regions.' },
+    requiresAuth: false, unauth: { kind: 'accessible' }, depth: 1,
+    discoveredFromRoute: ROUTE.home, discoveredFromHref: '/about',
+    scrollHeight: 900, scrollSteps: 1, sharedWith: ROUTE.aboutAnon },
+
+  { routeId: ROUTE.orders, page: accountOrdersPage(), urlPattern: '/account/orders', url: `${ORIGIN}/account/orders`,
+    pathParams: {}, contextId: 'auth-desktop', instanceIndex: 0,
+    template: { name: 'account-table', confidence: 0.81, rationale: 'Shares the shell with every route; body is a single data table.' },
+    requiresAuth: true, unauth: { kind: 'redirect', to: '/login', status: 302 }, depth: 1,
+    discoveredFromRoute: ROUTE.home, discoveredFromHref: null, scrollHeight: 900, scrollSteps: 1 },
 ];
 
 const routes = new Map();
 for (const p of PAGES) {
   routes.set(p.routeId, {
     spec: p,
-    ...materialize(p.page.tree, { routeId: p.routeId, pageTitle: p.page.title }),
+    ...materialize(p.page.tree, { documentUrl: p.url, pageTitle: p.page.title }),
   });
 }
 const home = routes.get(ROUTE.home);
@@ -242,11 +284,8 @@ rmSync(OUT, { recursive: true, force: true });
 
 for (const [routeId, r] of routes) {
   const p = r.spec;
-  const scroll = Array.from({ length: p.scrollSteps }, (_, i) => ({
-    index: i,
-    scrollY: Math.min(i * (p.viewport.height / 2), Math.max(0, p.scrollHeight - p.viewport.height)),
-    shot: shot(`scroll/${String(i).padStart(4, '0')}.png`, p.viewport.width, p.viewport.height, `${routeId}:${i}`),
-  }));
+  const context = contextById.get(p.contextId);
+  const viewport = context.viewport;
 
   const frameHosts = p.embedded
     ? [ROUTE.mug, ROUTE.notebook].map((parentId) => ({
@@ -257,36 +296,34 @@ for (const [routeId, r] of routes) {
     : [];
   const discoveredFrom = p.embedded
     ? { kind: 'iframe', routeId: frameHosts[0].routeId, nodeId: frameHosts[0].nodeId }
-    : p.discoveredFrom ?? (p.discoveredFromSel
-      ? { kind: 'link', routeId: p.discoveredFromRoute, nodeId: p.discoveredFromSel(home) }
-      : { kind: 'link', routeId: p.discoveredFromRoute, nodeId: findOne(home.root, (n) => n.attributes.href === '/shop').nodeId });
-  const recursedIframes = findAll(r.root, (n) => n.iframe?.sameOrigin === true).length > 0;
+    : p.discoveredFrom ?? {
+        kind: 'link', routeId: p.discoveredFromRoute,
+        nodeId: findOne(home.root, (n) => n.attributes.href === (p.discoveredFromHref ?? '/shop')).nodeId,
+      };
 
-  write(`routes/${routeId}/meta.json`, S.RouteMetaSchema, {
-    ...envelope('route-meta', 1840),
-    routeId, siteId: SITE_ID,
-    urlPattern: p.urlPattern, instanceIndex: p.instanceIndex, viewport: p.viewport,
-    url: p.url, pathParams: p.pathParams, canonicalUrl: p.url, title: p.page.title,
-    status: 200, redirectChain: p.redirectChain ?? [],
-    templateGuess: p.template,
-    authState: p.auth, requiresAuth: p.requiresAuth, unauthenticatedBehavior: p.unauth,
-    depth: p.depth, discoveredFrom, embeddedIn: frameHosts,
-    screenshots: { full: shot('shot.full.png', p.viewport.width, p.scrollHeight, `${routeId}:full`), scroll },
-    pageMetrics: { scrollHeight: p.scrollHeight, scrollWidth: p.viewport.width, scrollSteps: p.scrollSteps },
-    gapIds: routeId === ROUTE.orders ? [GAP.thirdPartyIframe, GAP.licensedFont, GAP.destructiveSkip] : [GAP.thirdPartyIframe, GAP.licensedFont],
-  });
+  // The rendered box is the context viewport, except inside a frame.
+  const renderedSize = p.embedded
+    ? { width: SIZE_GUIDE_BOX.width, height: SIZE_GUIDE_BOX.height }
+    : { width: viewport.width, height: viewport.height };
 
-  write(`routes/${routeId}/dom.json`, S.DomDocumentSchema, {
+  // Gaps are derived from what the DOM actually contains, not hand-listed, so a
+  // structural change cannot leave a stale reference behind.
+  const gapIds = [GAP.licensedFont];
+  if (findAll(r.root, (n) => n.iframe?.sameOrigin === false).length) gapIds.unshift(GAP.thirdPartyIframe);
+  if (findAll(r.root, (n) => n.shadowHost?.mode === 'closed').length) gapIds.push(GAP.closedShadowRoot);
+  if (routeId === ROUTE.orders) gapIds.push(GAP.destructiveSkip);
+
+  const dom = {
     ...envelope('dom-document', 620),
     routeId, documentUrl: p.url, doctype: 'html', lang: 'en',
     normalization: {
       whitespace: 'collapsed', commentsRemoved: true, inlineCodeOmitted: true,
-      shadowDomFlattened: true, iframesRecursed: recursedIframes,
+      shadowDomFlattened: true,
+      iframesRecursed: findAll(r.root, (n) => n.iframe?.sameOrigin === true).length > 0,
     },
     root: r.root, nodeCount: r.nodeCount, domHash: r.domHash,
-  });
-
-  write(`routes/${routeId}/styles.json`, S.StyleSheetDocumentSchema, {
+  };
+  const styles = {
     ...envelope('style-sheet', 410),
     routeId, propertySet: 'siteforge/v1',
     table: r.table, assignments: r.assignments,
@@ -300,10 +337,9 @@ for (const [routeId, r] of routes) {
       distinctStyles: r.table.length,
       dedupeRatio: Number((r.table.length / r.styledNodeCount).toFixed(4)),
     },
-  });
-
-  const entries = stateEntriesFor(routeId, r, p);
-  write(`routes/${routeId}/states.json`, S.StateDeltasDocumentSchema, {
+  };
+  const entries = stateEntriesFor(routeId, r, { ...p, viewport });
+  const states = {
     ...envelope('state-deltas', 780),
     routeId, entries,
     stats: {
@@ -311,7 +347,49 @@ for (const [routeId, r] of routes) {
       probedNodes: entries.filter((e) => e.source === 'probed').length,
       scrollSteps: entries.filter((e) => e.source === 'scroll').length,
     },
+  };
+
+  const contentHash = S.deriveRouteContentHash({ dom, styles, states });
+  r.contentHash = contentHash;
+
+  let content;
+  if (p.sharedWith) {
+    const canonical = routes.get(p.sharedWith);
+    if (canonical.contentHash !== contentHash) {
+      console.error(`✗ ${routeId} is declared as sharing content with ${p.sharedWith}, but they hash differently.`);
+      process.exit(1);
+    }
+    content = { kind: 'shared', contentHash, canonicalRouteId: p.sharedWith };
+  } else {
+    const scroll = Array.from({ length: p.scrollSteps }, (_, i) => ({
+      index: i,
+      scrollY: Math.min(i * (renderedSize.height / 2), Math.max(0, p.scrollHeight - renderedSize.height)),
+      shot: shot(`scroll/${String(i).padStart(4, '0')}.png`, renderedSize.width, renderedSize.height, `${routeId}:${i}`),
+    }));
+    content = {
+      kind: 'captured', contentHash, renderedSize,
+      screenshots: { full: shot('shot.full.png', renderedSize.width, p.scrollHeight, `${routeId}:full`), scroll },
+      pageMetrics: { scrollHeight: p.scrollHeight, scrollWidth: renderedSize.width, scrollSteps: p.scrollSteps },
+    };
+  }
+
+  write(`routes/${routeId}/meta.json`, S.RouteMetaSchema, {
+    ...envelope('route-meta', 1840),
+    routeId, siteId: SITE_ID,
+    urlPattern: p.urlPattern, contextId: p.contextId, instanceIndex: p.instanceIndex,
+    url: p.url, pathParams: p.pathParams, canonicalUrl: p.url, title: p.page.title,
+    status: 200, redirectChain: p.redirectChain ?? [],
+    templateGuess: p.template,
+    requiresAuth: p.requiresAuth, unauthenticatedBehavior: p.unauth,
+    depth: p.depth, discoveredFrom, embeddedIn: frameHosts,
+    content, gapIds,
   });
+
+  // A shared route stores nothing but its pointer.
+  if (p.sharedWith) continue;
+  write(`routes/${routeId}/dom.json`, S.DomDocumentSchema, dom);
+  write(`routes/${routeId}/styles.json`, S.StyleSheetDocumentSchema, styles);
+  write(`routes/${routeId}/states.json`, S.StateDeltasDocumentSchema, states);
 }
 
 /* -------------------------------------------------------------------- assets */
@@ -335,6 +413,9 @@ const byUrl = Object.fromEntries(FILES.map((f) => [f.url, {
 const resolveUrl = (v) => (v.startsWith('http') ? v : `${ORIGIN}${v}`);
 
 for (const [routeId, r] of routes) {
+  // A shared route stores no dom.json, so it can host no references; its content
+  // is reached through the canonical route.
+  if (r.spec.sharedWith) continue;
   walk(r.root, (n) => {
     if (n.nodeType !== 'element') return;
     for (const attr of ['src', 'href']) {
@@ -634,43 +715,6 @@ const contentHash = sha256(
     .join('\n'),
 );
 
-write('manifest.json', S.CaptureManifestSchema, {
-  ...envelope('capture-manifest', 41880),
-  siteId: SITE_ID,
-  target: { entryUrl: 'http://example.com/', origin: ORIGIN },
-  permission: { source: 'allowlist', matchedEntry: 'example.com' },
-  viewports: [DESKTOP, MOBILE],
-  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 siteforge/0.1.0',
-  determinism: {
-    seed: SEED,
-    frozenEpochMs: Date.parse('2026-01-01T00:00:00.000Z'),
-    frozenTimezone: 'UTC', frozenLocale: 'en-US',
-    frozen: ['Date.now', 'performance.now', 'Math.random', 'crypto.randomUUID'],
-    prefersReducedMotion: 'reduce',
-  },
-  crawl: {
-    maxRoutes: 40, maxDepth: 3, maxInstancesPerPattern: 3, sameOriginOnly: true,
-    allowDestructive: false,
-    destructiveTerms: ['delete', 'remove', 'cancel subscription', 'deactivate'],
-  },
-  auth: {
-    mode: 'storage-state', storageStatePath: 'auth/storage-state.json',
-    acquiredBy: 'interactive-headful', expiresAt: '2026-09-15T11:24:07.000Z',
-    credentialSource: 'os-keychain',
-  },
-  toolVersions: { siteforge: '0.1.0', playwright: '1.49.1', browser: 'chromium-131.0.6778.85' },
-  patterns: [
-    { urlPattern: '/', observedUrlCount: 1, routeIds: [ROUTE.home] },
-    { urlPattern: '/product/:id', observedUrlCount: 12, routeIds: [ROUTE.mug, ROUTE.notebook, ROUTE.mugMobile] },
-    { urlPattern: '/account/orders', observedUrlCount: 1, routeIds: [ROUTE.orders] },
-    { urlPattern: '/embeds/size-guide', observedUrlCount: 1, routeIds: [ROUTE.sizeGuide] },
-  ],
-  routeIds: Object.values(ROUTE),
-  flowIds: ['add-mug-to-cart', 'toggle-product-details', 'delete-account'],
-  contentHash,
-  counts: { routes: routes.size, patterns: 4, assets: FILES.length, endpoints: ENDPOINTS.length, flows: 3, gaps: 5 },
-});
-
 const GAPS = [
   {
     gapId: GAP.thirdPartyIframe, stage: 'capture', category: 'iframe-third-party', severity: 'degraded',
@@ -707,7 +751,64 @@ const GAPS = [
     detail: '§8 forbids outbound network from the clone. These requests are documented here and blocked by the undici agent; nothing in the generated app will attempt them.',
     stub: { kind: 'none' },
   },
+  {
+    gapId: GAP.closedShadowRoot, stage: 'capture', category: 'shadow-dom', severity: 'degraded',
+    subject: { routeId: ROUTE.mug, url: `${ORIGIN}/product/mug-blue-12oz` },
+    summary: '<nw-rating> uses a closed shadow root; its content is unreachable.',
+    detail: '§11 pierces shadow roots via element.shadowRoot, which returns null for a closed root by design — there is no supported way to read one from page context. This is a permanent capability limit, not a missing feature. The host element and its computed style are captured; its subtree is not. The clone renders an empty element of the same box size.',
+    stub: { kind: 'omitted', detail: 'Host element rendered at captured dimensions with no content.' },
+  },
 ];
+
+write('manifest.json', S.CaptureManifestSchema, {
+  ...envelope('capture-manifest', 41880),
+  siteId: SITE_ID,
+  target: { entryUrl: 'http://example.com/', origin: ORIGIN },
+  permission: { source: 'allowlist', matchedEntry: 'example.com' },
+  contexts: CONTEXTS,
+  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 siteforge/0.1.0',
+  determinism: {
+    seed: SEED,
+    frozenEpochMs: Date.parse('2026-01-01T00:00:00.000Z'),
+    frozenTimezone: 'UTC', frozenLocale: 'en-US',
+    frozen: ['Date.now', 'performance.now', 'Math.random', 'crypto.randomUUID'],
+    prefersReducedMotion: 'reduce',
+  },
+  crawl: {
+    budget: {
+      maxInstancesPerPattern: 3,
+      maxRoutesPerContext: 40,
+      // Three contexts at 40 apiece would be 120; the ceiling is what keeps a
+      // run that declares more contexts from silently costing proportionally more.
+      maxRoutesTotal: 100,
+      maxDepth: 3,
+    },
+    sameOriginOnly: true,
+    allowDestructive: false,
+    destructiveTerms: ['delete', 'remove', 'cancel subscription', 'deactivate'],
+  },
+  toolVersions: { siteforge: '0.1.0', playwright: '1.49.1', browser: 'chromium-131.0.6778.85' },
+  patterns: [
+    { urlPattern: '/', observedUrlCount: 1, routeIds: [ROUTE.home] },
+    { urlPattern: '/product/:id', observedUrlCount: 12, routeIds: [ROUTE.mug, ROUTE.notebook, ROUTE.mugMobile] },
+    { urlPattern: '/about', observedUrlCount: 1, routeIds: [ROUTE.aboutAnon, ROUTE.aboutAuth] },
+    { urlPattern: '/account/orders', observedUrlCount: 1, routeIds: [ROUTE.orders] },
+    { urlPattern: '/embeds/size-guide', observedUrlCount: 1, routeIds: [ROUTE.sizeGuide] },
+  ],
+  routeIds: [...routes.keys()],
+  flowIds: ['add-mug-to-cart', 'toggle-product-details', 'delete-account'],
+  contentHash,
+  counts: {
+    contexts: CONTEXTS.length,
+    routes: routes.size,
+    capturedRoutes: [...routes.values()].filter((r) => !r.spec.sharedWith).length,
+    patterns: 5,
+    assets: FILES.length,
+    endpoints: ENDPOINTS.length,
+    flows: 3,
+    gaps: GAPS.length,
+  },
+});
 
 write('stage-report.json', S.StageReportSchema, {
   ...envelope('stage-report', 41880),

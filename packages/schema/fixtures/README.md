@@ -12,14 +12,32 @@ capture/northwind-supply/
 │   ├── add-mug-to-cart.trace.json       # scripted, 3 steps, 2 network calls
 │   ├── toggle-product-details.trace.json# probe, 1 step, JS-driven
 │   └── delete-account.trace.json        # skipped by §6's destructive heuristic
-└── routes/
-    ├── root--i0--1280x800/              # home; reached via an http→https 301
-    ├── product-id--i0--1280x800/        # /product/mug-blue-12oz
-    ├── product-id--i1--1280x800/        # /product/notebook-a5-dot   (2nd instance)
-    ├── product-id--i0--390x844/         # same URL, mobile viewport
-    ├── embeds-size-guide--i0--640x420/  # nested: a same-origin iframe (§11)
-    └── account-orders--i0--1280x800/    # authenticated
+└── routes/                              # <pattern>--<context>--i<instance>
+    ├── root--anon-desktop--i0/           # home; reached via an http→https 301
+    ├── product-id--anon-desktop--i0/     # /product/mug-blue-12oz
+    ├── product-id--anon-desktop--i1/     # /product/notebook-a5-dot  (2nd instance)
+    ├── product-id--anon-mobile--i0/      # same URL, mobile context
+    ├── embeds-size-guide--anon-desktop--i0/  # nested: a same-origin iframe (§11)
+    ├── about--anon-desktop--i0/          # captured
+    ├── about--auth-desktop--i0/          # meta.json only — points at the above
+    └── account-orders--auth-desktop--i0/ # authenticated context
 ```
+
+## Three capture contexts
+
+Decision 0004: everything that changes how a page renders is a declared context,
+referenced by the route id — never spelled into it.
+
+| contextId | auth | viewport | variant |
+|---|---|---|---|
+| `anon-desktop` | anonymous | 1280×800 | `homepage-hero=control`, pinned by cookie |
+| `anon-mobile` | anonymous | 390×844 | same |
+| `auth-desktop` | storage-state | 1280×800 | none |
+
+`/about` is captured under two of them. It renders identically, so the second
+directory holds **only `meta.json`** with a `shared` pointer at the first — which
+is what the content-hash mechanism is for, and why 8 route directories contain 7
+routes' worth of artifacts.
 
 ## Why they look like this
 
@@ -40,6 +58,10 @@ consistent world and `src/fixtures.test.ts` asserts the joins:
 | every `gapId` referenced anywhere is defined in `stage-report.json` | §1's "explicitly stubbed, not silently faked" |
 | `manifest.contentHash` recomputes from the content artifacts | M1's "recrawl is idempotent modulo timestamps" |
 | every nodeId, styleId, a11y ref and routeId recomputes from `identity.ts` | capture reimplementing the id scheme differently |
+| nodeIds survive restyling and content churn, and move only on structural change | decision 0005 — prices and timestamps relocating every node |
+| every route resolves to a declared context, and rendered at that context's viewport | contexts drifting from the routes that claim them |
+| §6's caps hold per (pattern, context), under the global ceiling | contexts multiplying the crawl without bound |
+| every shared pointer resolves, does not chain, and its hash recomputes | deduplicating two pages that are not equal |
 | every same-origin iframe names a nested route that lists the parent in `embeddedIn` | §11's iframe recursion |
 | every redirect chain terminates at `meta.url`, and `dom.documentUrl` agrees | the three URL fields drifting apart |
 | every route's viewport is declared in the manifest, unless it is an embed | frame content boxes leaking into `viewports` |
@@ -57,9 +79,14 @@ consistent world and `src/fixtures.test.ts` asserts the joins:
   `unauthenticatedBehavior: redirect → /login`, which is §6's "the clone must
   reproduce the redirect-to-login behavior" without giving auth its own key axis.
 - **`/embeds/size-guide`** — a same-origin iframe recursed into as a nested route
-  (§11). Its viewport is the frame's *content box* (640×420), which no browser
-  viewport declares; `embeddedIn` is what licenses that, and it lists both desktop
-  product routes as parents. Decision 0003 §15.
+  (§11). It inherits its parent's context and records the frame's content box
+  (640×420) as `content.renderedSize`; `embeddedIn` lists both desktop product
+  routes as parents.
+- **`<nw-rating>` on the product pages** — a **closed** shadow root. Unlike the
+  open `<nw-search>`, its content is unreachable: `element.shadowRoot` returns
+  `null` from page context by design. That is a permanent capability limit, so the
+  host carries a required `gapId` and the schema will not accept a closed root
+  without one.
 - **home** also carries a non-empty `redirectChain` (`http://` → `https://`),
   which every real crawl hits and which pins the relationship between `meta.url`,
   `dom.documentUrl`, and the chain's last hop.
@@ -94,15 +121,16 @@ unreviewed:
 
 - `discoveredFrom: { kind: 'redirect' }` — the chain itself is covered, but no
   route was *found* by following one.
-- `auth: { mode: 'anonymous' }` and `permission: { source: 'cli-flag' }` — the
-  fixture is an authenticated, allowlisted crawl, so the two §3.1 default paths
-  are untested. A second, minimal capture directory would cover both.
+- `permission: { source: 'cli-flag' }` — this is an allowlisted crawl, so §3.1's
+  `--i-have-permission` path is unwitnessed.
+- `variant.pinnedBy: 'observed-only'` and `bestEffort: true` — the case where
+  siteforge could not force an A/B variant and just recorded what it was served.
 - `StageStatus: 'ok'` (this run has gaps), `propertySet: 'full'`,
-  `shadowHost.mode: 'closed'`, `UnauthenticatedBehavior` variants `status` and
-  `empty-shell`, and the `network` asset-reference kind.
+  `UnauthenticatedBehavior` variants `status` and `empty-shell`, and the
+  `network` asset-reference kind.
 
-None of these is a correctness risk the way the iframe and viewport cases were —
-they are shapes the schema already constrains, just not yet witnessed.
+None of these is a correctness risk the way the iframe, viewport, and content-churn
+cases were — they are shapes the schema already constrains, just not yet witnessed.
 
 ## Regenerating
 

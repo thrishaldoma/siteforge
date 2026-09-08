@@ -35,6 +35,7 @@ export const GAP = {
   destructiveSkip: gap('destructive-delete-account'),
   stubbedDelete: gap('stubbed-delete-account-endpoint'),
   thirdPartyOrigin: gap('third-party-origin-widgets'),
+  closedShadowRoot: gap('closed-shadow-root-nw-rating'),
 };
 
 export const PRODUCTS = [
@@ -242,6 +243,13 @@ export function productPage(product, { mobile }) {
               el('div', { attrs: { class: 'buy-panel' }, style: { display: 'block' } }, [
                 el('h1', { style: mobile ? ST.h1Mobile : ST.h1, role: 'heading', name: product.title, level: 1 }, [txt(product.title)]),
                 el('p', { attrs: { class: 'price' }, style: ST.price }, [txt(product.price)]),
+                // A closed shadow root: element.shadowRoot is null from page
+                // context by design, so its content is permanently unreachable.
+                el('nw-rating', {
+                  attrs: { class: 'rating', 'data-value': '4.5' },
+                  style: { display: 'block', height: '20px', 'margin-bottom': '16px' },
+                  shadowHost: { mode: 'closed', gapId: GAP.closedShadowRoot },
+                }),
                 el('div', { attrs: { class: 'qty-row' }, style: ST.qtyRow }, [
                   el('label', { attrs: { for: 'qty' }, style: ST.label }, [txt('Quantity')]),
                   el('input', {
@@ -292,7 +300,7 @@ export function productPage(product, { mobile }) {
 }
 
 /** The nested route the product page's same-origin iframe is captured as. */
-export const SIZE_GUIDE_ROUTE_ID = 'embeds-size-guide--i0--640x420';
+export const SIZE_GUIDE_ROUTE_ID = 'embeds-size-guide--anon-desktop--i0';
 export const SIZE_GUIDE_BOX = { x: 32, y: 620, width: 640, height: 420 };
 
 export function sizeGuidePage() {
@@ -311,6 +319,33 @@ export function sizeGuidePage() {
           el('tbody', { style: ST.tbody, role: 'rowgroup' }, rows.map((r) =>
             el('tr', { style: ST.tr, role: 'row' }, r.map((c) =>
               el('td', { style: ST.td, role: 'cell', name: c }, [txt(c)]))))),
+        ]),
+      ]),
+    ]),
+  };
+}
+
+/**
+ * A static marketing page. Rendered identically whether or not a session exists,
+ * which is what makes it the natural fixture for the shared-content pointer.
+ */
+export function aboutPage() {
+  const title = 'About — Northwind Supply';
+  return {
+    title,
+    tree: el('html', { attrs: { lang: 'en' }, style: ST.html }, [
+      head(title, false),
+      el('body', { style: ST.body }, [
+        el('div', { attrs: { id: 'app' }, style: ST.app }, [
+          siteHeader(false),
+          el('main', { style: ST.main, role: 'main' }, [
+            el('h1', { style: ST.h1, role: 'heading', name: 'About Northwind Supply', level: 1 }, [
+              txt('About Northwind Supply'),
+            ]),
+            el('p', { style: ST.p }, [txt('We sell a small number of well-made things and try not to sell anything else.')]),
+            el('p', { style: ST.p }, [txt('Everything ships from one warehouse. Returns are accepted for sixty days.')]),
+          ]),
+          siteFooter(),
         ]),
       ]),
     ]),
