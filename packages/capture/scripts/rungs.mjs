@@ -17,7 +17,7 @@ export const RUNGS = {
     expectNonEmpty: ['styleTableEntries', 'assets', 'a11yNodes'],
     knownEmpty: [
       'statesCssomPseudo', 'statesCssomAttribute', 'statesProbed', 'endpoints', 'fonts',
-      'foreignAssets', 'blockedOffOriginNavigations',
+      'foreignAssets', 'blockedOffOriginNavigations', 'cancelledDownloads',
     ],
   },
   2: {
@@ -41,6 +41,9 @@ export const RUNGS = {
       // everything would satisfy this one and fail `foreignAssets`; a guard
       // that blocked nothing would do the reverse. Both are needed.
       'blockedOffOriginNavigations',
+      // The download branch of the boundary. A handler that cancels downloads
+      // is untestable against a fixture that never starts one (§13).
+      'cancelledDownloads',
     ],
     knownEmpty: ['endpoints', 'statesProbed'],
   },
@@ -59,7 +62,7 @@ export const RUNGS = {
     ],
     // The crud app is single-origin by design; rung 2 owns the foreign-asset
     // measurement. Declared rather than omitted so the count is still printed.
-    knownEmpty: ['foreignAssets'],
+    knownEmpty: ['foreignAssets', 'cancelledDownloads'],
   },
 };
 

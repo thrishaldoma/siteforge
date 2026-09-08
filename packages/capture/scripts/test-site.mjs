@@ -165,6 +165,14 @@ ${CDN ? `  <p class="remote-note">This paragraph is set in a font fetched from a
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       window.open('https://example.net/partner', '_blank');
+      // A download the crawl must cancel and record. Same reasoning as the
+      // popup above: rung 2 does not probe controls, so the escape fires on
+      // load or it never fires at all.
+      const a = document.createElement('a');
+      a.href = '/download/report.csv';
+      a.download = 'report.csv';
+      document.body.appendChild(a);
+      a.click();
     });
   </script>
 
@@ -210,6 +218,20 @@ const server = createServer((req, res) => {
     if (!FONT_AVAILABLE) { res.writeHead(404).end(); return; }
     const body = readFileSync(FONT_PATH);
     res.writeHead(200, { 'content-type': 'font/woff2', 'content-length': body.length });
+    res.end(body);
+    return;
+  }
+  // A real download, so the boundary's download branch has something to refuse.
+  // §13: a fixture app must be able to inflict the hazard it exists to test —
+  // a download handler with nothing that downloads proves nothing about the
+  // guard, exactly as the logout handler that never deleted a session did.
+  if (path === '/download/report.csv') {
+    const body = 'quarter,revenue\nQ1,100\nQ2,120\n';
+    res.writeHead(200, {
+      'content-type': 'text/csv',
+      'content-disposition': 'attachment; filename="report.csv"',
+      'content-length': Buffer.byteLength(body),
+    });
     res.end(body);
     return;
   }

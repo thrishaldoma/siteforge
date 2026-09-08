@@ -456,10 +456,31 @@ export async function installOriginGuard(context, { allowedOrigins, onBlocked, d
  * A popup gets its own page, a download never navigates, and `target="_blank"`
  * produces the first. Each is recorded and closed; none is crawled.
  */
+/**
+ * A URL Chromium substitutes for the one that was asked for.
+ *
+ * A popup whose navigation the router aborted lands here, and reading it is how
+ * `chrome-error://chromewebdata/` ended up in a gap describing which origin we
+ * had been protected from.
+ */
+const isErrorPage = (url) => url.startsWith('chrome-error://') || url === 'about:blank';
+
 export function installEscapeGuards(page, { onBlocked }) {
   page.on('popup', async (popup) => {
-    const url = popup.url();
-    onBlocked({ kind: 'popup', url, origin: originOrNull(url) });
+    const raw = popup.url();
+    /*
+     * Measured, not assumed: for a popup the router blocked, `popup.url()` is
+     * `chrome-error://chromewebdata/` at *every* moment it can be read — at the
+     * event, via `mainFrame().url()`, and 300ms later. The intended URL is not
+     * recoverable from the popup, so it is not invented here.
+     *
+     * It does not need to be. Two `window.open` calls to two foreign origins
+     * produce exactly two router records, each carrying the real target — so
+     * the router owns the URL, and emitting a second record naming an error
+     * page would be a duplicate with strictly less information in it.
+     */
+    const url = isErrorPage(raw) ? null : raw;
+    onBlocked({ kind: 'popup', url, origin: url === null ? null : originOrNull(url) });
     // Closed immediately and never crawled. Its own main-frame navigation is
     // already covered by the router — `parentFrame() === null` is true of a
     // popup's top frame too, which is why the guard is written that way rather
@@ -471,6 +492,76 @@ export function installEscapeGuards(page, { onBlocked }) {
     onBlocked({ kind: 'download', url, origin: originOrNull(url) });
     await download.cancel().catch(() => {});
   });
+}
+
+/**
+ * The crawl boundary's refusals, as gaps.
+ *
+ * A cancelled download and a closed popup were being counted in a console line
+ * and nowhere else. §13: a known gap recorded only in prose is not tracked —
+ * cancelled-but-unrecorded is untracked, and the next stage has no way to learn
+ * the control goes somewhere we declined to follow.
+ *
+ * Gap ids are derived from the target URL, never from a counter or from event
+ * order: `manifest.contentHash` is M1's idempotency check, and an id that
+ * shifted when two popups arrived in a different order would make a re-crawl of
+ * an unchanged site look changed.
+ */
+export function boundaryGaps(events, { gapId, routeId, fallbackUrl }) {
+  const gaps = [];
+  // The URL is what the gap is *about* — a gap naming the origin it protected
+  // you from is useful; one naming the route it happened on is much less so, and
+  // one naming an error page is worse than nothing. `routeId` rides along when
+  // the caller knows it.
+  const on = (url) => (routeId ? { url, routeId } : { url });
+  const navigations = events.filter((e) => e.kind === 'navigation');
+
+  for (const event of navigations) {
+    gaps.push({
+      gapId: gapId(`off-origin-navigation:${event.url}`), stage: 'capture',
+      category: 'out-of-scope-control', severity: 'info', subject: on(event.url),
+      summary: `A main-frame navigation to ${event.origin ?? event.url} was blocked.`,
+      detail: `${event.url} is outside the crawl's allowed origins, so the request was aborted at the router before it left the machine (§6, the crawl boundary). Subresources from other origins are still fetched and recorded; only navigation is refused. Nothing about the destination was observed, and no endpoint is created either way.`,
+      stub: { kind: 'none' },
+    });
+  }
+
+  for (const event of events.filter((e) => e.kind === 'popup')) {
+    if (event.url === null) {
+      // The router already recorded this one, with the URL this event lacks.
+      // If it somehow did not, that is a hole worth a gap of its own rather
+      // than a silently dropped escape.
+      if (navigations.length === 0) {
+        gaps.push({
+          gapId: gapId('popup-target-unrecorded'), stage: 'capture',
+          category: 'out-of-scope-control', severity: 'degraded', subject: on(fallbackUrl),
+          summary: 'A popup was opened and closed, and its target was never recorded.',
+          detail: 'The popup landed on an error page and no blocked navigation was recorded to pair it with, so the origin it would have reached is unknown. Either the popup failed for a reason unrelated to the boundary, or the router did not see its navigation.',
+          stub: { kind: 'none' },
+        });
+      }
+      continue;
+    }
+    gaps.push({
+      gapId: gapId(`popup-not-crawled:${event.url}`), stage: 'capture',
+      category: 'out-of-scope-control', severity: 'info', subject: on(event.url),
+      summary: `A popup to ${event.url} was closed without being crawled.`,
+      detail: '§6 records a popup and closes it immediately rather than crawling it. Its content is not captured, so the clone renders whatever opened it and the popup goes nowhere.',
+      stub: { kind: 'none' },
+    });
+  }
+
+  for (const event of events.filter((e) => e.kind === 'download')) {
+    gaps.push({
+      gapId: gapId(`download-cancelled:${event.url}`), stage: 'capture',
+      category: 'out-of-scope-control', severity: 'info', subject: on(event.url),
+      summary: `A download of ${event.url} was cancelled.`,
+      detail: 'A file download is out-of-scope for the crawl (§6): not destructive, just not ours to fetch. It is cancelled rather than saved, so the bytes were never observed and the clone cannot serve them.',
+      stub: { kind: 'omitted', detail: 'The control renders; activating it downloads nothing.' },
+    });
+  }
+
+  return gaps;
 }
 
 const originOrNull = (url) => {

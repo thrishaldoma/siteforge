@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
-import { installEscapeGuards, installOriginGuard, scrubHarFile } from './capture-lib.mjs';
+import { boundaryGaps, installEscapeGuards, installOriginGuard, scrubHarFile } from './capture-lib.mjs';
 import {
   allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, originOf, scanCaptureTree,
 } from '../../shared/dist/index.js';
@@ -380,7 +380,7 @@ const ALLOWED_ORIGINS = deriveAllowedOrigins({ origin: new URL(TARGET).origin })
 const blockedNavigations = [];
 const onBlocked = (event) => {
   blockedNavigations.push(event);
-  console.log(`  ⤫ blocked ${event.kind} → ${event.origin ?? event.url}`);
+  console.log(`  ⤫ blocked ${event.kind} → ${event.origin ?? event.url ?? 'target recorded by the router'}`);
 };
 await installOriginGuard(context, {
   allowedOrigins: ALLOWED_ORIGINS, onBlocked, decide: decideNavigation,
@@ -820,6 +820,16 @@ const meta = {
   gapIds: [],
 };
 
+/**
+ * What the crawl boundary refused, as gaps rather than as console output.
+ *
+ * Rung 2's page opens a popup to another origin and starts a download on load.
+ * Both are cancelled; §13 says cancelled-but-unrecorded is untracked, so both
+ * become gaps naming the URL they protected the crawl from.
+ */
+const gapId = (label) => `gap_${S.shortHash(label).slice(0, 12)}`;
+const gaps = boundaryGaps(blockedNavigations, { gapId, routeId, fallbackUrl: TARGET });
+
 const manifest = {
   ...envelope('capture-manifest'),
   siteId: 'spike-target',
@@ -850,7 +860,7 @@ const manifest = {
   routeIds: [routeId], flowIds: [], contentHash: sha256('spike'),
   counts: {
     contexts: 1, routes: 1, capturedRoutes: 1, patterns: 1,
-    assets: Object.keys(assetEntries).length, endpoints: 0, flows: 0, gaps: 0,
+    assets: Object.keys(assetEntries).length, endpoints: 0, flows: 0, gaps: gaps.length,
   },
 };
 
@@ -864,6 +874,12 @@ const artifacts = [
   [`routes/${routeId}/states.json`, S.StateDeltasDocumentSchema, states],
   ['assets/index.json', S.AssetIndexSchema, assets],
   ['network/endpoints.json', S.EndpointIndexSchema, endpoints],
+  ['stage-report.json', S.StageReportSchema, {
+    ...envelope('stage-report'),
+    stage: 'capture', siteId: 'spike-target',
+    status: gaps.length ? 'ok-with-gaps' : 'ok',
+    inputs: [], outputs: [], warnings: [], gaps,
+  }],
 ];
 
 let failed = 0;
@@ -883,6 +899,13 @@ for (const [path, schema, value] of artifacts) {
       finding('schema-rejects-reality', `${path} · ${where}: ${issue.message}`);
     }
   }
+}
+
+// The same cross-check rung 3 makes: no two artifacts of one run may disagree
+// about a count they both carry.
+if (manifest.counts.gaps !== gaps.length) {
+  finding('artifact-disagreement',
+    `manifest.counts.gaps is ${manifest.counts.gaps} but ${gaps.length} gap(s) were recorded`);
 }
 
 /** Nothing was skipped on a static page, which is a real answer, not an absence. */
@@ -1032,6 +1055,7 @@ const rungCounts = {
   ...extractedCounts,
   foreignAssets: foreignAssetUrls.length,
   blockedOffOriginNavigations: blockedNavigations.filter((e) => e.kind === 'navigation').length,
+  cancelledDownloads: blockedNavigations.filter((e) => e.kind === 'download').length,
 };
 const { spec, failures, surprises } = checkRung(rung, rungCounts);
 console.log('');

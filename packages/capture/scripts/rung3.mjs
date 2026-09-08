@@ -19,7 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import * as S from '../../schema/dist/index.js';
 import {
-  assertPermitted, installEscapeGuards, installOriginGuard, scrub, scrubDeep, scrubHarFile, sha256,
+  assertPermitted, boundaryGaps, installEscapeGuards, installOriginGuard, scrub, scrubDeep,
+  scrubHarFile, sha256,
 } from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
@@ -93,7 +94,7 @@ const ALLOWED_ORIGINS = deriveAllowedOrigins({ origin: ORIGIN });
 const blockedNavigations = [];
 const onBlocked = (event) => {
   blockedNavigations.push(event);
-  console.log(`      ⤫ blocked ${event.kind} → ${event.origin ?? event.url}`);
+  console.log(`      ⤫ blocked ${event.kind} → ${event.origin ?? event.url ?? 'target recorded by the router'}`);
 };
 const guardContext = async (context) => {
   await installOriginGuard(context, {
@@ -961,6 +962,18 @@ const coverage = {
 };
 write('coverage.json', S.CoverageReportSchema, coverage);
 
+/*
+ * Every gap must be in the list before the manifest counts them.
+ *
+ * `narrowingGaps` used to be appended *after* this write, so
+ * `manifest.counts.gaps` said 3 while `stage-report.json` carried 4 — two
+ * artifacts of one run disagreeing about a quantity both report. Adding the
+ * boundary gaps at the same seam would have widened the gap rather than
+ * revealed it; a test now asserts the two agree.
+ */
+gaps.push(...narrowingGaps);
+gaps.push(...boundaryGaps(blockedNavigations, { gapId, fallbackUrl: `${ORIGIN}/` }));
+
 const manifest = write('manifest.json', S.CaptureManifestSchema, {
   ...envelope('capture-manifest'),
   siteId: SITE_ID,
@@ -1005,8 +1018,6 @@ const skippedControlIndex = write('flows/skipped-controls.json', S.SkippedContro
   controls: skippedControls,
 });
 
-gaps.push(...narrowingGaps);
-
 const report = write('stage-report.json', S.StageReportSchema, {
   ...envelope('stage-report'),
   stage: 'capture', siteId: SITE_ID,
@@ -1014,6 +1025,17 @@ const report = write('stage-report.json', S.StageReportSchema, {
   inputs: [], outputs: written.map((p) => ({ path: p, sha256: sha256(p), bytes: 0 })),
   warnings: [], gaps,
 });
+
+/*
+ * Two artifacts of one run must not disagree about a quantity both report.
+ * They did: `narrowingGaps` was appended after the manifest was built, so
+ * manifest.counts.gaps said 3 while stage-report.json carried 4. Nothing
+ * failed, because nothing compared them.
+ */
+if (manifest.counts.gaps !== report.gaps.length) {
+  finding('artifact-disagreement',
+    `manifest.counts.gaps is ${manifest.counts.gaps} but stage-report.json has ${report.gaps.length}; a gap was added after the manifest was built`);
+}
 
 const model = S.CaptureModelSchema.safeParse({
   modelVersion: S.CAPTURE_MODEL_VERSION, siteId: SITE_ID,
@@ -1050,6 +1072,7 @@ const rungCounts = {
   ...extracted,
   foreignAssets: foreignAssetCount,
   blockedOffOriginNavigations: blockedNavigations.filter((e) => e.kind === 'navigation').length,
+  cancelledDownloads: blockedNavigations.filter((e) => e.kind === 'download').length,
 };
 const { spec, failures, surprises } = checkRung(3, rungCounts);
 console.log('');
