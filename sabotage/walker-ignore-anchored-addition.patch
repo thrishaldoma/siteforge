@@ -1,0 +1,12 @@
+diff --git a/packages/shared/src/scan-walker.ts b/packages/shared/src/scan-walker.ts
+index 5e9e18a..4349366 100644
+--- a/packages/shared/src/scan-walker.ts
++++ b/packages/shared/src/scan-walker.ts
+@@ -49,6 +49,7 @@ export const SOURCE_IGNORE = [
+   '**/dist',
+   '/.git',
+   '/packages/schema/fixtures/**',
++  '**/coverage',
+ ] as const;
+ 
+ /**

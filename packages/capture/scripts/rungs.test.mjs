@@ -73,6 +73,27 @@ describe('the rung gates fail when the thing they measure is missing', () => {
     });
   }
 
+  /**
+   * The negative case (§13), stated rather than left implicit.
+   *
+   * Every `it.each` above zeroes a key and asserts the failure list is exactly
+   * that key, which does carry the isolation claim — but only for `checkRung`
+   * over a synthetic count table, and only as a side effect of how the
+   * assertion happens to be written. A reader scanning this file sees a wall of
+   * drops. So: perturb a count no rule mentions, and nothing may move.
+   *
+   * What this does *not* prove is that the rung *gate* isolates — that would
+   * need the crawl to run. This is the table-level half.
+   */
+  it.each(Object.keys(RUNGS).map(Number))('rung %s ignores a count no rule names', (rung) => {
+    const untracked = 'countNoRuleMentions';
+    expect(RUNGS[rung].expectNonEmpty).not.toContain(untracked);
+    expect(RUNGS[rung].knownEmpty).not.toContain(untracked);
+    const { failures, surprises } = checkRung(rung, { ...allPassing(rung), [untracked]: 7 });
+    expect(failures).toEqual([]);
+    expect(surprises).toEqual([]);
+  });
+
   it('rung 2 measures both halves of the crawl boundary', () => {
     // One fixture, two branches. A guard that blocked everything would pass
     // `blockedOffOriginNavigations` and fail `foreignAssets`; a guard that

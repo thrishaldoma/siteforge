@@ -104,7 +104,12 @@ const SABOTAGE: Sabotage[] = [
   {
     id: 'xhr-implies-endpoints',
     bug: 'the response handler was async and the page closed before it settled',
-    drop: { endpoints: 0 },
+    // Both, because a capture with no endpoints cannot have three of them
+    // carrying auth evidence. Dropping only `endpoints` modelled a record no
+    // run can produce, and the isolation assertion below found it on its first
+    // execution — §13's "the sabotage must reproduce the actual defect", caught
+    // by a rule added for a different reason.
+    drop: { endpoints: 0, endpointsWithAuthEvidence: 0 },
     silence: { harXhrEntries: 0 },
   },
   {
@@ -188,6 +193,21 @@ describe('coverage invariants detect the bug they were written for (§13)', () =
     expect(aggregate).toBeGreaterThan(0); // an aggregate invariant would pass here
     expect(resultFor('attribute-states-imply-attribute-states', HEALTHY_OBSERVED, extracted).holds)
       .toBe(false);
+  });
+
+  /**
+   * The negative case (§13). Every test above removes something and watches an
+   * invariant fail; none of them can tell that apart from an evaluator where
+   * *any* change fails *everything*. A table made only of drops proves nothing
+   * about isolation — so each drop has to leave every other invariant holding.
+   *
+   * This is the same assertion `checkRung` makes with `toEqual([key])`, moved to
+   * the layer where the invariants actually live.
+   */
+  it.each(SABOTAGE)('$id fails alone — the other invariants do not move', ({ id, drop }) => {
+    const results = evaluateCoverage(HEALTHY_OBSERVED, { ...HEALTHY_EXTRACTED, ...drop });
+    const failing = results.filter((r) => !r.vacuous && !r.holds).map((r) => r.id);
+    expect(failing).toEqual([id]);
   });
 
   /**

@@ -30,6 +30,26 @@
  *   3. **A revert that leaves residue.** The tree hash is compared before and
  *      after; anything left behind turns the next gate's result into noise.
  *
+ * ## Controls
+ *
+ * A table made only of defects proves nothing about isolation. A gate that
+ * fails on *any* edit to the file satisfies every row above it, and reads
+ * exactly like a gate that discriminates — the mirror image of the vacuous
+ * invariant this repo keeps finding. So the table also carries **controls**:
+ * patches that change the same code a defect attacks, preserve its meaning, and
+ * must leave the gate **green**.
+ *
+ * A control has to be a change the gate could plausibly have keyed on and
+ * should not. Re-spelling `matchPath(rel, P)` as `matchesAnyPath(rel, [P])` is
+ * one: identical anchoring, different call, on the exact line
+ * `secret-gate-path-suffix` rewrites. Renaming a local or reflowing whitespace
+ * is *not* — it demonstrates only that the gate is not deranged, which is the
+ * vacuous spelling of the same idea.
+ *
+ * Two are declared, not eight. The rule (§13) is at least one, because the
+ * marginal control is worth much less than the first and every patch is one
+ * more thing that rots.
+ *
  * Runs last in `verify:clean`, because it mutates the working tree.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -45,8 +65,16 @@ const REPO = (() => {
 const PATCHES = join(REPO, 'sabotage');
 
 /**
- * One sabotage: the bug it reintroduces, the gate that must notice, and the
- * words that prove it noticed *that* rather than tripping over the patch.
+ * One entry per patch.
+ *
+ * `kind: 'defect'` — the bug it reintroduces, the gate that must notice, and
+ * the words that prove it noticed *that* rather than tripping over the patch.
+ *
+ * `kind: 'control'` — a meaning-preserving change to the same code, naming the
+ * defect it is the control for. The gate must stay green. There is no `expect`
+ * because there is no output to discriminate: the discriminating property of a
+ * control is the exit code, and the pairing is what makes it a control rather
+ * than a no-op.
  */
 const SABOTAGES = [
   {
@@ -106,7 +134,46 @@ const SABOTAGES = [
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
     expect: 'promiseHandlers',
   },
+  {
+    id: 'grade-digest-not-frozen',
+    bug: 'a scored-field threshold moves without the contract digest moving with it',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: 'the contract table moved without its digest',
+  },
+  {
+    id: 'infer-report-contract-optional',
+    bug: "infer's stage report stops having to carry the scored-field contract",
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: 'an infer report with no scored-field contract parsed',
+  },
+  {
+    id: 'truth-404-as-absent',
+    bug: 'a 404 to an anonymous caller is read as "no such endpoint" rather than as gated',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'must classify as required, never absent',
+  },
+
+  // ---- controls: the gate must NOT fire ------------------------------------
+
+  {
+    kind: 'control',
+    id: 'secret-gate-exemption-respelled',
+    controlFor: 'secret-gate-path-suffix',
+    change: 'the §3.4 exemption re-spelled as matchesAnyPath(rel, [P]) — the same anchored comparison through a different call, on the line the defect rewrites',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+  },
+  {
+    kind: 'control',
+    id: 'walker-ignore-anchored-addition',
+    controlFor: 'walker-unanchored-ignore',
+    change: "a fifth ignore pattern, '**/coverage', correctly anchored — the same array the defect un-anchors",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+  },
 ];
+
+const isControl = (s) => s.kind === 'control';
+const DEFECTS = SABOTAGES.filter((s) => !isControl(s));
+const CONTROLS = SABOTAGES.filter(isControl);
 
 const git = (...args) => execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8' });
 
@@ -145,12 +212,30 @@ function main() {
     console.error(`\nsabotage/ and the table disagree.\n  on disk:  ${onDisk.join(', ')}\n  declared: ${declared.join(', ')}\n`);
     process.exit(1);
   }
-  if (SABOTAGES.length === 0) {
+  if (DEFECTS.length === 0) {
     console.error('\nno sabotages declared — a harness that runs nothing reports success.\n');
     process.exit(1);
   }
+  // §13: a table made only of drops passes while proving nothing about
+  // isolation. At least one control, and each control has to name a defect that
+  // exists — an unpaired control is a patch nobody can say what it isolates.
+  if (CONTROLS.length === 0) {
+    console.error('\nno controls declared. A harness of defects alone cannot tell a gate that');
+    console.error('discriminates from one that fails on any edit at all — see §13.\n');
+    process.exit(1);
+  }
+  const declaredIds = new Set(DEFECTS.map((s) => s.id));
+  for (const control of CONTROLS) {
+    if (!declaredIds.has(control.controlFor)) {
+      console.error(`\ncontrol ${control.id} names ${control.controlFor}, which is not a declared defect.\n`);
+      process.exit(1);
+    }
+  }
 
-  console.log(`\nsabotage — reintroducing ${SABOTAGES.length} fixed bug(s), one at a time\n`);
+  console.log(
+    `\nsabotage — ${DEFECTS.length} fixed bug(s) reintroduced, ` +
+    `${CONTROLS.length} control(s) that must change nothing\n`,
+  );
   const before = treeSignature();
   let failed = 0;
 
@@ -169,10 +254,24 @@ function main() {
       continue;
     }
 
-    // 2. The gate must fail, and for the stated reason.
+    // 2. A defect must make the gate fail, for the stated reason. A control
+    //    must leave it green — a control that fails means the gate is keyed on
+    //    the edit rather than on the meaning, which makes every defect row
+    //    above it unfalsifiable.
     const gate = run(sabotage.gate);
     let verdict;
-    if (gate.code === 0) {
+    if (isControl(sabotage)) {
+      if (gate.code === 0) {
+        verdict = `✓  unmoved   (control for ${sabotage.controlFor})`;
+      } else {
+        verdict = `✗  the gate fired on a meaning-preserving change: ${sabotage.change}`;
+        console.log(verdict);
+        console.log('      It is keyed on the edit, not on the property — so its defect row proves nothing.');
+        console.log(`      ${gate.output.trim().split('\n').slice(-6).join('\n      ')}`);
+        verdict = null;
+        failed += 1;
+      }
+    } else if (gate.code === 0) {
       verdict = `✗  the gate still passed — it does not catch: ${sabotage.bug}`;
       failed += 1;
     } else if (!gate.output.includes(sabotage.expect)) {
@@ -193,15 +292,18 @@ function main() {
       console.log('✗  revert left residue; every later result would be noise');
       process.exit(1);
     }
-    console.log(verdict);
+    if (verdict !== null) console.log(verdict);
   }
 
   console.log('');
   if (failed > 0) {
-    console.log(`✗ ${failed} sabotage(s) did not reproduce a caught failure.\n`);
+    console.log(`✗ ${failed} entr(ies) did not behave as declared.\n`);
     process.exit(1);
   }
-  console.log(`✓ every gate failed when its bug came back, and the tree is clean.\n`);
+  console.log(
+    '✓ every gate failed when its bug came back, held still when nothing changed,\n' +
+    '  and the tree is clean.\n',
+  );
 }
 
 main();

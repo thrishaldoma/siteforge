@@ -1,0 +1,13 @@
+diff --git a/packages/schema/src/grade-contract.ts b/packages/schema/src/grade-contract.ts
+index ca797c4..fd74396 100644
+--- a/packages/schema/src/grade-contract.ts
++++ b/packages/schema/src/grade-contract.ts
+@@ -158,7 +158,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
+     category: 'field-type',
+     numerator: 'matched fields whose JSON type equals the spec’s, under the two fixed normalisations',
+     denominator: 'matched fields the spec types',
+-    gate: atLeast(0.9, 'calibration'),
++    gate: atLeast(0.75, 'calibration'),
+     why: '`integer` counts as `number`; a nullable type matches its non-nullable counterpart where the spec marks the field optional. Fixed in advance so they cannot be argued after seeing a score',
+   },
+   {
