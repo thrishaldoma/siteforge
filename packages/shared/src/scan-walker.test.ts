@@ -76,12 +76,18 @@ describe('one walker, and the anti-vacuity lives in it', () => {
   it('has no parameter through which the tree profile could be given a skip list', () => {
     // The profile is the whole configuration surface. If this ever compiles with
     // an `ignore` option, the guarantee above is gone.
-    const call = walkFiles as unknown as (o: Record<string, unknown>) => { files: string[] };
-    const { files } = call({
-      root: makeTree(), profile: 'tree', expect: CAPTURE_TREE_EXPECTATION,
+    const root = makeTree();
+    const call = walkFiles as unknown as (o: Record<string, unknown>) => { relative: string[] };
+    const configured = call({
+      root, profile: 'tree', expect: CAPTURE_TREE_EXPECTATION,
       ignore: ['**/node_modules'],
     });
-    expect(files.some((f) => f.includes('node_modules'))).toBe(true);
+    // The whole list, not "node_modules survived". An absence check would pass
+    // an `ignore` that dropped something *else*; this cannot — the configured
+    // walk has to be indistinguishable from the unconfigured one.
+    const plain = walkFiles({ root, profile: 'tree', expect: CAPTURE_TREE_EXPECTATION });
+    expect(configured.relative).toEqual(plain.relative);
+    expect(plain.relative.some((f) => f.startsWith('src/node_modules/'))).toBe(true);
   });
 
   describe('sabotage: a scan that examined nothing must not report success', () => {

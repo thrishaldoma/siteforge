@@ -104,12 +104,16 @@ const SABOTAGE: Sabotage[] = [
   {
     id: 'xhr-implies-endpoints',
     bug: 'the response handler was async and the page closed before it settled',
-    // Both, because a capture with no endpoints cannot have three of them
-    // carrying auth evidence. Dropping only `endpoints` modelled a record no
-    // run can produce, and the isolation assertion below found it on its first
-    // execution — §13's "the sabotage must reproduce the actual defect", caught
-    // by a rule added for a different reason.
-    drop: { endpoints: 0, endpointsWithAuthEvidence: 0 },
+    // All three, because a capture with no endpoints has none carrying auth
+    // evidence and none contributing a method. Dropping only `endpoints`
+    // modelled a record no run can produce; the isolation assertion caught the
+    // auth-evidence half and the reachability check caught the methods half,
+    // which is the argument for having both — the first only sees a coupling
+    // that breaks a *second invariant*, and this one did not.
+    drop: { endpoints: 0, endpointsWithAuthEvidence: 0, endpointDistinctMethods: 0 },
+    // And with no endpoints, the method invariant fails too. That is the
+    // capture, not a leak in the sabotage: one bug, two contradictions.
+    alsoFails: ['methods-imply-endpoint-methods'],
     silence: { harXhrEntries: 0 },
   },
   {
@@ -153,7 +157,45 @@ const SABOTAGE: Sabotage[] = [
 const resultFor = (id: string, observed: CoverageObserved, extracted: CoverageExtracted) =>
   evaluateCoverage(observed, extracted).find((r) => r.id === id)!;
 
+/**
+ * Relations no real capture can violate, whatever broke in it.
+ *
+ * §13's reachability rule, applied to the table below. `xhr-implies-endpoints`
+ * was green from the day it was written because it described a capture with no
+ * endpoints and three of them carrying auth evidence — a state no run reaches,
+ * so the invariant's correct behaviour on it said nothing about its behaviour
+ * on a real drop. The check that found it was the isolation assertion, by
+ * accident. This is the same check on purpose.
+ *
+ * Only relations that hold *by construction* belong here. A bound that merely
+ * usually holds would fail a legitimate sabotage and get relaxed until it never
+ * fired, which is the shape this file exists to prevent.
+ */
+function incoherences(observed: CoverageObserved, extracted: CoverageExtracted): string[] {
+  const broken: string[] = [];
+  if (extracted.endpointsWithAuthEvidence > extracted.endpoints) {
+    broken.push('more endpoints carry auth evidence than exist');
+  }
+  if (extracted.endpointDistinctMethods > extracted.endpoints) {
+    broken.push('more distinct methods than endpoints to carry them');
+  }
+  if (extracted.sessionDestructiveFired > observed.sessionDestructiveControls) {
+    broken.push('more session-destructive controls fired than were discovered');
+  }
+  return broken;
+}
+
 describe('coverage invariants detect the bug they were written for (§13)', () => {
+  it('describes a capture that could exist, before and after every sabotage', () => {
+    expect(incoherences(HEALTHY_OBSERVED, HEALTHY_EXTRACTED)).toEqual([]);
+    for (const { id, drop, silence } of SABOTAGE) {
+      expect(
+        incoherences({ ...HEALTHY_OBSERVED, ...silence }, { ...HEALTHY_EXTRACTED, ...drop }),
+        `${id} describes a capture no run can produce`,
+      ).toEqual([]);
+    }
+  });
+
   it('holds across the board on a capture that dropped nothing', () => {
     const broken = evaluateCoverage(HEALTHY_OBSERVED, HEALTHY_EXTRACTED).filter(
       (r) => !r.vacuous && !r.holds,
@@ -204,10 +246,15 @@ describe('coverage invariants detect the bug they were written for (§13)', () =
    * This is the same assertion `checkRung` makes with `toEqual([key])`, moved to
    * the layer where the invariants actually live.
    */
-  it.each(SABOTAGE)('$id fails alone — the other invariants do not move', ({ id, drop }) => {
+  it.each(SABOTAGE)('$id moves exactly what it declares', ({ id, drop, alsoFails }) => {
     const results = evaluateCoverage(HEALTHY_OBSERVED, { ...HEALTHY_EXTRACTED, ...drop });
-    const failing = results.filter((r) => !r.vacuous && !r.holds).map((r) => r.id);
-    expect(failing).toEqual([id]);
+    const failing = results.filter((r) => !r.vacuous && !r.holds).map((r) => r.id).sort();
+    // A whole-set equality, not "the one under test failed". Genuine coupling
+    // exists — a capture with no endpoints contradicts two invariants at once —
+    // so the rule is that every invariant a drop moves has to be *declared*,
+    // not that only one may move. An absence claim would let an undeclared
+    // second failure through; this cannot.
+    expect(failing).toEqual([id, ...(alsoFails ?? [])].sort());
   });
 
   /**

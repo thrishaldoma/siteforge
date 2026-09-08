@@ -1,14 +1,23 @@
 diff --git a/packages/capture/scripts/capture-lib.mjs b/packages/capture/scripts/capture-lib.mjs
-index e06cfe6..03b5173 100644
+index e06cfe6..55ef2d0 100644
 --- a/packages/capture/scripts/capture-lib.mjs
 +++ b/packages/capture/scripts/capture-lib.mjs
-@@ -56,7 +56,8 @@ export function selectorClassNames(selectorTexts) {
+@@ -54,17 +54,7 @@ const STATE_PSEUDOS = new Set(S.STATE_PSEUDO_CLASSES);
+ export function selectorClassNames(selectorTexts) {
+   const names = new Set();
    for (const text of selectorTexts) {
-     try {
-       selectorParser((sel) => {
+-    try {
+-      selectorParser((sel) => {
 -        sel.walkClasses((node) => names.add(node.value));
-+        sel.walkClasses(() => {});
-+        names.add(text);
-       }).processSync(text, { lossless: false });
-     } catch {
-       // operational: postcss throws on selectors real stylesheets contain.
+-      }).processSync(text, { lossless: false });
+-    } catch {
+-      // operational: postcss throws on selectors real stylesheets contain.
+-      // A selector that will not parse contributes no class names, which makes
+-      // a class look *unexplained* rather than explained — the safe direction:
+-      // an extra probed state is noise, a missed one is a silent drop.
+-      continue;
+-    }
++    for (const token of text.match(/[a-zA-Z]\w*/g) ?? []) names.add(token);
+   }
+   return names;
+ }

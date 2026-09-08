@@ -37,6 +37,7 @@ import {
   canonicalizeStyleDeclarations,
   deriveRouteContentHash,
   resolveAuthRequirement,
+  ProvenanceSchema,
   resolveAuthForCodegen,
   deriveA11yRef,
   deriveContentFingerprint,
@@ -890,7 +891,20 @@ describe('idempotency and safety', () => {
     // Stripping provenance must leave nothing that changes between two crawls.
     const { provenance, ...stable } = parsed;
     expect(provenance).toBeDefined();
-    expect(JSON.stringify(stable)).not.toMatch(/recordedAt|durationMs|run_[0-9a-f]{16}/);
+    // The forbidden names are **derived from ProvenanceSchema**, not three
+    // someone thought of. A hand-list only covers what was volatile the day it
+    // was typed; a field added to the schema tomorrow is covered here the day
+    // it lands. Same reason the contract's independence is asserted as a whole
+    // import list rather than as the absence of one name.
+    const volatileNames = Object.keys(ProvenanceSchema.shape);
+    expect(volatileNames.length).toBeGreaterThan(2);
+    const body = JSON.stringify(stable);
+    for (const name of volatileNames) {
+      expect(body, `${name} is a volatile field and appears outside provenance`)
+        .not.toContain(`"${name}"`);
+    }
+    // And the run id by its value shape, since it travels without its key name.
+    expect(body).not.toMatch(/run_[0-9a-f]{16}/);
   });
 
   it('recomputes the manifest contentHash from the content artifacts', async () => {

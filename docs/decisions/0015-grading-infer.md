@@ -139,6 +139,55 @@ than not having one: it gets muted, and then it is a gate nobody is checking.
   the exemption list is empty — adding the first entry means deleting an
   assertion, in a diff someone reads.
 
+### Ground truth has to match the claim's modality
+
+The auth finding is an instance of a rule, and the rule is the part that will
+recur.
+
+**A document grounds a claim about declared shape. Only observation grounds a
+claim about runtime behaviour.** `requiresAuth` is a claim about what the server
+does to an uncredentialed request; the document declares an intent, the server
+has a behaviour, and here they differ on 13 of 50 endpoints. Scoring the
+behavioural claim against the declaration charges infer for the gap between two
+things that were never the same thing.
+
+So, **before any field is scored, name the modality its truth comes from.** It
+is one line per category and it is not obvious in advance — the auth case looked
+settled right up until the fetch.
+
+| modality | truth source | categories |
+|---|---|---|
+| declared shape | the committed spec snapshot | `endpoint-identity`, `path-param-arity`, `path-param-naming`, `request-field-presence`, `response-field-presence`, `field-type`, `narrowing`, `synthesized-endpoint` |
+| observed behaviour | the recorded sweep against the pinned digest | `auth` |
+| not yet grounded | — | `identifier` (§9's `notDerived`) |
+
+**Response schemas are the next one to bite, and this decides them now.** §5
+makes the response schema the mock backend's data model, so what matters is what
+the server *returns* — a behavioural claim by the argument above. But infer's
+own claim is a generalisation from a handful of observed responses, and the
+document is the API authors' generalisation about the same behaviour: it is a
+declaration *about* behaviour, made by the people who wrote it, and it is
+complete where a crawl is a sample. Grading against the sample would score
+transcription; grading against the document scores generalisation, which is the
+thing §7 asks infer to do.
+
+So response fields are graded against the **declaration**, deliberately, with
+the disagreement handled rather than assumed away:
+
+- where the document and the server differ, that is the known-divergence
+  mechanism working as designed, and
+- if they differ *systematically*, the per-category cap surfaces it — more than
+  half the 5% budget landing in `response-field-presence` is the signal that
+  this modality choice was the wrong one, not a list to keep extending.
+
+The cap was written for a different reason and catches this too, which is the
+argument for having it before the first run rather than after.
+
+An observed response sweep against the seeded container would give a second
+truth for the same category, and the disagreement between the two would itself
+be a measurement worth having. It waits on the same seeding script as the
+parameterised auth sweep.
+
 ### The graded universe
 
 - **Only requests under `/api/v1/`.** The spec describes that surface and not

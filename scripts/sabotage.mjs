@@ -50,6 +50,29 @@
  * marginal control is worth much less than the first and every patch is one
  * more thing that rots.
  *
+ * ## Reachability
+ *
+ * Every entry states, in `reachable`, why the state it produces is one a real
+ * run or a real edit can arrive at, and the harness refuses to run without it.
+ *
+ * This is a third way a mutation harness goes quiet, alongside never-fires and
+ * fires-on-everything: **a gate behaving correctly on input no run can reach
+ * proves nothing about the input it will actually see.** It was found in the
+ * coverage table — a sabotage that set `endpoints: 0` while leaving three of
+ * them carrying auth evidence, green since the day it was written — and the
+ * audit that followed found two here:
+ *
+ *   - `selector-substring-match` parsed the selector, discarded the parse, and
+ *     added the raw text. Nobody writes that. Rewritten as a hand-rolled `\w`
+ *     tokeniser, which omits the hyphen a class name may contain — the family
+ *     of mistake this repo has hit five times.
+ *   - `walker-mustreach-disabled` iterated `[] as readonly string[]`. Nobody
+ *     writes that either. Rewritten as the check deleted, which is what
+ *     removing a slow assertion actually looks like.
+ *
+ * Both gates fired under the old patches, and both would have kept firing while
+ * saying nothing about a reachable regression.
+ *
  * Runs last in `verify:clean`, because it mutates the working tree.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -67,6 +90,9 @@ const PATCHES = join(REPO, 'sabotage');
 /**
  * One entry per patch.
  *
+ * `reachable` — why a real run or a real edit arrives at this state. Required
+ * on every entry, defect and control alike.
+ *
  * `kind: 'defect'` — the bug it reintroduces, the gate that must notice, and
  * the words that prove it noticed *that* rather than tripping over the patch.
  *
@@ -80,12 +106,14 @@ const SABOTAGES = [
   {
     id: 'secret-gate-path-suffix',
     bug: "§3.4's exemption matches any path ending in auth/storage-state.json",
+    reachable: 'the code as shipped, until decision 0014 replaced it with an anchored match',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
     expect: 'not the one at the tree root',
   },
   {
     id: 'origin-prefix-match',
     bug: 'sameOrigin() compares a URL prefix instead of the parsed origin',
+    reachable: 'the classifier as shipped: href.startsWith(ORIGIN), which called a foreign link same-origin',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
     expect: 'an origin is a parsed component',
   },
@@ -97,9 +125,10 @@ const SABOTAGES = [
     // count. Measured; §13 says a sabotage must reproduce the actual defect,
     // and this one only reproduces half of it.
     id: 'selector-substring-match',
-    bug: 'selectorClassNames returns raw selector text instead of parsed class tokens',
+    bug: 'selectorClassNames tokenises the selector with a regex instead of parsing it',
+    reachable: 'a hand-rolled \\w tokeniser, which does not admit the hyphen a class name may contain — the string-op-against-a-grammar mistake, five occurrences so far',
     gate: ['pnpm', '-s', 'test', '--project', 'capture'],
-    expect: 'contained in an attribute name',
+    expect: 'an attribute-value token was reported as a class name',
   },
   {
     // The defect exactly as it shipped, in the caller, gated by the rung that
@@ -107,48 +136,56 @@ const SABOTAGES = [
     // the one that was silently dropping a state on every capture.
     id: 'probe-detector-substring',
     bug: 'the probe asks whether the joined selector text contains a class name',
+    reachable: 'the detector as shipped, dropping one state on every rung-3 run',
     gate: ['pnpm', '-s', 'rung3', '--allow-destructive'],
     expect: 'expects statesProbed exactly 3, got 2',
   },
   {
     id: 'walker-unanchored-ignore',
     bug: "the walker's ignore list carries a bare name again",
+    reachable: 'the IGNORED_DIRS entry that hid packages/capture for eight commits',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
     expect: 'unanchored',
   },
   {
     id: 'walker-mustreach-disabled',
     bug: 'the walker stops enforcing that a scan reached what it claims to cover',
+    reachable: 'the check deleted outright, which is what removing an assertion someone finds slow or noisy looks like',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
     expect: 'never reached',
   },
   {
     id: 'gap-count-not-recomputed',
     bug: 'the model stops recomputing manifest.counts.gaps against the stage report',
+    reachable: 'the schema as it stood before 0014 added the recompute',
     gate: ['pnpm', '-s', 'test', '--project', 'schema'],
     expect: 'One run, one number',
   },
   {
     id: 'catch-lint-promise-rule-removed',
     bug: 'the catch linter stops examining .catch(fn) handlers',
+    reachable: 'the linter as it stood before 0013 added the rule, with nine handlers unlinted under it',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
     expect: 'promiseHandlers',
   },
   {
     id: 'grade-digest-not-frozen',
     bug: 'a scored-field threshold moves without the contract digest moving with it',
+    reachable: 'a threshold edited and the constant beneath it left alone, which is the entire reason the constant exists',
     gate: ['pnpm', '-s', 'test', '--project', 'schema'],
     expect: 'the contract table moved without its digest',
   },
   {
     id: 'infer-report-contract-optional',
     bug: "infer's stage report stops having to carry the scored-field contract",
+    reachable: 'one branch of the biconditional deleted, which is how a required field becomes optional-and-encouraged',
     gate: ['pnpm', '-s', 'test', '--project', 'schema'],
     expect: 'an infer report with no scored-field contract parsed',
   },
   {
     id: 'truth-404-as-absent',
     bug: 'a 404 to an anonymous caller is read as "no such endpoint" rather than as gated',
+    reachable: 'the naive reading of the status code, and the one anyone writes who has not met Gitea\'s existence-hiding 404',
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
     expect: 'must classify as required, never absent',
   },
@@ -159,6 +196,7 @@ const SABOTAGES = [
     kind: 'control',
     id: 'secret-gate-exemption-respelled',
     controlFor: 'secret-gate-path-suffix',
+    reachable: 'an ordinary refactor to another correct API already exported from shared',
     change: 'the §3.4 exemption re-spelled as matchesAnyPath(rel, [P]) — the same anchored comparison through a different call, on the line the defect rewrites',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
   },
@@ -166,6 +204,7 @@ const SABOTAGES = [
     kind: 'control',
     id: 'walker-ignore-anchored-addition',
     controlFor: 'walker-unanchored-ignore',
+    reachable: 'the ignore list is meant to grow; this is what growing it correctly looks like',
     change: "a fifth ignore pattern, '**/coverage', correctly anchored — the same array the defect un-anchors",
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
   },
@@ -224,6 +263,16 @@ function main() {
     console.error('discriminates from one that fails on any edit at all — see §13.\n');
     process.exit(1);
   }
+  // §13: every entry states why a real run or a real edit reaches the state it
+  // produces. A gate behaving correctly on unreachable input proves nothing
+  // about reachable input, and reads exactly like a gate that works.
+  const unreachable = SABOTAGES.filter((s) => !s.reachable || s.reachable.length < 20);
+  if (unreachable.length > 0) {
+    console.error(`\n${unreachable.map((s) => s.id).join(', ')}: no reachability note.`);
+    console.error('Say why a real run or a real edit arrives at this state — see §13.\n');
+    process.exit(1);
+  }
+
   const declaredIds = new Set(DEFECTS.map((s) => s.id));
   for (const control of CONTROLS) {
     if (!declaredIds.has(control.controlFor)) {

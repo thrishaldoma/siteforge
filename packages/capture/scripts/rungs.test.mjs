@@ -104,9 +104,29 @@ describe('the rung gates fail when the thing they measure is missing', () => {
 
   it('gates statesProbed exactly, because the drop it must catch is 3 to 2', () => {
     // Non-emptiness held at 2 while a state was being silently dropped every
-    // run. §13 prefers equality wherever the data allows one.
-    expect(RUNGS[3].expectExactly?.statesProbed).toBe(3);
-    expect(RUNGS[3].expectNonEmpty).not.toContain('statesProbed');
+    // run. §13 prefers equality wherever the data allows one — including here:
+    // the whole exactly-gated set, not `statesProbed` in isolation, so a second
+    // exact gate appearing is visible rather than silently accepted.
+    expect(RUNGS[3].expectExactly).toEqual({ statesProbed: 3 });
+  });
+
+  /**
+   * The freeze, in whole-set form.
+   *
+   * `expect(...).not.toContain('statesProbed')` only said one key was absent
+   * from one bucket. It could not see the same key sitting in two buckets, or a
+   * key quietly leaving all three — and a key in no bucket is a count nothing
+   * gates, which is the failure the rung tables exist to prevent.
+   */
+  it.each(Object.keys(RUNGS).map(Number))('rung %s puts every gated key in exactly one bucket', (rung) => {
+    const spec = RUNGS[rung];
+    const buckets = [
+      ...spec.expectNonEmpty,
+      ...Object.keys(spec.expectExactly ?? {}),
+      ...spec.knownEmpty,
+    ];
+    expect(buckets.length, 'a key is gated two ways at once').toBe(new Set(buckets).size);
+    expect(buckets.length).toBeGreaterThan(0);
   });
 
   it('rung 3 declares foreignAssets known-empty rather than omitting it', () => {
