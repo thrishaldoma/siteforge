@@ -509,7 +509,7 @@ const productSchema = {
     sku: idField(['unique-per-record']),
     // The strong case: these values were observed as the path parameter of
     // `/api/products/:slug`, so the field is a key by observation, not by name.
-    slug: idField(['path-param-value-overlap', 'unique-per-record'], ['get-api-products-id']),
+    slug: idField(['path-param-value-overlap', 'unique-per-record'], ['get-api-products-slug']),
     title: { type: 'string' },
     price: { type: 'number' },
     // Three products, all 'USD'. A human knows this domain is closed; capture
@@ -551,7 +551,7 @@ const ENDPOINTS = [
     observedCount: 1, observedOn: [ROUTE.home],
   },
   {
-    endpointId: 'get-api-products-id', method: 'GET', pathPattern: '/api/products/:slug', origin: ORIGIN,
+    endpointId: 'get-api-products-slug', method: 'GET', pathPattern: '/api/products/:slug', origin: ORIGIN,
     params: { path: [{ name: 'slug', type: 'string', required: true, examples: ['mug-blue-12oz', 'notebook-a5-dot'] }], query: [], headers: [] },
     requestBodySchema: null,
     responses: [
@@ -695,7 +695,7 @@ write('flows/skipped-controls.json', S.SkippedControlIndexSchema, {
     nodeId: DELETE_ACCOUNT_BUTTON,
     role: 'button',
     name: 'Delete account',
-    cause: 'destructive-heuristic',
+    cause: 'target-destructive',
     matchedTerm: 'delete',
     gapId: GAP.destructiveSkip,
     flowId: 'delete-account',

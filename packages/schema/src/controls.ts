@@ -29,10 +29,45 @@ export const ControlIdSchema = z
   .string()
   .regex(/^ctl_[0-9a-f]{12}$/, 'expected ctl_<12 hex>');
 
-/** Why the control was discovered but never activated. */
+/**
+ * What a control's activation would cost, classified by **who absorbs the harm**.
+ *
+ * §6's original heuristic had one bucket — "destructive" — and it conflated
+ * three unrelated things. "Sign out" and "Delete account" both match a
+ * destructive term, and treating them alike was backwards in both directions: it
+ * left `POST /api/auth/logout` uncaptured and filed a core auth flow as
+ * unreliable, while §10's auth tasks depend on logout working.
+ */
+export const ControlHazardSchema = z.enum([
+  /**
+   * Irreversible against a system we do not own. **Never fire** (§6, §13).
+   * The only hazard that yields an endpoint with no observed responses.
+   */
+  'target-destructive',
+  /**
+   * Ends our session and nothing else: logout, switch account, revoke own
+   * token. Harmless to the target, so **fire it** — in a disposable context on
+   * a session acquired for the purpose, which is then thrown away. Yields real
+   * observations and an ordinary endpoint: no gap, never synthesized.
+   */
+  'session-destructive',
+  /** External origin, `mailto:`, a file download. Not destructive, just not ours. */
+  'out-of-scope',
+]);
+
+/**
+ * Why the control was discovered but never activated.
+ *
+ * `session-destructive` is deliberately **absent**. A control whose only cost is
+ * our own session must be captured, not skipped, so "skipped because it would
+ * log us out" is not a sentence this schema can express. If firing one fails,
+ * that is `precondition-unmet` — a different and honest claim.
+ */
 export const SkipCauseSchema = z.enum([
-  /** §6's destructive heuristic: `delete`, `remove`, `cancel subscription`, … */
-  'destructive-heuristic',
+  /** Irreversible against the target. See `ControlHazardSchema`. */
+  'target-destructive',
+  /** Not ours to exercise: another origin, a mail client, a download. */
+  'out-of-scope',
   'auth-required',
   'precondition-unmet',
   /** §2: abort rather than bypass. */
@@ -54,19 +89,38 @@ export const SkippedControlSchema = z
     role: z.string().min(1),
     name: z.string(),
     cause: SkipCauseSchema,
-    /** The heuristic term that matched, for `destructive-heuristic`. */
+    /** The heuristic term that matched, for `target-destructive`. */
     matchedTerm: z.string().min(1).optional(),
+    /** What put the control outside scope: the origin, `mailto:`, the download URL. */
+    outOfScopeTarget: z.string().min(1).optional(),
     /** §6: "Log every skip as a gap." Not optional — this is what makes it so. */
     gapId: GapIdSchema,
     /** The placeholder flow recording the un-run probe, when one was written. */
     flowId: FlowIdSchema.nullable(),
   })
   .superRefine((control, ctx) => {
-    if (control.cause === 'destructive-heuristic' && control.matchedTerm === undefined) {
+    // Fixture legality (decision 0011): a derived field carries the evidence it
+    // was derived from, and the schema rejects a value that evidence does not
+    // support. `cause` is a classification, so it names what classified it.
+    if (control.cause === 'target-destructive' && control.matchedTerm === undefined) {
       ctx.addIssue({
         code: 'custom',
         path: ['matchedTerm'],
-        message: 'a control skipped by the destructive heuristic must name the term that matched it',
+        message: 'a control skipped as target-destructive must name the term that classified it',
+      });
+    }
+    if (control.cause === 'out-of-scope' && control.outOfScopeTarget === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['outOfScopeTarget'],
+        message: 'a control skipped as out-of-scope must say what put it out of scope',
+      });
+    }
+    if (control.cause !== 'target-destructive' && control.matchedTerm !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['matchedTerm'],
+        message: `a ${control.cause} skip does not come from a term match`,
       });
     }
   });
@@ -82,6 +136,7 @@ export const SkippedControlIndexSchema = z.strictObject({
 });
 
 export type ControlId = z.infer<typeof ControlIdSchema>;
+export type ControlHazard = z.infer<typeof ControlHazardSchema>;
 export type SkipCause = z.infer<typeof SkipCauseSchema>;
 export type SkippedControl = z.infer<typeof SkippedControlSchema>;
 export type SkippedControlIndex = z.infer<typeof SkippedControlIndexSchema>;

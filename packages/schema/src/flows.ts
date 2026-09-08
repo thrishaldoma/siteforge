@@ -270,6 +270,19 @@ export const FlowTraceSchema = z
           message: 'a skipped flow must say why, and name the gap it wrote',
         });
       }
+    }
+    // One-directional (decision 0011): skipping for destructiveness means the
+    // flow is destructive. The converse is not enforced — with
+    // --allow-destructive a destructive flow runs to completion, and that is
+    // exactly the observation §6 wants when the operator owns the target.
+    if (flow.skipReason?.cause === 'destructive-heuristic' && !flow.destructive) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['destructive'],
+        message: 'skipped by the destructive heuristic, yet not marked destructive',
+      });
+    }
+    if (flow.outcome === 'skipped') {
     } else if (flow.steps.length === 0) {
       ctx.addIssue({
         code: 'custom',

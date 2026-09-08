@@ -51,6 +51,11 @@ export const GapCategorySchema = z.enum([
   'server-side-logic',
   // §6
   'destructive-action-skipped',
+  /**
+   * A control that leaves the site: another origin, `mailto:`, a download. Not
+   * destructive, just not ours to exercise — and no endpoint either way.
+   */
+  'out-of-scope-control',
   'auth-required-not-captured',
   'crawl-limit-reached',
   'asset-fetch-failed',

@@ -21,6 +21,7 @@ import {
   RouteIdSchema,
 } from './primitives.js';
 import { artifactEnvelope } from './artifact.js';
+import { SAFE_HTTP_METHODS, deriveEndpointId, patternParams } from './identity.js';
 import { JsonSchemaNodeSchema } from './json-schema.js';
 import { GapIdSchema } from './gap.js';
 import { AuthEvidenceSchema, AuthRequirementSchema, resolveAuthRequirement } from './auth.js';
@@ -170,6 +171,45 @@ export const EndpointDescriptorSchema = z
     // (codegen implements it against the store, and the gap records that the
     // response shape was synthesized rather than seen). What it may never be is
     // silent.
+    // ---- derived fields carry their derivation (decision 0011) ----------------
+    // A field the producer computed is recomputed here, so a value the rules do
+    // not support cannot be written down. Observed fields are exempt; derived
+    // ones are not.
+    const derivedId = deriveEndpointId(endpoint.method, endpoint.pathPattern);
+    if (endpoint.endpointId !== derivedId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endpointId'],
+        message: `is '${endpoint.endpointId}' but ${endpoint.method} ${endpoint.pathPattern} derives '${derivedId}'`,
+      });
+    }
+
+    // One-directional: a safe method cannot mutate. The converse is not enforced
+    // because a POST that only reads is a real thing (a search), and pinning it
+    // both ways would make a legitimate observation unrepresentable.
+    if ((SAFE_HTTP_METHODS as readonly string[]).includes(endpoint.method) && endpoint.isMutation) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['isMutation'],
+        message: `${endpoint.method} is a safe method and cannot be a mutation`,
+      });
+    }
+
+    // A pattern that declares a parameter nobody observed is a normalization
+    // that invented a segment. Note this checks that each declared parameter has
+    // a recorded value — not that the segment *should* have been parameterized,
+    // which no artifact records enough to decide.
+    const declared = patternParams(endpoint.pathPattern).sort();
+    const recorded = endpoint.params.path.map((p) => p.name).sort();
+    if (declared.join(',') !== recorded.join(',')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['params', 'path'],
+        message:
+          `pattern declares [${declared.join(', ')}] but params.path records [${recorded.join(', ')}]`,
+      });
+    }
+
     if (endpoint.responses.length === 0 && !endpoint.stub && endpoint.discovery.kind !== 'bound-from-control') {
       ctx.addIssue({
         code: 'custom',

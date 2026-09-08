@@ -55,7 +55,7 @@
                   "type": "string",
                   "identifier": {
                     "pathParamOf": [
-                      "get-api-products-id"
+                      "get-api-products-slug"
                     ],
                     "evidence": [
                       "path-param-value-overlap",
@@ -172,7 +172,7 @@
       ]
     },
     {
-      "endpointId": "get-api-products-id",
+      "endpointId": "get-api-products-slug",
       "method": "GET",
       "pathPattern": "/api/products/:slug",
       "origin": "https://example.com",
@@ -213,7 +213,7 @@
                 "type": "string",
                 "identifier": {
                   "pathParamOf": [
-                    "get-api-products-id"
+                    "get-api-products-slug"
                   ],
                   "evidence": [
                     "path-param-value-overlap",

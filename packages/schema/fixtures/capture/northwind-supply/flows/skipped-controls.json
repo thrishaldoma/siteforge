@@ -15,7 +15,7 @@
       "nodeId": "n_da219963007efd4a",
       "role": "button",
       "name": "Delete account",
-      "cause": "destructive-heuristic",
+      "cause": "target-destructive",
       "matchedTerm": "delete",
       "gapId": "gap_5e8cb74e1ae7",
       "flowId": "delete-account"

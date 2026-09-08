@@ -23,6 +23,7 @@ import {
 import { artifactEnvelope } from './artifact.js';
 import { GapIdSchema } from './gap.js';
 import { AuthEvidenceSchema, AuthRequirementSchema, resolveAuthRequirement } from './auth.js';
+import { patternParams } from './identity.js';
 
 /**
  * A URL pattern with named parameters, e.g. `/product/:id` or `/blog/:year/:slug`.
@@ -213,6 +214,19 @@ export const RouteMetaSchema = z.strictObject({
   gapIds: z.array(GapIdSchema),
 })
   .superRefine((route, ctx) => {
+    // Derived field, derivation checked (decision 0011): a pattern that declares
+    // a parameter with no bound value is a normalization that invented a
+    // segment, and §7.3 groups templates on this.
+    const declared = patternParams(route.urlPattern).sort();
+    const bound = Object.keys(route.pathParams).sort();
+    if (declared.join(',') !== bound.join(',')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['pathParams'],
+        message: `urlPattern declares [${declared.join(', ')}] but pathParams binds [${bound.join(', ')}]`,
+      });
+    }
+
     const derived = resolveAuthRequirement(route.authEvidence);
     if (derived !== route.requiresAuth) {
       ctx.addIssue({

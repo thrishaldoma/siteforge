@@ -209,3 +209,25 @@ export function deriveRouteId(
 ): RouteId {
   return `${slugifyUrlPattern(urlPattern)}--${contextId}--i${instanceIndex}`;
 }
+
+/**
+ * `endpointId` from the method and the normalized path pattern.
+ *
+ * Derivation is contract, not convenience (decision 0011): the id is a *derived*
+ * field, so the schema recomputes it rather than trusting what a producer wrote.
+ * The fixture claimed `get-api-products-id` for `/api/products/:slug` — an id
+ * that had drifted from its own pattern and would have had infer and codegen
+ * disagreeing about which endpoint they were discussing.
+ */
+export function deriveEndpointId(method: string, pathPattern: string): string {
+  return `${method.toLowerCase()}${pathPattern.replace(/[/:]+/g, '-').replace(/-+$/, '').toLowerCase()}`
+    .replace(/-{2,}/g, '-');
+}
+
+/** Methods that cannot mutate. §8: "Mutations actually mutate the store." */
+export const SAFE_HTTP_METHODS = ['GET', 'HEAD', 'OPTIONS'] as const;
+
+/** The `:param` names a pattern declares, in order. */
+export function patternParams(pattern: string): string[] {
+  return [...pattern.matchAll(/:([A-Za-z][A-Za-z0-9]*)/g)].map((m) => m[1]!);
+}
