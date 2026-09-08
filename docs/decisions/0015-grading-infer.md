@@ -239,7 +239,7 @@ response field at a JSON pointer, a narrowing on such a field.
 | `narrowing` | matched field carrying enum/const/format | narrowings infer emitted | narrowings the spec declares |
 | `identifier` | field with `identifier.pathParamOf` | identifiers infer emitted | foreign keys derivable from the spec |
 | `synthesized-endpoint` | endpoint with `discovery: bound-from-control` | synthesized endpoints emitted | *(not scored — see below)* |
-| `auth` | endpoint | — three metrics, §4 | — |
+| `auth` | endpoint | — four metrics over three unlike denominators, §4 | — |
 
 Four denominator choices carry the design:
 
@@ -334,7 +334,7 @@ Three properties keep that honest:
 
 **A degenerate infer that marks every endpoint `required` never under-gates.**
 It would score perfectly on the metric that matters most. So auth is not scored
-as accuracy, precision or recall. It is three numbers over **three different
+as accuracy, precision or recall. It is four numbers over **three unlike
 denominators**, and they are never combined:
 
 | metric | numerator | denominator | why |
