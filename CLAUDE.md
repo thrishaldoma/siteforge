@@ -151,7 +151,19 @@ For each candidate, in a fresh page context:
 
 This tuple set **is** the functional specification. The generated clone is correct when it reproduces these transitions. Write them to `flows/`.
 
-Skip destructive actions by heuristic (`delete`, `remove`, `cancel subscription`, `deactivate`) unless `--allow-destructive`. Log every skip as a gap, **and record the control itself** in `flows/skipped-controls.json`: role, accessible name, nodeId, route, gap id. Control-level, and no endpoint entry — capture never fired it, so it never learned the URL, and inventing one is the §7 failure this whole machinery exists to prevent. §7.6 binds it to a URL from the source.
+**Classify every candidate by who absorbs the harm** (decision 0011), because one "destructive" bucket conflates three unrelated things:
+
+| hazard | what it costs | what to do |
+|---|---|---|
+| **target-destructive** | irreversible against a system we do not own | never fire (unless `--allow-destructive`, and even then an explicitly designated control stays declined). The only hazard that yields an endpoint with `responses: []` |
+| **session-destructive** | ends *our* session; the target is unharmed — logout, switch account, revoke own token | **fire it**, on a session acquired for the purpose and thrown away after. Real observations, an ordinary endpoint, no gap, never synthesized |
+| **out-of-scope** | nothing; it is simply not ours — external origin, `mailto:`, a file download | no endpoint either way |
+
+A disposable *context* is not enough for the session case: `storageState` carries the cookie, but the session lives on the server and logout deletes it, so cloning the crawl's state and clicking "Sign out" ends the crawl too. Each such probe gets its own login. Where a target offers no non-interactive re-auth, run them last instead and accept that the crawl ends signed out.
+
+**Destructive probes run last even when allowed.** A fresh page context does not undo a mutation: "Delete all todos" empties the store for every probe after it, and §6's "probes cannot contaminate each other's preconditions" is about the browser, not the server.
+
+Log every skip as a gap, **and record the control itself** in `flows/skipped-controls.json`: role, accessible name, nodeId, route, gap id. Control-level, and no endpoint entry — capture never fired it, so it never learned the URL, and inventing one is the §7 failure this whole machinery exists to prevent. §7.6 binds it to a URL from the source.
 
 The gap alone is not enough for the next stage to act on: a skipped `FlowTrace` is forced to `steps: []`, and role/name/nodeId live on `FlowStep.target` — so in a skipped flow they survive only as prose. This file is the structured half the empty step list threw away.
 
@@ -387,10 +399,14 @@ Milestone gates. Do not start a milestone before the previous one's gate is gree
 - Prefer deterministic code over LLM calls. Every LLM call in the pipeline needs a comment justifying why a deterministic approach cannot do the job. Inference (§7) is legitimately LLM work; asset rewriting is not.
 - Cache LLM calls by input hash in `.siteforge-cache/`. You will re-run `infer` many times against an unchanged capture.
 - Never `--force` past a failing gate. Add the gap and let the gate fail visibly.
+- **The definition of green is `pnpm verify:clean`**: a fresh clone of the committed HEAD, installed, built, tested, and both measurement rungs run in a temp directory. No milestone gate in §12 counts unless it passed there. A gate that runs where the code already is cannot tell you the code is committed — `packages/capture/` was ignored by an unanchored `.gitignore` pattern and had never been committed at all, while every local check passed.
+- **Every `.gitignore` pattern is explicitly anchored**: `/x` for root-only, `**/x` where any-depth is intended. An unanchored pattern matches at any depth by accident, which is how a source package disappeared. A test asserts it, and asserts that every workspace package has tracked files.
+- **§3.4 is a gate, not a note.** Every file written under `capture/` is scanned for cookies, `Authorization` headers, bearer and JWT shapes, and the literal values of `SITEFORGE_USER`/`SITEFORGE_PASS`. A hit fails the run. `auth/storage-state.json` is the one exemption and is checked for mode `0600` instead — the single artifact allowed to hold a credential has to prove it is protected.
 - **No invariant lands without a sabotage test** that reintroduces the bug and proves the invariant fails. Two invariants written to catch a specific silent drop were checked by hand against that drop and stayed green — twice. Neither was visible by reading the invariant; both were visible in ten seconds by breaking the extractor and watching nothing happen. An invariant that never fires is indistinguishable from one that passes.
 - **An invariant's observed side must be derived independently of the thing it checks.** Counting inputs with the same parser the extractor uses means a bug in that parser moves both sides and the check goes vacuous. Use raw text and a cruder detector; over-counting there is safe, sharing a code path is not.
 - **Counts must be disaggregated to the granularity of the failure.** An aggregate lets a partial loss hide inside a surviving total: with attribute-state extraction fully broken, nine surviving pseudo-class entries kept `statesCssom` non-zero and the check held. Prefer an equality over a non-emptiness assertion wherever the data allows one.
 - **Narrowing a type must be justified; widening is free.** `string` admits every value the real API can produce. An enum makes valid states of the real system unrepresentable in the clone, and §5 turns response schemas into the mock backend's data model — so a wrong one is silent and corrupts every trajectory touching that field. Any inference that narrows records its evidence in the model and lands in `GAPS.md` as review-required.
+- **A derived field carries the evidence it was derived from, and the schema rejects a value that evidence does not support.** Observed fields are exempt; derived ones are not. `NarrowingRecord` is the pattern: it holds the counts the narrowing was drawn from, so an unjustified enum does not parse. Where recomputation is possible, recompute (`endpointId`, `contentHash`, `requiresAuth`); where only a one-directional implication is sound, enforce that and say so rather than pinning both ways — over-constraining is how a legitimate observation becomes unrepresentable.
 - **Deduplicate by entity identity before any frequency heuristic.** A list endpoint polled six times is not six times the evidence. This applies to every count inference draws a conclusion from, not only enums.
 - Test targets, in order: a static site, then a Jekyll/Hugo blog, then a self-hosted open-source app you control (Gitea, Wagtail, or similar) for M3+. Do not develop against production sites you do not own.
 - Commit format: `<stage>: <what changed>`. One stage per commit.
