@@ -62,10 +62,25 @@ const SABOTAGES = [
     expect: 'an origin is a parsed component',
   },
   {
+    // Scoped honestly: this reproduces the *helper* returning raw text, which
+    // is not the defect that shipped. The shipped defect was in the caller and
+    // is `probe-detector-substring` below — the two are separate entries
+    // because this patch, applied alone, leaves rung 3 reporting the right
+    // count. Measured; §13 says a sabotage must reproduce the actual defect,
+    // and this one only reproduces half of it.
     id: 'selector-substring-match',
-    bug: 'selector class names come from raw selector text, so data-flagged explains "flag"',
+    bug: 'selectorClassNames returns raw selector text instead of parsed class tokens',
     gate: ['pnpm', '-s', 'test', '--project', 'capture'],
     expect: 'contained in an attribute name',
+  },
+  {
+    // The defect exactly as it shipped, in the caller, gated by the rung that
+    // measures the consequence. Costs a 22-second run and is worth it: this is
+    // the one that was silently dropping a state on every capture.
+    id: 'probe-detector-substring',
+    bug: 'the probe asks whether the joined selector text contains a class name',
+    gate: ['pnpm', '-s', 'rung3', '--allow-destructive'],
+    expect: 'expects statesProbed exactly 3, got 2',
   },
   {
     id: 'walker-unanchored-ignore',
@@ -95,12 +110,15 @@ const SABOTAGES = [
 
 const git = (...args) => execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8' });
 
-/** A hash over the tracked working tree, so residue after a revert is visible. */
-const treeHash = () => {
-  git('add', '-A', '--intent-to-add', '--', '.');
-  return execFileSync('git', ['-C', REPO, 'diff', '--stat', 'HEAD'], { encoding: 'utf8' })
-    + git('status', '--porcelain');
-};
+/**
+ * A signature of the working tree, so residue after a revert is visible.
+ *
+ * Reads only. An earlier version ran `git add -A --intent-to-add` first, which
+ * meant the "did the revert leave anything behind" *check* wrote to the index —
+ * a read with a side effect, in a harness whose whole job is leaving no trace.
+ * `--porcelain` already reports untracked files.
+ */
+const treeSignature = () => git('status', '--porcelain');
 
 const run = (command) => {
   const [bin, ...args] = command;
@@ -133,7 +151,7 @@ function main() {
   }
 
   console.log(`\nsabotage — reintroducing ${SABOTAGES.length} fixed bug(s), one at a time\n`);
-  const before = treeHash();
+  const before = treeSignature();
   let failed = 0;
 
   for (const sabotage of SABOTAGES) {
@@ -171,7 +189,7 @@ function main() {
       console.log(`      ${reverted.output.trim()}`);
       process.exit(1);
     }
-    if (treeHash() !== before) {
+    if (treeSignature() !== before) {
       console.log('✗  revert left residue; every later result would be noise');
       process.exit(1);
     }
