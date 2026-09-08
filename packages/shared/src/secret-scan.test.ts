@@ -11,7 +11,24 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { afterAll, describe, expect, it } from 'vitest';
-import { scanCaptureTree, scanText, credentialLiterals } from './secret-scan.js';
+import { SECRET_RULES, scanCaptureTree, scanText, credentialLiterals } from './secret-scan.js';
+
+/**
+ * One planted credential per rule. The completeness assertion at the bottom
+ * requires this to cover `SECRET_RULES` exactly, so a rule added without a test
+ * fails the suite — the same mechanism the coverage invariants use, for the same
+ * reason: §13's rule was "followed by hand" there too, right up until an audit
+ * found none of the nine had a test.
+ */
+const PLANTED: Record<string, string> = {
+  'cookie-header': 'Cookie: sid=sess_00000001; Path=/',
+  'authorization-header': 'Authorization: Basic dXNlcjpwYXNzd29yZA==',
+  'bearer-token': 'Bearer abcdefghijklmnopqrstuvwxyz012345',
+  jwt: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk',
+  'session-cookie-value': 'set-cookie: session=abc123def456; HttpOnly',
+  'private-key': '-----BEGIN RSA PRIVATE KEY-----',
+  'vendor-token': 'AKIAIOSFODNN7EXAMPLE',
+};
 
 const roots: string[] = [];
 const makeTree = (): string => {
@@ -162,6 +179,16 @@ describe('the §3.4 secret gate fails the run on a planted credential', () => {
   it('ignores short or absent env credentials rather than matching everywhere', () => {
     expect(credentialLiterals({ SITEFORGE_PASS: 'ab' })).toEqual([]);
     expect(credentialLiterals({})).toEqual([]);
+  });
+
+  it.each(Object.entries(PLANTED))('%s is caught when planted', (rule, text) => {
+    expect(scanText('artifact.json', text).map((f) => f.rule)).toContain(rule);
+  });
+
+  it('has a planted credential for every rule that exists', () => {
+    // Without this, a rule added to SECRET_RULES needs no test, and §13's
+    // convention goes back to being followed by hand.
+    expect(Object.keys(PLANTED).sort()).toEqual(SECRET_RULES.map((r) => r.id).sort());
   });
 
   it('never prints the credential it found', () => {

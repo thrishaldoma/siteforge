@@ -87,6 +87,10 @@ Details that matter:
 
 Sabotage tests plant a live cookie in a HAR, a bearer token in a PNG `tEXt`
 chunk, and a `SITEFORGE_PASS` literal in a DOM artifact, and prove each fails.
+One planted credential per rule, with a completeness assertion requiring the
+table to equal `SECRET_RULES` exactly — so a rule added without a test fails the
+suite. Without that, §13's convention is followed by hand, which is precisely the
+state the nine coverage invariants were found in.
 
 ### What it caught immediately
 
@@ -160,8 +164,9 @@ skipped: Email support    out-of-scope        mailto:
 gap, not synthesized. "Delete account" is the one control designated never-fire,
 so the synthesized path keeps its coverage against a real crawl rather than only
 against a fixture. Rung 2 has no destructive controls, so the flag is inert
-there; it is run with and without anyway, because a flag that breaks the
-non-destructive path is worth knowing about.
+there; `verify:clean` runs it both ways regardless, because a flag that breaks
+the non-destructive path is worth knowing about and "inert" is a claim worth
+testing rather than asserting.
 
 ### A silent drop found while doing it
 
@@ -245,5 +250,11 @@ testable TypeScript rather than an untested `.mjs` beside the crawler.
   `--auth` path is headful and manual, so on a live target these probes must run
   last and the crawl ends signed out. Nothing enforces that ordering yet.
 - **Compressed artifacts are outside the secret gate.** See §2.
-- **The out-of-scope hazard is detected from `href` only.** A JS-driven
-  `window.open` to another origin classifies as ordinary and would be probed.
+- **The out-of-scope hazard is detected from `href` only, and that is a crawl
+  boundary defect, not a classification nicety.** A control that navigates
+  off-origin via `window.open` or a scripted `location.assign` classifies as
+  ordinary and *will be fired*. §6 is same-origin only, so this is capture
+  reaching outside its own boundary — against a real target, an unowned one.
+  Detecting it needs the probe to check the post-click origin and abort, which
+  is a change to `runProbe` rather than to the classifier. Nothing today stops
+  it.

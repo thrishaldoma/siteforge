@@ -81,6 +81,12 @@ try {
   // Distinct ports: a rung server left running locally must not make the clone
   // look green by answering for it.
   run('rung 2', 'pnpm', ['-s', 'rung2'], clone, { RUNG2_PORT: '8888' });
+  // Rung 2 has no destructive controls, so the flag is inert — run anyway,
+  // because a flag that breaks the non-destructive path is worth knowing about
+  // and "inert" is a claim that should be tested rather than asserted.
+  run('rung 2 --allow-destructive', 'pnpm', ['-s', 'rung2', '--allow-destructive'], clone, {
+    RUNG2_PORT: '8891',
+  });
   run('rung 3', 'pnpm', ['-s', 'rung3'], clone, { RUNG3_PORT: '8889' });
   run('rung 3 --allow-destructive', 'pnpm', ['-s', 'rung3', '--allow-destructive'], clone, {
     RUNG3_PORT: '8890',
