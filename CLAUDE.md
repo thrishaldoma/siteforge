@@ -100,7 +100,10 @@ capture/<site-id>/
 ├── network/
 │   ├── session.har
 │   └── endpoints.json       # normalized: method, path-pattern, params, response schema
-├── flows/<flow-id>.trace.json
+├── flows/
+│   ├── <flow-id>.trace.json
+│   └── skipped-controls.json  # controls §6 refused to fire: role, name, node, gap
+├── coverage.json            # what the input held vs what extraction produced
 └── auth/storage-state.json  # gitignored, chmod 600
 ```
 
@@ -109,7 +112,8 @@ Key schema rules:
 - **Deduplicate styles.** A page has thousands of nodes and maybe 200 distinct style objects. Store `styleId` references. This is the difference between a 400MB and a 4MB model.
 - **Stable node IDs.** Derive from a structural path hash (`tag[nth-of-type]/...`) plus a **semantic key** of authored, data-independent attributes — not from DOM order alone, and not from content. Record the content fingerprint separately, so a diff can distinguish "node moved" from "node's content changed". Exclude classnames and framework-generated ids (React `useId`, Angular `ng-*`) from identity: both look stable and are not. They must survive re-crawls so diffs are meaningful.
 - **URL patterns, not URLs.** `/product/1183` and `/product/902` collapse to `/product/:id` with two observed instances. Route identity is the pattern.
-- **Response schemas, not just responses.** For each endpoint, infer a JSON Schema across all observed responses. That schema becomes the mock backend's data model.
+- **Response schemas, not just responses.** For each endpoint, infer a JSON Schema across all observed responses. That schema becomes the mock backend's data model — which is exactly why a narrowed type must carry its evidence (§7.5). Default to `string`.
+- **Auth requirement is three-valued**, never a boolean: `required | not-required | unknown`, derived from recorded observations and not declared beside them. A crawl that only ever ran signed in has learned nothing about whether an endpoint is gated, and a boolean has nowhere to put that except `false`. Never collapse `unknown` to `false`.
 
 ---
 
@@ -147,13 +151,24 @@ For each candidate, in a fresh page context:
 
 This tuple set **is** the functional specification. The generated clone is correct when it reproduces these transitions. Write them to `flows/`.
 
-Skip destructive actions by heuristic (`delete`, `remove`, `cancel subscription`, `deactivate`) unless `--allow-destructive`. Log every skip as a gap.
+Skip destructive actions by heuristic (`delete`, `remove`, `cancel subscription`, `deactivate`) unless `--allow-destructive`. Log every skip as a gap, **and record the control itself** in `flows/skipped-controls.json`: role, accessible name, nodeId, route, gap id. Control-level, and no endpoint entry — capture never fired it, so it never learned the URL, and inventing one is the §7 failure this whole machinery exists to prevent. §7.6 binds it to a URL from the source.
+
+The gap alone is not enough for the next stage to act on: a skipped `FlowTrace` is forced to `steps: []`, and role/name/nodeId live on `FlowStep.target` — so in a skipped flow they survive only as prose. This file is the structured half the empty step list threw away.
 
 ### Scroll behavior
 Step scroll in 0.5-viewport increments to the bottom. Screenshot each step. Diff consecutive DOM snapshots to detect lazy loading, infinite scroll, sticky/fixed transitions, and IntersectionObserver reveals. Record scroll-triggered state changes explicitly — they are a common source of "the clone looks right on load and wrong at 40% scroll."
 
 ### Authenticated capture
 `--auth` launches headful, navigates to the login route, and waits for the operator to sign in by hand (this handles MFA and CAPTCHA without any bypass logic). On success, persist `storageState`. Every subsequent run reuses it non-interactively until it expires. Anonymous and authenticated crawls are two **capture contexts** (`CaptureContext`, decision 0004), declared in the manifest and referenced by every `routeId` as `<pattern>--<context>--i<instance>`. Record which routes require auth (`RouteMeta.requiresAuth`) and what an anonymous visitor gets (`unauthenticatedBehavior`), because the clone must reproduce the redirect-to-login behavior.
+
+**Both are three-valued and both are derived, never declared.** `requiresAuth` must equal `resolveAuthRequirement(authEvidence)`; the schema rejects a verdict the observations do not support, so `not-required` without an observed anonymous success is unrepresentable rather than merely discouraged. Use the evidence you already have:
+
+- a **401/403 answering an uncredentialed request** settles `required` — but a 401 answering a *signed-in* one does not. That is the endpoint's own failure mode (a wrong password on a login route), not a statement about needing auth. Evidence is an interpretation the producer makes, never an automatic consequence of a status code.
+- an **anonymous request that succeeded** settles `not-required`.
+- **every observation carried a credential** settles nothing, but is strictly better than recording `false` — it says the crawl only ever saw this signed in, which is why the verdict is `unknown`. Read it from the full request headers: Playwright's `request.headers()` omits cookies, and reading auth evidence from it means this can never fire.
+- the control appearing in an authenticated context and **not** in an anonymous one is context-diff evidence; contexts are what make it observable at all.
+
+Re-issue each distinct **GET** endpoint once anonymously to learn what an unauthenticated caller gets. Never a mutation: issuing a PATCH or DELETE without a session to find out what happens changes the target's state, which capture must not do. Those stay `unknown`, and §8 fails them closed.
 
 ### Coverage invariants
 
@@ -169,6 +184,7 @@ Every extraction bug found so far has been a **silent drop**: the input containe
 | document taller than 2 viewports | more than one scroll step |
 | a11y tree has interactive roles | interaction candidates non-empty |
 | subresources were requested | asset entries non-empty |
+| credentialed requests were seen | **every** endpoint records the observations its auth verdict rests on |
 
 A broken invariant **fails the run** — `stage-report.json` status must be `failed`, and the schema enforces that.
 
@@ -194,9 +210,29 @@ This is where you, the LLM, do the work no deterministic pass can. Everything he
 
 3. **Route templating.** Group routes by shared structure. `/product/:id` becomes one template. Distinguish layout (shared shell, nav, footer) from page content.
 
-4. **Data model inference.** From `endpoints.json` response schemas, derive entities and relationships. `GET /api/products` returning objects with `id, title, price, categoryId` plus `GET /api/categories` gives you a two-table model with a foreign key. Write it as a Prisma-style schema in `data-model.ts`.
+4. **Data model inference.** From `endpoints.json` response schemas, derive entities and relationships. `GET /api/products` returning objects with `id, title, price, categoryId` plus `GET /api/categories` gives you a two-table model with a foreign key. Write it as a Prisma-style schema in `data-model.ts`. Read foreign keys off `JsonSchemaNode.identifier.pathParamOf`, which records the endpoints whose path parameters a field's values were actually observed as — an observation, not a guess from a name ending in `Id`.
 
-5. **Behavior specification.** Convert `flows/` transitions into declarative specs: `{trigger, precondition, effect}`. Effects are typed — `navigate`, `mutate-entity`, `toggle-ui-state`, `open-overlay`, `submit-form`. Anything that does not fit a known effect type is a gap, not a guess.
+5. **Type narrowing, and the evidence it requires.** Every frequency heuristic in this stage counts **distinct records, after deduplication by entity identity** — never observations. A list endpoint polled six times is not six times the evidence.
+
+   The default type is `string`. Narrowing must be justified; widening is free. An **enum requires evidence of a CLOSED domain, and low cardinality is not that.** Ranked:
+
+   1. **UI constraint (primary).** A `<select>`, radio group, or fixed filter set in the captured DOM whose option values cover the field's values. This is ground truth about the domain, and the only evidence that is: we captured the UI that drives the API. A field is an enum because the DOM constrains it, not because sampling was thin.
+   2. **Corroboration.** Distinct values stayed flat while distinct records grew — read statically, since one capture gives a final count rather than a trajectory: at least 20 distinct records, and a value-to-record ratio at or below 0.3.
+   3. **Value shape.** Slug-like: no whitespace, short.
+
+   Hard exclusions, regardless of the above:
+
+   - a uniqueness ratio near 1.0 per record — free text or an identifier, never an enum;
+   - values observed as a **path parameter** of any endpoint — that is a key; emit it as an identifier (`JsonSchemaNode.identifier`), not an enum. Match by **value overlap**, not by field name: path normalization collapses every id segment to the literal `:id`, so a name comparison tests against a constant;
+   - values containing sentence-like text.
+
+   **Invariant: no enum from fewer than 20 distinct records without a UI constraint backing it.** The schema enforces this — a narrowing carries the counts it was drawn from, so an unjustified enum does not parse.
+
+   Any inference that narrows a type records its evidence in the model and lands in `GAPS.md` as review-required. A wrong enum is silent: §5 makes the response schema the mock backend's data model, so the clone rejects values the real API accepts, on every trajectory that touches the field.
+
+6. **Binding skipped controls.** For each entry in `flows/skipped-controls.json`, look for the control's handler in the captured source — a `<form action>`, a `fetch()` literal — and bind it to a URL. On success, emit an endpoint with `discovery: bound-from-control`, `responses: []`, and the capture gap carried through; codegen implements it against the store (§8). On failure the gap stands alone. This is infer's job and not capture's: capture never fired the control, so it never learned the URL.
+
+7. **Behavior specification.** Convert `flows/` transitions into declarative specs: `{trigger, precondition, effect}`. Effects are typed — `navigate`, `mutate-entity`, `toggle-ui-state`, `open-overlay`, `submit-form`. Anything that does not fit a known effect type is a gap, not a guess.
 
 **Rule: when confidence is low, write a gap, not an invention.** A stubbed endpoint returning `501` with `X-Siteforge-Stub: true` is infinitely more useful in an RL env than a plausible hallucinated one, because a hallucinated endpoint silently corrupts every trajectory that touches it.
 
@@ -216,6 +252,8 @@ Emit a Next.js app plus a Fastify mock API into `envs/<site-id>/`.
 - In-memory store implementing `snapshot(): State` and `restore(s: State): void`. Structured-clone based. Reset must be < 50ms — you will call it once per RL episode, and a slow reset silently caps your training throughput.
 - Seeded from `seeds/<seed>.json`, generated from real captured responses after scrubbing.
 - Implement every endpoint in `endpoints.json`. Mutations actually mutate the store. Auth is a real (if trivially simple) session check, because agents must be able to fail at logging in.
+- **Implement the destructive endpoints too.** §6 skips `DELETE /api/account` because it is dangerous against the *target*; against a local mock it is free. A dead button is worse than a working one — it teaches an agent the control does nothing — and "delete your account" is a legitimate §10 task with a clean state-based validator. Where infer bound a skipped control to a URL (§7.6), implement it fully against the store; the response shape comes from the inferred data model and the gap records that it was **synthesized** rather than observed.
+- **`requiresAuth: 'unknown'` resolves to required for mutations, and to not-required for reads.** Fail closed where it costs something. A clone that demands a login the original did not costs an agent one step; a clone that permits an anonymous mutation the original blocked makes every §10 auth task trivially bypassable and every trajectory through it worthless. Use `resolveAuthForCodegen`; never read the field as a boolean.
 - No outbound network. Enforce with an undici agent that throws on any non-loopback host — do not rely on convention.
 
 ### Determinism harness
@@ -349,6 +387,11 @@ Milestone gates. Do not start a milestone before the previous one's gate is gree
 - Prefer deterministic code over LLM calls. Every LLM call in the pipeline needs a comment justifying why a deterministic approach cannot do the job. Inference (§7) is legitimately LLM work; asset rewriting is not.
 - Cache LLM calls by input hash in `.siteforge-cache/`. You will re-run `infer` many times against an unchanged capture.
 - Never `--force` past a failing gate. Add the gap and let the gate fail visibly.
+- **No invariant lands without a sabotage test** that reintroduces the bug and proves the invariant fails. Two invariants written to catch a specific silent drop were checked by hand against that drop and stayed green — twice. Neither was visible by reading the invariant; both were visible in ten seconds by breaking the extractor and watching nothing happen. An invariant that never fires is indistinguishable from one that passes.
+- **An invariant's observed side must be derived independently of the thing it checks.** Counting inputs with the same parser the extractor uses means a bug in that parser moves both sides and the check goes vacuous. Use raw text and a cruder detector; over-counting there is safe, sharing a code path is not.
+- **Counts must be disaggregated to the granularity of the failure.** An aggregate lets a partial loss hide inside a surviving total: with attribute-state extraction fully broken, nine surviving pseudo-class entries kept `statesCssom` non-zero and the check held. Prefer an equality over a non-emptiness assertion wherever the data allows one.
+- **Narrowing a type must be justified; widening is free.** `string` admits every value the real API can produce. An enum makes valid states of the real system unrepresentable in the clone, and §5 turns response schemas into the mock backend's data model — so a wrong one is silent and corrupts every trajectory touching that field. Any inference that narrows records its evidence in the model and lands in `GAPS.md` as review-required.
+- **Deduplicate by entity identity before any frequency heuristic.** A list endpoint polled six times is not six times the evidence. This applies to every count inference draws a conclusion from, not only enums.
 - Test targets, in order: a static site, then a Jekyll/Hugo blog, then a self-hosted open-source app you control (Gitea, Wagtail, or similar) for M3+. Do not develop against production sites you do not own.
 - Commit format: `<stage>: <what changed>`. One stage per commit.
 

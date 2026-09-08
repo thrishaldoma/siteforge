@@ -1,6 +1,6 @@
 # DECISION 0009 — what rung 3 found
 
-**Status:** RECORDED. Fixes applied; two limitations accepted and one open.
+**Status:** RECORDED. Fixes applied. §1, §4 and §5 superseded by decision 0010.
 **Raised:** M1, rung 3 — a local CRUD app, both auth contexts
 **Affects:** endpoint inference, probing, `COVERAGE_INVARIANTS`
 
@@ -29,10 +29,15 @@ through a missing endpoint.
 records, which is what a real list endpoint gives you and what a fixture author
 never bothers to write.
 
-Now an enum requires: a non-identifier field name, 2–6 distinct values, at least
-3× as many observations as distinct values, every value a short spaceless token,
-and no shared prefix with a varying numeric tail (`td_1`, `td_2` is an id scheme,
-not an enum). Everything else records `examples`, which carries the same
+**Superseded by decision 0010.** The heuristic recorded here was tightened again
+into an evidence ladder — UI constraint, then corroborated cardinality — with the
+counts recorded in the model and the floor enforced by the schema. What follows
+described the interim fix.
+
+The interim rule required: a non-identifier field name, 2–6 distinct values, at
+least 3× as many observations as distinct values, every value a short spaceless
+token, and no shared prefix with a varying numeric tail (`td_1`, `td_2` is an id
+scheme, not an enum). Everything else records `examples`, which carries the same
 information for seeding and review **without constraining the store**. An enum is
 a hard constraint; guessing one is expensive and guessing none costs nothing.
 
@@ -77,8 +82,10 @@ Capture now re-issues each distinct **GET** endpoint once anonymously, purely to
 record what an unauthenticated caller gets. `GET /api/todos` is correctly
 `requiresAuth: true` (`200×23, 401×3`).
 
-**Accepted limitation:** mutation endpoints stay `requiresAuth: false` unless a
-401 happens to be observed. Learning otherwise would mean issuing a PATCH or
+**Superseded by decision 0010:** `requiresAuth` is now three-valued, and
+mutations stay `unknown` rather than `false` — §8 resolves that closed. The
+limitation itself stands: learning otherwise means issuing a mutation
+anonymously. Learning otherwise would mean issuing a PATCH or
 DELETE anonymously, which changes the target's state — capture must not do that.
 Worth a gap at M2 rather than a guess.
 
@@ -94,11 +101,11 @@ control becomes a gap; there is no endpoint descriptor to attach a stub to.
 An endpoint that was never called can only be recovered by reading a `<form
 action>` or a `fetch()` call out of the page source — which is §7's job, not §6's.
 
-**Open:** either infer populates stubbed endpoints from static analysis at M2, or
-the fixture's `delete-api-account` entry should be relabelled as an infer-stage
-artifact. It is currently a shape the producing stage cannot produce, which is
-exactly the drift §13 warns about — found only because a real crawl was run
-beside it.
+**Resolved by decision 0010 — neither.** The concept was conflated. Capture
+records the *control* (`flows/skipped-controls.json`); infer binds it to a URL
+from the source and emits the endpoint. `EndpointIndexSchema` now rejects a
+bound endpoint outright, so the ownership rule is enforced rather than
+documented, and the fixture moved to `fixtures/infer/`.
 
 ## What rung 3 confirmed works
 
