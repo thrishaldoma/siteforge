@@ -15,7 +15,10 @@ export const RUNGS = {
     label: 'a plain static page (example.com)',
     target: 'https://example.com/',
     expectNonEmpty: ['styleTableEntries', 'assets', 'a11yNodes'],
-    knownEmpty: ['statesCssomPseudo', 'statesCssomAttribute', 'statesProbed', 'endpoints', 'fonts'],
+    knownEmpty: [
+      'statesCssomPseudo', 'statesCssomAttribute', 'statesProbed', 'endpoints', 'fonts',
+      'foreignAssets', 'blockedOffOriginNavigations',
+    ],
   },
   2: {
     label: 'a local static site: external CSS, webfont, images, long scroll',
@@ -29,6 +32,15 @@ export const RUNGS = {
       'statesScroll',
       'a11yNodes',
       'interactionCandidates',
+      // The crawl boundary's *allow* branch. Rung 2 serves its font and one
+      // image from a second origin precisely so this can be a count rather
+      // than a claim: a guard that blocked subresources would pass every other
+      // gate here and break capture on every real site.
+      'foreignAssets',
+      // ...and the block branch, from the same page. A guard that blocked
+      // everything would satisfy this one and fail `foreignAssets`; a guard
+      // that blocked nothing would do the reverse. Both are needed.
+      'blockedOffOriginNavigations',
     ],
     knownEmpty: ['endpoints', 'statesProbed'],
   },
@@ -43,8 +55,11 @@ export const RUNGS = {
       'endpoints',
       'interactionCandidates',
       'a11yNodes',
+      'blockedOffOriginNavigations',
     ],
-    knownEmpty: [],
+    // The crud app is single-origin by design; rung 2 owns the foreign-asset
+    // measurement. Declared rather than omitted so the count is still printed.
+    knownEmpty: ['foreignAssets'],
   },
 };
 

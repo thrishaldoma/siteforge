@@ -15,9 +15,30 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env['RUNG2_PORT'] ?? 8788);
+const CDN_PORT = Number(process.env['RUNG2_CDN_PORT'] ?? 8790);
 
-const site = spawn(process.execPath, [join(HERE, 'test-site.mjs'), String(PORT)], { stdio: 'inherit' });
-const stop = () => { if (!site.killed) site.kill(); };
+/**
+ * Two origins, both loopback.
+ *
+ * The page is served from `localhost` and its font and one image from
+ * `127.0.0.1` — the same machine, a different *origin*, and nothing that
+ * leaves it. Both hosts are in `allowlist.txt` (§3.1).
+ *
+ * This exists because the crawl boundary has an allow branch that had never
+ * run: subresources from any origin are permitted and recorded, and only a
+ * fixture with a second origin can show that. A guard that blocked them would
+ * pass every test we had and break capture on every real site.
+ */
+const cdn = spawn(process.execPath, [join(HERE, 'test-cdn.mjs'), String(CDN_PORT)], { stdio: 'inherit' });
+const CDN_ORIGIN = `http://127.0.0.1:${CDN_PORT}`;
+const site = spawn(process.execPath, [join(HERE, 'test-site.mjs'), String(PORT)], {
+  stdio: 'inherit',
+  env: { ...process.env, RUNG2_CDN_ORIGIN: CDN_ORIGIN },
+});
+const stop = () => {
+  if (!site.killed) site.kill();
+  if (!cdn.killed) cdn.kill();
+};
 process.on('exit', stop);
 process.on('SIGINT', () => { stop(); process.exit(130); });
 
@@ -25,8 +46,8 @@ await new Promise((r) => setTimeout(r, 800));
 
 const spike = spawn(
   process.execPath,
-  [join(HERE, 'spike-one-page.mjs'), `http://127.0.0.1:${PORT}/`],
-  { stdio: 'inherit' },
+  [join(HERE, 'spike-one-page.mjs'), `http://localhost:${PORT}/`],
+  { stdio: 'inherit', env: { ...process.env, RUNG2_CDN_ORIGIN: CDN_ORIGIN } },
 );
 const code = await new Promise((resolve) => spike.on('close', resolve));
 stop();

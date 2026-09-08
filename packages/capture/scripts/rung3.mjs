@@ -25,7 +25,7 @@ import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
 import {
   allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, operationalKind,
-  rethrowIfDefect,
+  originOf, rethrowIfDefect,
   scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
@@ -1041,11 +1041,28 @@ for (const inv of invariants) {
   if (inv.vacuous) { console.log(`    · ${inv.id} (vacuous)`); continue; }
   console.log(`    ${inv.holds ? '✓' : '✗'} ${inv.id}`);
 }
-const { spec, failures, surprises } = checkRung(3, extracted);
+// The crud app is single-origin, so this is legitimately zero and rung 3
+// declares it known-empty. Passed explicitly rather than left undefined so the
+// declaration is checked against a measurement rather than against absence.
+const foreignAssetCount = Object.keys(assetEntries)
+  .filter((u) => { const o = originOf(u); return o !== null && o !== ORIGIN; }).length;
+const rungCounts = {
+  ...extracted,
+  foreignAssets: foreignAssetCount,
+  blockedOffOriginNavigations: blockedNavigations.filter((e) => e.kind === 'navigation').length,
+};
+const { spec, failures, surprises } = checkRung(3, rungCounts);
 console.log('');
 console.log(`  RUNG 3 — ${spec.label}`);
+// `rungCounts`, not `extracted` — the display and the gate must read the same
+// value. They briefly did not, and the report printed ✗ against a measurement
+// the gate had already passed, which is the more dangerous direction of the
+// same bug: a green run with a red line in it teaches you to ignore the lines.
 for (const key of spec.expectNonEmpty) {
-  console.log(`    ${extracted[key] > 0 ? '✓' : '✗'} ${key.padEnd(22)} ${extracted[key] ?? 0}`);
+  console.log(`    ${rungCounts[key] > 0 ? '✓' : '✗'} ${key.padEnd(22)} ${rungCounts[key] ?? 0}`);
+}
+for (const key of spec.knownEmpty) {
+  console.log(`    · ${key.padEnd(22)} ${rungCounts[key] ?? 0}  (known-empty at this rung)`);
 }
 console.log('');
 console.log(`  contexts exercised: ${[...new Set([...routes.values()].map((r) => r.context.contextId))].join(', ')}`);

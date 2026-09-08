@@ -18,7 +18,7 @@ import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
 import { installEscapeGuards, installOriginGuard, scrubHarFile } from './capture-lib.mjs';
 import {
-  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, scanCaptureTree,
+  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, originOf, scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 import * as S from '../../schema/dist/index.js';
@@ -997,16 +997,51 @@ if (brokenInvariants) {
   finding('silent-drop', `${brokenInvariants} coverage invariant(s) broken — extraction dropped something the input contained`);
 }
 
+/**
+ * Subresources fetched from an origin the crawl may not navigate to.
+ *
+ * This is the allow half of the boundary (§6). It is counted rather than
+ * asserted in prose because the previous version of this report printed
+ * `allowed 0 foreign subresource(s)` against a single-origin fixture — a number
+ * that could only ever be zero, presented as evidence.
+ */
+const PAGE_ORIGIN = new URL(TARGET).origin;
+const foreignAssetUrls = Object.keys(assetEntries)
+  .filter((u) => { const o = originOf(u); return o !== null && o !== PAGE_ORIGIN; });
+
+// A subresource allowed because its origin was allowlisted would prove nothing
+// about the guard. Assert the second origin was never navigable in the first
+// place, so "allowed" can only mean "allowed as a subresource".
+const declaredCdn = process.env['RUNG2_CDN_ORIGIN'] ?? '';
+if (declaredCdn) {
+  if (ALLOWED_ORIGINS.has(declaredCdn)) {
+    finding('boundary-misconfigured',
+      `${declaredCdn} is in allowedOrigins, so its subresources prove nothing about the guard`);
+  }
+  if (!foreignAssetUrls.some((u) => u.startsWith(declaredCdn))) {
+    finding('boundary-allow-branch-dead',
+      `no subresource was recorded from ${declaredCdn}; the guard's allow branch did not run`);
+  }
+}
+
 const rung = Number(process.env['SITEFORGE_RUNG'] ?? 2);
-const { spec, failures, surprises } = checkRung(rung, extractedCounts);
+// Augmented with the boundary measurement: `foreignAssets` is a property of the
+// crawl, not an extraction category, so it gates the rung without widening
+// coverage.json's schema.
+const rungCounts = {
+  ...extractedCounts,
+  foreignAssets: foreignAssetUrls.length,
+  blockedOffOriginNavigations: blockedNavigations.filter((e) => e.kind === 'navigation').length,
+};
+const { spec, failures, surprises } = checkRung(rung, rungCounts);
 console.log('');
 console.log(`  RUNG ${rung} — ${spec.label}`);
 for (const key of spec.expectNonEmpty) {
-  const ok = extractedCounts[key] > 0;
-  console.log(`    ${ok ? '✓' : '✗'} ${key.padEnd(22)} ${extractedCounts[key] ?? 0}`);
+  const ok = rungCounts[key] > 0;
+  console.log(`    ${ok ? '✓' : '✗'} ${key.padEnd(22)} ${rungCounts[key] ?? 0}`);
 }
 for (const key of spec.knownEmpty) {
-  console.log(`    · ${key.padEnd(22)} ${extractedCounts[key] ?? 0}  (known-empty at this rung)`);
+  console.log(`    · ${key.padEnd(22)} ${rungCounts[key] ?? 0}  (known-empty at this rung)`);
 }
 for (const s2 of surprises) {
   finding('rung-declaration-stale', `${s2} is declared known-empty at rung ${rung} but produced output; update the declaration`);

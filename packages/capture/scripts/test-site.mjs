@@ -21,77 +21,28 @@
  *   node packages/capture/scripts/test-site.mjs [port]
  */
 import { createServer } from 'node:http';
-import { deflateSync } from 'node:zlib';
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 
 /* ------------------------------------------------------------------- assets */
 
-const CRC = (() => {
-  const t = new Int32Array(256);
-  for (let n = 0; n < 256; n += 1) {
-    let c = n;
-    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c;
-  }
-  return (buf) => {
-    let c = -1;
-    for (const b of buf) c = t[(c ^ b) & 0xff] ^ (c >>> 8);
-    return (c ^ -1) >>> 0;
-  };
-})();
-
-const chunk = (type, data) => {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(CRC(body));
-  return Buffer.concat([len, body, crc]);
-};
-
-/** A real, valid PNG: solid colour, w×h. Distinct bytes per colour and size. */
-function png(w, h, [r, g, b]) {
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(w, 0);
-  ihdr.writeUInt32BE(h, 4);
-  ihdr[8] = 8; ihdr[9] = 2; // 8-bit RGB
-  const raw = Buffer.alloc((w * 3 + 1) * h);
-  for (let y = 0; y < h; y += 1) {
-    const off = y * (w * 3 + 1);
-    raw[off] = 0;
-    for (let x = 0; x < w; x += 1) {
-      // A faint gradient so the images are not literally identical.
-      raw[off + 1 + x * 3] = (r + x) & 0xff;
-      raw[off + 2 + x * 3] = (g + y) & 0xff;
-      raw[off + 3 + x * 3] = b;
-    }
-  }
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
+import { FONT_AVAILABLE, FONT_PATH, png } from './test-assets.mjs';
 
 /**
- * Inter, SIL OFL 1.1, from the pinned `@fontsource/inter` dependency.
- *
- * Not the OS copy: an OS-installed font makes the idempotency gate
- * non-reproducible on CI, which is the one thing that gate exists to be. Not a
- * committed binary either — a lockfile-pinned package is reproducible *and*
- * carries its own licence, which macOS's Noto copy ("All Rights Reserved", no
- * bundled licence) does not.
+ * The second origin, when rung 2 runs one (see test-cdn.mjs). Empty means the
+ * page is self-contained, which is how this file behaves when run by hand.
  */
-const FONT_PATH = fileURLToPath(
-  new URL('../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2', import.meta.url),
-);
-const FONT_AVAILABLE = existsSync(FONT_PATH);
+const CDN = process.env['RUNG2_CDN_ORIGIN'] ?? '';
 
 /* -------------------------------------------------------------------- pages */
 
-const CSS = `
+const CSS = `${CDN ? `@font-face {
+  font-family: "Siteforge Remote";
+  src: url("${CDN}/cdn/font.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+.remote-note { font-family: "Siteforge Remote", serif; }
+` : ''}
 @font-face {
   font-family: "Siteforge Test";
   src: url("/fonts/siteforge-test.woff2") format("woff2");
@@ -186,6 +137,11 @@ const INDEX = `<!doctype html>
   <h1>A static page with the parts example.com lacks</h1>
   <p>External stylesheet, a web font, images, pseudo-class rules, and enough
      height to scroll.</p>
+${CDN ? `  <p class="remote-note">This paragraph is set in a font fetched from another
+     origin, next to an image from that same origin — both subresources, both
+     allowed and recorded by the crawl boundary.</p>
+  <img src="${CDN}/cdn/hero.png" alt="Served by the second origin" width="240" height="120">
+` : ''}
 
   <div class="accordion" data-state="closed">
     <button class="trigger btn" type="button" aria-expanded="false" aria-controls="panel">Details</button>
@@ -197,6 +153,20 @@ const INDEX = `<!doctype html>
     <label class="opt"><input type="checkbox" disabled> <span>Disabled option</span></label>
   </p>
   <p><button class="btn" type="button" disabled>Disabled action</button></p>
+
+  <!--
+    An escape the crawl must refuse. Rung 2 is a static capture with no probing,
+    so this fires on load: the boundary's block branch has to be exercised by
+    the same fixture that exercises its allow branch, or a guard that blocks
+    everything and a guard that blocks nothing both look green here.
+    example.net is IANA-reserved and the request is aborted at the router, so
+    nothing leaves the machine.
+  -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      window.open('https://example.net/partner', '_blank');
+    });
+  </script>
 
   ${[0, 1, 2, 3, 4].map(section).join('\n')}
 </main>
