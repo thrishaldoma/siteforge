@@ -114,6 +114,15 @@ beyond what was ruled: a wrongly-gated GET costs an agent a login step, while
 gating every public read would break the anonymous crawl the clone also has to
 reproduce.
 
+> **Superseded — see 0014.** The operator withdrew the asymmetry. `unknown`
+> resolves to required, reads included, and `resolveAuthForCodegen` no longer
+> takes `isMutation`. The worry above — that gating every public read would
+> break the anonymous crawl — rested on `unknown` being common for reads. It is
+> not: §6 re-issues every distinct GET anonymously, so a public read carries
+> `anonymous-success` and resolves open on evidence without reaching the
+> resolver. What the asymmetry actually protected was the reads nobody probed,
+> and publishing those is the failure that cannot be seen.
+
 ### A subtlety the fixture now records
 
 **A 401 is only evidence of a requirement when it answers an *uncredentialed*
