@@ -1,0 +1,13 @@
+diff --git a/packages/schema/src/site-model/presentation.ts b/packages/schema/src/site-model/presentation.ts
+index 737a7e2..6fe3ebf 100644
+--- a/packages/schema/src/site-model/presentation.ts
++++ b/packages/schema/src/site-model/presentation.ts
+@@ -260,6 +260,8 @@ export const LayoutSchema = z.strictObject({
+  */
+ export const RouteTemplateSchema = z.strictObject({
+   templateId: z.string().regex(/^tpl_[a-z0-9]+(-[a-z0-9]+)*$/),
++  /** Free-text note for reviewers. */
++  notes: z.string().nullable(),
+   pathPattern: z.string().regex(/^\//),
+   layoutId: z.string().min(1),
+   content: ChildNodeSchema,

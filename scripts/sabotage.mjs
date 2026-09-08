@@ -189,6 +189,13 @@ const SABOTAGES = [
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
     expect: 'must classify as required, never absent',
   },
+  {
+    id: 'sitemodel-unclaimed-field',
+    bug: 'a field lands in SiteModel that no codegen need and no scored category asks for',
+    reachable: 'a convenience field added to a section that is already claimed — the realistic way the model drifts back towards a renamed CaptureModel, one legitimate-looking addition at a time',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: 'the model carries a field no consumer asked for',
+  },
 
   // ---- controls: the gate must NOT fire ------------------------------------
 
