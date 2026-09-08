@@ -36,6 +36,7 @@
 
 import { readFileSync, statSync } from 'node:fs';
 import { CAPTURE_TREE_EXPECTATION, walkFiles, type ScanExpectation } from './scan-walker.js';
+import { matchPath, parsePathPattern } from './identifiers.js';
 import { join, relative, sep } from 'node:path';
 
 /** A credential-shaped thing found in an artifact. */
@@ -193,6 +194,8 @@ export function scanText(
  * `.gitignore` pattern and the bare-name ignore list, now in §3.4.
  */
 export const STORAGE_STATE_PATH = 'auth/storage-state.json';
+/** Compared as a path, by segment — never as a string, in either direction. */
+const STORAGE_STATE_PATTERN = parsePathPattern(`/${STORAGE_STATE_PATH}`);
 /** @deprecated Kept as the old name; prefer the exact-path constant above. */
 export const STORAGE_STATE_SUFFIX = STORAGE_STATE_PATH;
 export const STORAGE_STATE_MODE = 0o600;
@@ -234,7 +237,7 @@ export function scanCaptureTree(
   for (const abs of files) {
     const rel = relative(root, abs).split(sep).join('/');
 
-    if (rel === STORAGE_STATE_PATH) {
+    if (matchPath(rel, STORAGE_STATE_PATTERN)) {
       // Exempt from the content scan — this file exists to hold the session
       // (§5) — but it has to prove it is protected, reported into the same
       // list so one gate covers both.

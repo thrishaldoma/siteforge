@@ -29,8 +29,10 @@ const PREFIX_IMPOSTORS = [
 
 describe('an origin is a parsed component, not a string prefix', () => {
   it.each(PREFIX_IMPOSTORS)('rejects %s — %s', (url) => {
+    // identifier: URLs, and the string op IS the subject — these two lines
+    // demonstrate that the impostor satisfies the prefix test the fix removed.
     const against = url.startsWith(ORIGIN) ? ORIGIN : PORTLESS;
-    // The property the fix is about: the impostor passes the old test.
+    // identifier: URLs, as above — asserting the broken comparison's answer.
     expect(url.startsWith(against)).toBe(true);
     expect(sameOrigin(url, against)).toBe(false);
   });

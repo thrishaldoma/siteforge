@@ -211,6 +211,29 @@ export function deriveRouteId(
 }
 
 /**
+ * Take a `routeId` apart again.
+ *
+ * A routeId is a delimiter grammar, so asking about it with `includes()` is the
+ * same mistake as asking about a path that way: `routeId.includes('--anon--')`
+ * is satisfied by a *pattern slug* that happens to contain those characters,
+ * not only by the context field. Returns null when the id is not well formed,
+ * which is a different answer from "the context does not match".
+ */
+export function parseRouteId(
+  routeId: string,
+): { patternSlug: string; contextId: string; instanceIndex: number } | null {
+  const parts = routeId.split('--');
+  if (parts.length < 3) return null;
+  const instance = parts[parts.length - 1]!;
+  const match = /^i(\d+)$/.exec(instance);
+  if (match === null) return null;
+  const contextId = parts[parts.length - 2]!;
+  const patternSlug = parts.slice(0, parts.length - 2).join('--');
+  if (patternSlug.length === 0 || contextId.length === 0) return null;
+  return { patternSlug, contextId, instanceIndex: Number(match[1]) };
+}
+
+/**
  * `endpointId` from the method and the normalized path pattern.
  *
  * Derivation is contract, not convenience (decision 0011): the id is a *derived*

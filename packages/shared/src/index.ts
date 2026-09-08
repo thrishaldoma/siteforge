@@ -1,6 +1,7 @@
 // @siteforge/shared — cross-cutting contracts and utilities.
 export * from './element-ref.js';
 export * from './scan-walker.js';
+export * from './identifiers.js';
 export * from './narrowing.js';
 export * from './secret-scan.js';
 export * from './errors.js';

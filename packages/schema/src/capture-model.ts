@@ -14,6 +14,7 @@
 import { z } from 'zod';
 import { FlowIdSchema, RouteIdSchema, SiteIdSchema } from './primitives.js';
 import { deriveRouteContentHash } from './artifact.js';
+import { parseRouteId } from './identity.js';
 import { CAPTURE_MODEL_VERSION } from './version.js';
 import { CaptureManifestSchema } from './manifest.js';
 import { RouteMetaSchema } from './route.js';
@@ -152,7 +153,9 @@ export const CaptureModelSchema = z
         });
         continue;
       }
-      if (!routeId.includes(`--${route.meta.contextId}--`)) {
+      // Parsed, not substring-tested: `includes('--anon-desktop--')` is also
+      // satisfied by a pattern slug containing those characters.
+      if (parseRouteId(routeId)?.contextId !== route.meta.contextId) {
         ctx.addIssue({
           code: 'custom',
           path: ['routes', routeId, 'meta', 'contextId'],

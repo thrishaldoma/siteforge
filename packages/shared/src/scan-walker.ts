@@ -29,6 +29,9 @@
  */
 import { readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import {
+  PathPatternError, matchPath, matchesAnyPath, parsePathPattern, type PathPattern,
+} from './identifiers.js';
 
 /** Source extensions. A scanner that misses `.mjs` misses this repo's crawler. */
 export const SOURCE_EXTENSIONS = ['.ts', '.mts', '.cts', '.mjs', '.cjs', '.js'] as const;
@@ -45,16 +48,13 @@ export const SOURCE_IGNORE = [
   '**/node_modules',
   '**/dist',
   '/.git',
-  '/packages/schema/fixtures',
+  '/packages/schema/fixtures/**',
 ] as const;
 
-/** The `tree` profile ignores nothing. Not a default — the only possibility. */
-const TREE_IGNORE = [] as const;
-
-const IGNORE_BY_PROFILE = {
-  source: SOURCE_IGNORE,
-  tree: TREE_IGNORE,
-} as const satisfies Record<ScanProfile, readonly string[]>;
+/**
+ * The `tree` profile ignores nothing. Not a default — the only possibility;
+ * see `PATTERNS_BY_PROFILE` below, which has no third case to configure.
+ */
 
 export type ScanProfile = 'source' | 'tree';
 
@@ -88,27 +88,27 @@ export interface ScanResult {
   profile: ScanProfile;
 }
 
-/** Anchoring is checked here so an unanchored pattern cannot reach a walk. */
-export const assertAnchoredPatterns = (patterns: readonly string[]): void => {
-  for (const p of patterns) {
-    if (!p.startsWith('/') && !p.startsWith('**/')) {
-      throw new VacuousScanError(
-        `ignore pattern ${JSON.stringify(p)} is unanchored. Use '/path' for an exact path or '**/name' for any depth — a bare name is how packages/capture/ was hidden from the linter.`,
-      );
-    }
+/**
+ * Anchoring is checked here so an unanchored pattern cannot reach a walk.
+ *
+ * The parsing and the matching both live in `identifiers.ts` now — this module
+ * had its own segment comparison, which is one more implementation of the
+ * thing that keeps going wrong.
+ */
+export const assertAnchoredPatterns = (patterns: readonly string[]): PathPattern[] => {
+  try {
+    return patterns.map(parsePathPattern);
+  } catch (err) {
+    if (err instanceof PathPatternError) throw new VacuousScanError(err.message);
+    throw err;
   }
 };
-assertAnchoredPatterns(SOURCE_IGNORE);
+const SOURCE_IGNORE_PATTERNS = assertAnchoredPatterns(SOURCE_IGNORE);
 
-const isIgnored = (relDir: string, patterns: readonly string[]): boolean =>
-  patterns.some((p) => {
-    if (p.startsWith('**/')) {
-      const name = p.slice(3);
-      return relDir === name || relDir.endsWith(`/${name}`);
-    }
-    const exact = p.slice(1);
-    return relDir === exact || relDir.startsWith(`${exact}/`);
-  });
+const PATTERNS_BY_PROFILE = {
+  source: SOURCE_IGNORE_PATTERNS,
+  tree: [] as PathPattern[],
+} as const satisfies Record<ScanProfile, readonly PathPattern[]>;
 
 const toPosix = (p: string): string => p.split(sep).join('/');
 
@@ -125,7 +125,7 @@ export function walkFiles(options: {
   expect: ScanExpectation;
 }): ScanResult {
   const { root, profile, expect } = options;
-  const ignore = IGNORE_BY_PROFILE[profile];
+  const ignore = PATTERNS_BY_PROFILE[profile];
   const found: string[] = [];
 
   const walk = (dir: string): void => {
@@ -133,7 +133,7 @@ export function walkFiles(options: {
       const abs = join(dir, entry.name);
       const rel = toPosix(relative(root, abs));
       if (entry.isDirectory()) {
-        if (!isIgnored(rel, ignore)) walk(abs);
+        if (!matchesAnyPath(rel, ignore)) walk(abs);
         continue;
       }
       if (!entry.isFile()) continue;
@@ -161,7 +161,8 @@ export function walkFiles(options: {
     );
   }
   for (const prefix of expect.mustReach) {
-    if (!rel.some((r) => r === prefix || r.startsWith(`${prefix}/`))) {
+    const under = parsePathPattern(`/${prefix}/**`);
+    if (!rel.some((r) => matchPath(r, under))) {
       throw new VacuousScanError(
         `the walk never reached ${prefix}/ — it is either missing, ignored, or filtered out by the ${profile} profile.`,
       );

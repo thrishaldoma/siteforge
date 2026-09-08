@@ -89,6 +89,8 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
     for (const line of lines) {
       const pattern = line.startsWith('!') ? line.slice(1) : line;
       expect(
+        // identifier: paths — .gitignore's own anchoring syntax, which is what this
+        // assertion is about; there is no parsed form of a pattern's leading marker.
         pattern.startsWith('/') || pattern.startsWith('**/'),
         `"${line}" is unanchored: it matches at any depth by accident. Use /x for root-only or **/x to say you meant any depth.`,
       ).toBe(true);
