@@ -1,0 +1,89 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "stage-report",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 12440
+  },
+  "stage": "infer",
+  "siteId": "northwind-supply",
+  "status": "ok-with-gaps",
+  "inputs": [
+    {
+      "path": "network/endpoints.json",
+      "sha256": "a0135658fd9ac7c93dd998f1b6bb315f0ea3788953b0b98aabb30c3d3496b626",
+      "bytes": 0
+    }
+  ],
+  "outputs": [],
+  "warnings": [
+    {
+      "code": "grade-not-run",
+      "message": "The scored-field contract is reported; no grade has run against this capture. §7.1 keeps the two separable on purpose."
+    }
+  ],
+  "gaps": [
+    {
+      "gapId": "gap_e0fb84bb13c7",
+      "stage": "infer",
+      "category": "endpoint-synthesized",
+      "severity": "degraded",
+      "subject": {
+        "endpointId": "delete-api-account",
+        "routeId": "account-orders--auth-desktop--i0"
+      },
+      "summary": "DELETE /api/account bound from a skipped control; behaviour synthesized.",
+      "detail": "Capture skipped the \"Delete account\" button by §6’s destructive heuristic, so no request was ever issued and no response was ever seen. Infer recovered the URL from a fetch() literal in the captured source. The clone implements the endpoint fully against the mock store — deleting an account is free locally, and a control that does nothing is worse than one that works, because it teaches an agent the button is inert. The response shape is derived from the inferred data model, not observed, which is why this is a gap: if the real endpoint returns something else, a trajectory that reads the response will diverge.",
+      "stub": {
+        "kind": "synthesized-endpoint",
+        "endpointId": "delete-api-account",
+        "basis": "inferred-data-model"
+      }
+    }
+  ],
+  "detail": {
+    "stage": "infer",
+    "metrics": {
+      "metricsVersion": 1,
+      "contractDigest": "357f102a16836bc3eae8a74882e3e85cb6250659f96d3f3e7ed5d64133ec8139",
+      "categories": [
+        "endpoint-identity",
+        "path-param-arity",
+        "path-param-naming",
+        "request-field-presence",
+        "response-field-presence",
+        "field-type",
+        "narrowing",
+        "identifier",
+        "synthesized-endpoint",
+        "auth"
+      ],
+      "metricIds": [
+        "endpoint-identity.precision",
+        "endpoint-identity.recall",
+        "path-param-arity.accuracy",
+        "path-param-naming.accuracy",
+        "request-field-presence.precision",
+        "request-field-presence.recall",
+        "response-field-presence.precision",
+        "response-field-presence.recall",
+        "field-type.accuracy",
+        "narrowing.precision",
+        "narrowing.recall",
+        "identifier.precision",
+        "identifier.recall",
+        "synthesized-endpoint.precision",
+        "auth.under-gate-count",
+        "auth.over-gate-rate",
+        "auth.evidence-coverage"
+      ],
+      "graded": false
+    },
+    "authUnknownEndpointIds": [
+      "delete-api-account",
+      "post-api-checkout"
+    ]
+  }
+}

@@ -1084,6 +1084,49 @@ write('bound-endpoints.json', z.strictObject({
   gaps: [boundDeleteGap],
 }, OUT_INFER);
 
+/* ------------------------------------ infer-stage: the FIRST stage report */
+
+/**
+ * What is being measured, reported before any score exists (0015 §7.1).
+ *
+ * This is infer's first report: no grade has run, so `graded` is false and
+ * there are no numbers anywhere in it. The scored categories are here so the
+ * list can be reviewed as a list — a category list that first becomes visible
+ * attached to a score gets read as a score, and a category quietly missing from
+ * the table is invisible in exactly the case that matters.
+ *
+ * The block is built by `inferMetricsBlock()` from the contract, not restated:
+ * the schema recomputes the category list, so a fixture that drifts from
+ * `GRADE_CATEGORIES` fails to parse here rather than in a review.
+ *
+ * `authUnknownEndpointIds` is 0014's ruling in the same artifact — derived from
+ * the endpoints, never typed out. §8 gates every one of these, and a long list
+ * means a shallow anonymous crawl the operator should see.
+ */
+const authUnknownEndpointIds = [...ENDPOINTS, boundDeleteEndpoint]
+  .filter((e) => e.requiresAuth === 'unknown')
+  .map((e) => e.endpointId)
+  .sort();
+
+write('stage-report.json', S.StageReportSchema, {
+  ...envelope('stage-report', 12440),
+  stage: 'infer', siteId: SITE_ID, status: 'ok-with-gaps',
+  inputs: [{ path: 'network/endpoints.json', sha256: sha256('network/endpoints.json'), bytes: 0 }],
+  outputs: [],
+  warnings: [
+    {
+      code: 'grade-not-run',
+      message: 'The scored-field contract is reported; no grade has run against this capture. §7.1 keeps the two separable on purpose.',
+    },
+  ],
+  gaps: [boundDeleteGap],
+  detail: {
+    stage: 'infer',
+    metrics: S.inferMetricsBlock({ graded: false }),
+    authUnknownEndpointIds,
+  },
+}, OUT_INFER);
+
 console.log(`✓ fixtures written to ${OUT.replace(process.cwd() + '/', '')}`);
 console.log(`  ${written.length} artifacts · ${routes.size} routes · ${ENDPOINTS.length} endpoints · 3 flows · ${GAPS.length} gaps`);
 console.log(`  contentHash ${contentHash.slice(0, 16)}…`);
