@@ -257,31 +257,47 @@ export const CaptureModelSchema = z
 
     // §1/§7: a gap that is referenced but never written is a gap that never
     // reaches GAPS.md, which is the whole failure the gap machinery prevents.
-    if (model.stageReport) {
-      const defined = new Set(model.stageReport.gaps.map((g) => g.gapId));
-      const referenced = new Map<string, string>();
-      const note = (gapId: string | undefined, where: string): void => {
-        if (gapId) referenced.set(gapId, where);
+    //
+    // Collected unconditionally. `stageReport` is optional because a capture in
+    // progress has not written one yet — but that must not become a way to
+    // reference gaps nothing will ever define.
+    const referencedGaps = new Map<string, string>();
+    const note = (gapId: string | undefined, where: string): void => {
+      if (gapId) referencedGaps.set(gapId, where);
+    };
+    for (const [routeId, route] of routes) {
+      for (const gapId of route.meta.gapIds) note(gapId, `routes/${routeId}/meta.json`);
+      const walkDom = (node: DomNode): void => {
+        if (node.nodeType !== 'element') return;
+        if (node.iframe && !node.iframe.sameOrigin) note(node.iframe.gapId, `routes/${routeId} iframe`);
+        if (node.shadowHost?.mode === 'closed') note(node.shadowHost.gapId, `routes/${routeId} closed shadow root`);
+        node.children.forEach(walkDom);
       };
-      for (const [routeId, route] of routes) {
-        for (const gapId of route.meta.gapIds) note(gapId, `routes/${routeId}/meta.json`);
-        const walkDom = (node: DomNode): void => {
-          if (node.nodeType !== 'element') return;
-          if (node.iframe && !node.iframe.sameOrigin) note(node.iframe.gapId, `routes/${routeId} iframe`);
-          if (node.shadowHost?.mode === 'closed') note(node.shadowHost.gapId, `routes/${routeId} closed shadow root`);
-          node.children.forEach(walkDom);
-        };
-        if (route.dom) walkDom(route.dom.root);
+      if (route.dom) walkDom(route.dom.root);
+    }
+    for (const flow of Object.values(model.flows)) {
+      for (const gapId of flow.gapIds) note(gapId, `flows/${flow.flowId}`);
+      note(flow.skipReason?.gapId, `flows/${flow.flowId} skipReason`);
+    }
+    for (const endpoint of model.endpoints.endpoints) {
+      note(endpoint.stub?.gapId, `endpoint ${endpoint.endpointId}`);
+    }
+    for (const origin of model.endpoints.thirdPartyOrigins) note(origin.gapId, `third-party ${origin.origin}`);
+
+    if (!model.stageReport) {
+      if (referencedGaps.size > 0) {
+        const [gapId, where] = [...referencedGaps][0]!;
+        ctx.addIssue({
+          code: 'custom',
+          path: ['stageReport'],
+          message:
+            `${where} references ${gapId}, but there is no stage report to define it. ` +
+            'A model that names gaps must carry the report that writes them.',
+        });
       }
-      for (const flow of Object.values(model.flows)) {
-        for (const gapId of flow.gapIds) note(gapId, `flows/${flow.flowId}`);
-        note(flow.skipReason?.gapId, `flows/${flow.flowId} skipReason`);
-      }
-      for (const endpoint of model.endpoints.endpoints) {
-        note(endpoint.stub?.gapId, `endpoint ${endpoint.endpointId}`);
-      }
-      for (const origin of model.endpoints.thirdPartyOrigins) note(origin.gapId, `third-party ${origin.origin}`);
-      for (const [gapId, where] of referenced) {
+    } else {
+      const defined = new Set(model.stageReport.gaps.map((g) => g.gapId));
+      for (const [gapId, where] of referencedGaps) {
         if (!defined.has(gapId)) {
           ctx.addIssue({
             code: 'custom',

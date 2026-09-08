@@ -339,6 +339,7 @@ describe('capture contexts (decision 0004)', () => {
     assets: load('assets/index.json'),
     endpoints: clone(endpoints),
     flows: {},
+    stageReport: clone(report),
     ...overrides,
   });
 
@@ -415,6 +416,7 @@ describe('shared content pointers (decision 0004)', () => {
       assets: load('assets/index.json'),
       endpoints: clone(endpoints),
       flows: {},
+      stageReport: clone(report),
     };
   };
 
@@ -496,6 +498,31 @@ describe('closed shadow roots are a permanent gap (§11)', () => {
     walk(bad['root'] as Record<string, unknown>);
     expect(touched, 'fixture no longer contains a closed shadow root').toBeGreaterThan(0);
     expect(DomDocumentSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('rejects referenced gaps when there is no stage report at all', () => {
+    // The escape hatch: stageReport is optional for a capture in progress, which
+    // must not become a way to name gaps nothing will ever define.
+    const m = {
+      modelVersion: CAPTURE_MODEL_VERSION,
+      siteId: 'northwind-supply',
+      manifest: (() => {
+        const x = clone(manifest) as Record<string, unknown>;
+        x['routeIds'] = [MUG];
+        x['patterns'] = [{ urlPattern: '/product/:id', observedUrlCount: 1, routeIds: [MUG] }];
+        return x;
+      })(),
+      routes: {
+        [MUG]: { meta: clone(routeMeta), dom: clone(routeDom), styles: clone(routeStyles), states: clone(routeStates) },
+      },
+      assets: load('assets/index.json'),
+      endpoints: clone(endpoints),
+      flows: {},
+      // no stageReport
+    };
+    const result = CaptureModelSchema.safeParse(m);
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain('no stage report to define it');
   });
 
   it('rejects a gapId that the stage report never defines', () => {
