@@ -1064,10 +1064,11 @@ if (blockedOffOrigin.length === 0) {
 } else {
   console.log(`  boundary: blocked ${blockedOffOrigin.length} off-origin navigation(s), ${blockedNavigations.length - blockedOffOrigin.length} popup/download`);
 }
-// The other half: a guard that blocks everything would also pass the check
-// above, and would break capture on every real site.
-const foreignSubresources = Object.keys(assetEntries).filter((u) => !u.startsWith(ORIGIN));
-console.log(`  boundary: allowed ${foreignSubresources.length} foreign subresource(s)`);
+// The other half of the guard — that a foreign *subresource* still goes out — is
+// asserted in scripts/origin-guard.test.mjs against a page that actually
+// requests one. It is deliberately not counted here: this fixture serves
+// everything from its own origin, so the number would be structurally zero and
+// a reader would take it as evidence of something it cannot show.
 
 for (const f of failures) finding('rung-gate', `rung 3 expects ${f.key} non-empty, got ${f.actual}`);
 for (const s2 of surprises) finding('rung-declaration-stale', `${s2} is declared known-empty at rung 3 but produced output`);
