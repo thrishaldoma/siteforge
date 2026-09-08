@@ -213,6 +213,15 @@ export const SABOTAGES = [
     expect: 'still reports a score against an empty side',
     change: 'drop the empty-truth ungrounding from gradeSiteModel',
   },
+  {
+    id: 'binary-source-check-removed',
+    bug: 'a NUL byte in a source file stops being noticed, so its diffs are unreadable and no patch can be authored against it',
+    reachable:
+      'the check deleted outright — the same shape as walker-mustreach-disabled, and the likeliest fate of a whole-repo byte scan somebody finds slow. It landed today because a NUL really did reach grade.ts and really did make git call the file binary',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'binary-source',
+    change: 'return [] from assessSourceBytes without looking at the bytes',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
