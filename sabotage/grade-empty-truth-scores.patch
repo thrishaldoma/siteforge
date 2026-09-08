@@ -1,0 +1,21 @@
+diff --git a/packages/verify/src/grade/grade.ts b/packages/verify/src/grade/grade.ts
+index 352ee4d..6fd27e9 100644
+--- a/packages/verify/src/grade/grade.ts
++++ b/packages/verify/src/grade/grade.ts
+@@ -489,15 +489,9 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
+    * the second, and it reports a bug in the first — the same arrangement as the
+    * post-click origin check behind the router chokepoint.
+    */
+-  const emptyTruth =
+-    all.truthInUniverse === 0
+-      ? `the ground truth has no endpoints under ${truth.basePath}; §6 — a grader whose truth did not load reports nothing`
+-      : undefined;
+-
+   const metrics: MetricResult[] = GRADE_METRICS.map((metric) => {
+     const tally = byMetric[metric.id] ?? ZERO;
+-    const ungrounded =
+-      emptyTruth ?? (notDerived.has(metric.category) ? ungroundedIdentifier : tally.ungrounded);
++    const ungrounded = notDerived.has(metric.category) ? ungroundedIdentifier : tally.ungrounded;
+     const kind: MetricKind = COUNT_METRICS.has(metric.id) ? 'count' : 'rate';
+     const vacuous = ungrounded !== undefined || tally.denominator === 0;
+     const value = vacuous

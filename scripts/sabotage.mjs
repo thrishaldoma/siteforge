@@ -204,6 +204,15 @@ export const SABOTAGES = [
     expect: 'two claimants read one leaf without saying so',
   },
 
+  {
+    id: 'grade-empty-truth-scores',
+    bug: 'a ground truth with no endpoints still lets categories report a score',
+    reachable:
+      'the grader as written this morning. `endpoint-identity.recall` is computed against the OBSERVED list and never reads the truth at all, so it reported 1.000 inside a report whose truth side was empty — found by the truth-emptied mutation on the harness\'s first run, hours after the code was written',
+    gate: ['pnpm', '-s', 'grade:baseline'],
+    expect: 'still reports a score against an empty side',
+    change: 'drop the empty-truth ungrounding from gradeSiteModel',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
