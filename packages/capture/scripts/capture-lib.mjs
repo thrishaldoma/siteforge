@@ -485,11 +485,13 @@ export function installEscapeGuards(page, { onBlocked }) {
     // already covered by the router — `parentFrame() === null` is true of a
     // popup's top frame too, which is why the guard is written that way rather
     // than comparing against one page's mainFrame().
+    // operational: the popup is already recorded and is being discarded; a close that races page teardown changes nothing we go on to read.
     await popup.close().catch(() => {});
   });
   page.on('download', async (download) => {
     const url = download.url();
     onBlocked({ kind: 'download', url, origin: originOrNull(url) });
+    // operational: the download is already recorded as a gap; cancelling a transfer that has already ended is not a failure.
     await download.cancel().catch(() => {});
   });
 }

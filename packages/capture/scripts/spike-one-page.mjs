@@ -477,6 +477,7 @@ for (const [sfIdx, backendNodeId] of sfIdxToBackend) {
     const { listeners } = await cdp.send('DOMDebugger.getEventListeners', { objectId: object.objectId });
     const types = [...new Set((listeners ?? []).map((l) => l.type))];
     if (types.length) listenersBySfIdx.set(sfIdx, types);
+    // operational: releasing a CDP handle we are done with; nothing downstream reads this object.
     await cdp.send('Runtime.releaseObject', { objectId: object.objectId }).catch(() => {});
   // operational: the node detached between resolve and release
   } catch { /* detached or non-element node */ }
@@ -541,6 +542,7 @@ mkdirSync(join(OUT, 'routes'), { recursive: true });
 
 // The HAR is only flushed on context close, so the browser shuts down before the
 // artifacts are assembled rather than after.
+// operational: detaching at the end of the run; nothing is read from the session afterwards.
 await cdp.detach().catch(() => {});
 await context.close();
 await browser.close();

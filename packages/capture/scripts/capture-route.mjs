@@ -51,6 +51,7 @@ export async function readEventListeners(cdp, backendToSfIdx) {
       const { listeners } = await cdp.send('DOMDebugger.getEventListeners', { objectId: object.objectId });
       const types = [...new Set((listeners ?? []).map((l) => l.type))];
       if (types.length) out.set(sfIdx, types);
+      // operational: releasing a CDP handle we are done with. The page may already be gone, and nothing downstream reads this object.
       await cdp.send('Runtime.releaseObject', { objectId: object.objectId }).catch(() => {});
     // operational: the node detached between resolve and release
     } catch { /* detached or non-element */ }

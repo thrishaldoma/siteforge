@@ -97,6 +97,7 @@ describe('the off-origin chokepoint prevents rather than detects', () => {
 
   it('lets same-origin navigation through', async () => {
     const { blocked } = await run(async (page) => {
+      // operational: the assertion is about what the router did, and a same-origin click that does not settle still exercises it.
       await page.click('#same').catch(() => {});
     });
     expect(blocked.filter((b) => b.kind === 'navigation')).toHaveLength(0);

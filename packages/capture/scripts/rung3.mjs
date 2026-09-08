@@ -246,6 +246,7 @@ for (const context of CONTEXTS) {
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('DOM.enable');
   await cdp.send('Accessibility.enable');
+  // operational: the domain may already be enabled on this session; the calls that need it fail loudly on their own if it is not.
   await cdp.send('DOMDebugger.enable').catch(() => {});
 
   for (const plan of PLAN.filter((p) => p.contextId === context.contextId)) {
@@ -277,6 +278,7 @@ for (const context of CONTEXTS) {
     );
   }
 
+  // operational: detaching from a session whose page is closing; nothing is read from it afterwards.
   await cdp.detach().catch(() => {});
   await ctx.close();
 }
@@ -325,6 +327,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomT
     // when the page is already idle it resolves before the click's fetch has
     // even been issued, and the page then closes underneath the request.
     await page.waitForTimeout(400);
+    // operational: a settle timeout is the expected outcome on a page holding a connection open, and the snapshot after it is taken either way.
     await page.waitForLoadState('networkidle', { timeout: 1500 }).catch(() => {});
     await settleResponses();
     const after = await snap();
@@ -717,14 +720,39 @@ const anonRouteRef = { current: [...routes.keys()].find((k) => k.includes('anon-
 attachApiRecorder(anonPage, anonRouteRef, { anonymousProbe: true });
 await anonPage.goto(`${ORIGIN}/login`, { waitUntil: 'domcontentloaded' });
 const getUrls = [...new Set(observations.filter((o) => o.method === 'GET').map((o) => o.url))];
+/*
+ * A probe that failed is not a probe that found nothing.
+ *
+ * This swallowed the rejection, and the consequence ran a long way: no response
+ * recorded means no `anonymous-success` and no 401 either, so the endpoint
+ * stays `unknown` — and §8 resolves `unknown` to *not-required* for reads. A
+ * transient failure here would therefore publish a gated read in the clone,
+ * making every §10 auth task through it trivially bypassable. The failure has
+ * to be louder than the absence it would otherwise be mistaken for.
+ */
+const anonProbeFailures = [];
 for (const url of getUrls) {
-  await anonPage.evaluate(
-    (u) => fetch(u, { headers: { accept: 'application/json' } }).catch(() => {}), url);
+  const outcome = await anonPage.evaluate(async (u) => {
+    try {
+      const response = await fetch(u, { headers: { accept: 'application/json' } });
+      return { ok: true, status: response.status };
+    } catch (err) {
+      // operational: a network-level rejection in the page. Returned as a
+      // value rather than swallowed, so the caller can tell it apart from a
+      // probe that ran and learned the endpoint is public.
+      return { ok: false, error: String(err) };
+    }
+  }, url);
+  if (!outcome.ok) anonProbeFailures.push({ url, error: outcome.error });
   await anonPage.waitForTimeout(80);
 }
 await settleResponses();
 await anonCtx.close();
 console.log(`  auth probe: re-issued ${getUrls.length} GET endpoint(s) anonymously`);
+for (const failure of anonProbeFailures) {
+  finding('auth-probe-failed',
+    `the anonymous re-issue of ${failure.url} did not complete (${failure.error}); its auth requirement stays 'unknown', which §8 resolves to not-required for a read`);
+}
 
 await browser.close();
 

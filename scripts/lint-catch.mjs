@@ -71,6 +71,20 @@ export function blankNonCode(text) {
   return out.join('');
 }
 
+/** The span from `open` to its matching close, for any bracket pair. */
+function spanAt(text, open, [openCh, closeCh]) {
+  let depth = 0;
+  for (let i = open; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === openCh) depth += 1;
+    else if (ch === closeCh) {
+      depth -= 1;
+      if (depth === 0) return text.slice(open, i + 1);
+    }
+  }
+  return text.slice(open);
+}
+
 /** The body of the block starting at `open`, by brace matching. */
 function blockAt(text, open) {
   let depth = 0;
@@ -126,6 +140,30 @@ export function lintCatches(file, text) {
       });
     }
   }
+
+  /*
+   * `.catch(fn)` is the same swallow with different syntax, and it was
+   * invisible to the rule above — nine of them sat in the crawler while the
+   * linter reported every catch accounted for. `await popup.close().catch(() =>
+   * {})` discards a defect exactly as `try/catch` would.
+   */
+  const promiseRe = /\.catch\s*\(/g;
+  while ((m = promiseRe.exec(code)) !== null) {
+    examined += 1;
+    const open = code.indexOf('(', m.index);
+    const handler = spanAt(code, open, ['(', ')']);
+    const line = lineOf(code, m.index);
+    const lineStart = text.lastIndexOf('\n', m.index) + 1;
+    const prevStart = text.lastIndexOf('\n', lineStart - 2) + 1;
+    const nearby = text.slice(prevStart, lineStart) + text.slice(open, open + handler.length);
+    if (/\/\/\s*operational:/.test(nearby)) continue;
+    if (/rethrowIfDefect|isOperationalError|\bthrow\b/.test(handler)) continue;
+    violations.push({
+      file, line,
+      message: `.catch(${handler.slice(1, -1).trim().slice(0, 40)}) swallows every rejection, defects included. Call rethrowIfDefect first, or justify it with \`// operational: <reason>\`.`,
+    });
+  }
+
   return { examined, violations };
 }
 
