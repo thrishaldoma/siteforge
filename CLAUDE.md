@@ -171,6 +171,15 @@ The gap alone is not enough for the next stage to act on: a skipped `FlowTrace` 
 Step scroll in 0.5-viewport increments to the bottom. Screenshot each step. Diff consecutive DOM snapshots to detect lazy loading, infinite scroll, sticky/fixed transitions, and IntersectionObserver reveals. Record scroll-triggered state changes explicitly — they are a common source of "the clone looks right on load and wrong at 40% scroll."
 
 ### Authenticated capture
+**Two auth modes, and they change what probing is possible.** `manifest.crawl.sessionProbePolicy` records which one ran, derived from `credentialSource`:
+
+- **credentialed** — credentials from env or keychain (§3.3), so re-auth is non-interactive. Session-destructive probes run freely, each on a session acquired for the purpose and thrown away after.
+- **interactive** — a headful human login that cannot be repeated. There is one session to spend: session-destructive probes run **last**, once, and the crawl terminates after.
+
+A coverage invariant must not hold an interactive capture to a credentialed one's standard, so `coverage.observed.sessionProbePolicy` carries the mode and the session-destructive invariant is vacuous under `interactive`.
+
+Phase ordering is enforced by the scheduler (`planProbeSchedule`) and asserted by a test, not left as a convention — ordinary probes, then session-destructive, then target-destructive.
+
 `--auth` launches headful, navigates to the login route, and waits for the operator to sign in by hand (this handles MFA and CAPTCHA without any bypass logic). On success, persist `storageState`. Every subsequent run reuses it non-interactively until it expires. Anonymous and authenticated crawls are two **capture contexts** (`CaptureContext`, decision 0004), declared in the manifest and referenced by every `routeId` as `<pattern>--<context>--i<instance>`. Record which routes require auth (`RouteMeta.requiresAuth`) and what an anonymous visitor gets (`unauthenticatedBehavior`), because the clone must reproduce the redirect-to-login behavior.
 
 **Both are three-valued and both are derived, never declared.** `requiresAuth` must equal `resolveAuthRequirement(authEvidence)`; the schema rejects a verdict the observations do not support, so `not-required` without an observed anonymous success is unrepresentable rather than merely discouraged. Use the evidence you already have:
@@ -206,6 +215,17 @@ Two properties make an invariant actually work, both learned by reintroducing a 
 2. **It must compare like with like.** An aggregate output count lets one category mask another's disappearance.
 
 **Standing rule:** whenever a rung finds a silent drop, add the invariant that would have caught it. The list is meant to grow.
+
+### The crawl boundary
+Same-origin is enforced at a **chokepoint**, not by declining to follow links. A control that calls `window.open` or assigns `location` reaches another origin without any link being followed, and §6's behaviour probing clicks controls — so "do not follow off-origin links" left the boundary open to exactly the thing probing does.
+
+In `context.route('**/*')`, before anything else: **abort a main-frame navigation whose origin is not in `manifest.crawl.allowedOrigins`.** That set derives from the crawl scope, in one place; a literal list at each call site is how one boundary ends up enforced three ways, two of them stale.
+
+**Subresources to any origin are allowed and recorded.** Fonts, images, scripts and XHR from CDNs are how real sites render, and §8 localizes them later. A guard that blocks them breaks capture on every site worth cloning, so the rule is narrow on purpose. A request whose frame cannot be resolved is a subresource *unless it is a navigation* — Playwright throws on `request.frame()` for a popup's first navigation, and treating that as safe let a `window.open` to another origin complete. A navigation is never a font.
+
+Close the escapes that never become a routable request: `page.on('popup')` records and closes immediately and never crawls; `target="_blank"` produces the same; a `download` event is recorded and cancelled.
+
+Keep the post-click origin check as a **second layer that reports a bug in the first**. If it ever fires, the interceptor has a hole.
 
 ### Crawl frontier
 BFS from the entry URL. Same-origin only. Respect `--max-depth` (default 3), and the context-aware budget (decision 0004): `--max-routes` (default 40) applies **per context**, the cap of 3 instances applies **per (pattern, context)**, and `maxRoutesTotal` is a global ceiling across every context — without it, declaring six contexts silently costs six times as much. Three product pages is enough to infer the template, thirty is waste.
@@ -402,7 +422,9 @@ Milestone gates. Do not start a milestone before the previous one's gate is gree
 - **The definition of green is `pnpm verify:clean`**: a fresh clone of the committed HEAD, installed, built, tested, and both measurement rungs run in a temp directory. No milestone gate in §12 counts unless it passed there. A gate that runs where the code already is cannot tell you the code is committed — `packages/capture/` was ignored by an unanchored `.gitignore` pattern and had never been committed at all, while every local check passed.
 - **Every `.gitignore` pattern is explicitly anchored**: `/x` for root-only, `**/x` where any-depth is intended. An unanchored pattern matches at any depth by accident, which is how a source package disappeared. A test asserts it, and asserts that every workspace package has tracked files.
 - **§3.4 is a gate, not a note.** Every file written under `capture/` is scanned for cookies, `Authorization` headers, bearer and JWT shapes, and the literal values of `SITEFORGE_USER`/`SITEFORGE_PASS`. A hit fails the run. `auth/storage-state.json` is the one exemption and is checked for mode `0600` instead — the single artifact allowed to hold a credential has to prove it is protected.
+- **A fixture app must be able to inflict the hazard it exists to test.** The sabotage rule, one level up. The rung-3 logout handler returned 204 without touching the session map, so "session-destructive" was a hazard the fixture could not actually cause — and a probe that cannot break anything proves nothing about the mechanism guarding it. The details panel toggled a class the stylesheet then styled, while claiming to be invisible to the CSSOM pass; worse, it handed the detector exactly the class diff it keys on. Audit every rung fixture for hazards it only pretends to have, and never engineer the signal the detector happens to look for.
 - **No invariant lands without a sabotage test** that reintroduces the bug and proves the invariant fails. Two invariants written to catch a specific silent drop were checked by hand against that drop and stayed green — twice. Neither was visible by reading the invariant; both were visible in ten seconds by breaking the extractor and watching nothing happen. An invariant that never fires is indistinguishable from one that passes.
+- **Two error classes, and only one may be caught.** *Operational* — a timeout, an aborted navigation, a detached element, a refused connection: expected, recoverable, becomes a gap. *Everything else* is a defect and must propagate. No bare `catch`, no `catch (e) {}` that swallows by default: call `rethrowIfDefect(err)` first, or justify the swallow with `// operational: <reason>`. `pnpm lint` enforces it. A catch that cannot tell them apart converts a bug into missing data, which is strictly worse than a crash — a crash stops the run, missing data reports success and poisons everything downstream.
 - **An invariant's observed side must be derived independently of the thing it checks.** Counting inputs with the same parser the extractor uses means a bug in that parser moves both sides and the check goes vacuous. Use raw text and a cruder detector; over-counting there is safe, sharing a code path is not.
 - **Counts must be disaggregated to the granularity of the failure.** An aggregate lets a partial loss hide inside a surviving total: with attribute-state extraction fully broken, nine surviving pseudo-class entries kept `statesCssom` non-zero and the check held. Prefer an equality over a non-emptiness assertion wherever the data allows one.
 - **Narrowing a type must be justified; widening is free.** `string` admits every value the real API can produce. An enum makes valid states of the real system unrepresentable in the clone, and §5 turns response schemas into the mock backend's data model — so a wrong one is silent and corrupts every trajectory touching that field. Any inference that narrows records its evidence in the model and lands in `GAPS.md` as review-required.
