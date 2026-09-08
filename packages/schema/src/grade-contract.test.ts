@@ -32,7 +32,8 @@ describe('the scored-field contract is frozen before the model it constrains', (
   it('the committed digest matches the table', () => {
     // Moving a threshold without updating the constant fails here, so the
     // change cannot be made quietly — it shows up in review as two lines.
-    expect(computeGradeContractDigest()).toBe(GRADE_CONTRACT_DIGEST);
+    expect(computeGradeContractDigest(), 'the contract table moved without its digest')
+      .toBe(GRADE_CONTRACT_DIGEST);
   });
 
   it('imports nothing but zod and node:crypto — the model layer least of all', () => {
@@ -169,7 +170,7 @@ describe("infer's first stage report says what is measured, before any score", (
 
   it('rejects an infer report that omits it', () => {
     const result = StageReportSchema.safeParse({ ...REPORT_BASE, stage: 'infer' });
-    expect(result.success).toBe(false);
+    expect(result.success, 'an infer report with no scored-field contract parsed').toBe(false);
     expect(JSON.stringify(result.error?.issues)).toMatch(/scored-field contract/);
   });
 

@@ -122,7 +122,8 @@ describe('an anonymous status is classified fail-closed for the auth category', 
     // a gated endpoint from the truth set and turn a correct inference into a
     // hallucination — a wrong answer in a second category, caused by a default
     // chosen in this one.
-    expect(classifyAnonymousStatus(404)).toBe('required');
+    expect(classifyAnonymousStatus(404), 'a 404 to an anonymous caller must classify as required, never absent')
+      .toBe('required');
   });
 
   it('says indeterminate when it cannot decide, rather than guessing', () => {
