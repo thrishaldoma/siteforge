@@ -54,6 +54,47 @@ export const originOf = (url: string): string | null => {
  * excluded because §11 requires third-party iframes to load: they get a
  * screenshot placeholder and a gap, which needs them rendered.
  */
+/**
+ * Is `url` on exactly this origin?
+ *
+ * Never `url.startsWith(origin)`. A URL is a grammar with delimiters, and a
+ * prefix test cannot see them — both of these pass a prefix check and neither
+ * is same-origin:
+ *
+ *   http://127.0.0.1:8789@evil.example/x   → origin http://evil.example  (userinfo)
+ *   https://example.com.evil.net/x         → origin https://example.com.evil.net
+ *
+ * The second matters most: it needs no port on the legitimate origin, which is
+ * every real target. Parse and compare the component.
+ */
+export function sameOrigin(url: string, origin: string): boolean {
+  const parsed = originOf(url);
+  return parsed !== null && parsed === origin;
+}
+
+/**
+ * Is `url` on this origin *and* under this path prefix?
+ *
+ * The prefix is compared by **path segment**, so `/api` matches `/api/todos`
+ * and not `/api-docs` — the same delimiter blindness one level down.
+ */
+export function isUnder(url: string, scope: { origin: string; pathPrefix?: string }): boolean {
+  if (!sameOrigin(url, scope.origin)) return false;
+  if (scope.pathPrefix === undefined) return true;
+  const segments = (p: string): string[] => p.split('/').filter((x) => x.length > 0);
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    // operational: sameOrigin already parsed this successfully, so reaching
+    // here would be a defect in URL itself; treat as out of scope regardless.
+    return false;
+  }
+  const want = segments(scope.pathPrefix);
+  const got = segments(pathname);
+  return want.every((seg, i) => got[i] === seg);
+}
+
 export function decideNavigation(request: {
   url: string;
   isNavigation: boolean;
