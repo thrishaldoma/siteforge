@@ -1,0 +1,34 @@
+diff --git a/packages/schema/src/site-model/needs.ts b/packages/schema/src/site-model/needs.ts
+index e849dc8..482bdf9 100644
+--- a/packages/schema/src/site-model/needs.ts
++++ b/packages/schema/src/site-model/needs.ts
+@@ -157,6 +157,7 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
+     emits: 'app/<pattern>/page.tsx and app/layout.tsx',
+     reads: [
+       'layouts[].layoutId',
++      'operations[].method',
+       'layouts[].name',
+       'layouts[].root.attributes[].name',
+       'layouts[].root.attributes[].value.entity',
+@@ -734,10 +735,21 @@ export const SHARED_CLAIMS: readonly SharedClaim[] = [
+   {
+     by: [
+       'need:handlers',
++      'need:pages',
+       'scored:endpoint-identity',
+     ],
+     paths: [
+       'operations[].method',
++    ],
++    why:
++      'a page template describes the fetch it issues, so it reads the method alongside the handler that routes on it and the metric that matches on it.',
++  },
++  {
++    by: [
++      'need:handlers',
++      'scored:endpoint-identity',
++    ],
++    paths: [
+       'operations[].pathPattern',
+     ],
+     why:

@@ -196,8 +196,24 @@ const SABOTAGES = [
     gate: ['pnpm', '-s', 'test', '--project', 'schema'],
     expect: 'the model carries a field no consumer asked for',
   },
+  {
+    id: 'sitemodel-undeclared-share',
+    bug: 'a second claimant starts reading a leaf without the overlap being declared',
+    reachable: 'a need that legitimately grows a reader — a page template does describe the fetch it issues, so reading operations[].method is a reasonable thing to add, and adding it without touching SHARED_CLAIMS is the default way to add it',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: 'two claimants read one leaf without saying so',
+  },
 
   // ---- controls: the gate must NOT fire ------------------------------------
+
+  {
+    kind: 'control',
+    id: 'sitemodel-declared-share',
+    controlFor: 'sitemodel-undeclared-share',
+    change: 'the same extra claimant on the same leaf, with the two-way share split into a declared three-way one — a legitimate overlap, written down',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    reachable: 'the correct way to add the reader the defect patch adds carelessly, and the pair is the whole point: the gate must reject the overlap only while it is unwritten',
+  },
 
   {
     kind: 'control',

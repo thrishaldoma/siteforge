@@ -1,0 +1,12 @@
+diff --git a/packages/schema/src/site-model/needs.ts b/packages/schema/src/site-model/needs.ts
+index e849dc8..174c587 100644
+--- a/packages/schema/src/site-model/needs.ts
++++ b/packages/schema/src/site-model/needs.ts
+@@ -157,6 +157,7 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
+     emits: 'app/<pattern>/page.tsx and app/layout.tsx',
+     reads: [
+       'layouts[].layoutId',
++      'operations[].method',
+       'layouts[].name',
+       'layouts[].root.attributes[].name',
+       'layouts[].root.attributes[].value.entity',
