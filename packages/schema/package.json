@@ -1,0 +1,26 @@
+{
+  "name": "@siteforge/schema",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "zod schemas for the capture model and SiteModel - the contract between stages.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "typecheck:tests": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
+  }
+}

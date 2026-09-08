@@ -1,0 +1,22 @@
+# Capture artifacts are sensitive (CLAUDE.md §3.4): they may contain
+# response bodies, storage state, and user content. Never commit them.
+capture/
+# ...except the schema fixtures, which are a capture tree on purpose.
+!/packages/schema/fixtures/capture/
+**/auth/storage-state.json
+
+# Generated environments
+envs/*/
+!envs/.gitkeep
+
+# LLM call cache (CLAUDE.md §13)
+.siteforge-cache/
+
+
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example

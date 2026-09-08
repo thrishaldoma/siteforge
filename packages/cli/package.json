@@ -1,0 +1,32 @@
+{
+  "name": "@siteforge/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The `siteforge` entrypoint. Orchestrates stages; each is independently re-runnable.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "typecheck:tests": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@siteforge/schema": "workspace:*",
+    "@siteforge/shared": "workspace:*",
+    "@siteforge/capture": "workspace:*",
+    "@siteforge/infer": "workspace:*",
+    "@siteforge/codegen": "workspace:*",
+    "@siteforge/verify": "workspace:*",
+    "@siteforge/envkit": "workspace:*"
+  }
+}

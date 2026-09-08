@@ -1,0 +1,280 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "flow-trace",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 12
+  },
+  "flowId": "delete-account",
+  "siteId": "northwind-supply",
+  "kind": "probe",
+  "name": "Delete account (not run)",
+  "description": "Discovered as an interaction candidate on /account/orders and skipped by §6’s destructive heuristic. Recorded so the clone knows the control exists.",
+  "startRouteId": "account-orders--i0--1280x800",
+  "discoveredBy": "a11y-tree",
+  "initialA11yTree": {
+    "ref": "a11y_c24b6084500c",
+    "role": "RootWebArea",
+    "name": "Your orders — Northwind Supply",
+    "children": [
+      {
+        "ref": "a11y_f68a5a2b9ab7",
+        "role": "banner",
+        "name": "",
+        "nodeId": "n_f7d3f4dac88cdda3",
+        "children": [
+          {
+            "ref": "a11y_2956133882e2",
+            "role": "link",
+            "name": "Northwind Supply",
+            "nodeId": "n_a2b25bfa512412d5",
+            "children": []
+          },
+          {
+            "ref": "a11y_d88040cd88fb",
+            "role": "searchbox",
+            "name": "Search supplies",
+            "nodeId": "n_77ba110cbd88b160",
+            "children": []
+          },
+          {
+            "ref": "a11y_9d4178d30ce6",
+            "role": "navigation",
+            "name": "Primary",
+            "nodeId": "n_7508e953ae8d88b6",
+            "children": [
+              {
+                "ref": "a11y_2a497f24ffe5",
+                "role": "list",
+                "name": "",
+                "nodeId": "n_ade42dc7dc06ba20",
+                "children": [
+                  {
+                    "ref": "a11y_79710d5807c2",
+                    "role": "listitem",
+                    "name": "",
+                    "nodeId": "n_e5cc6231738ae8eb",
+                    "children": [
+                      {
+                        "ref": "a11y_cd96a4ca983d",
+                        "role": "link",
+                        "name": "Shop",
+                        "nodeId": "n_0dee0163b52f6f6e",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "ref": "a11y_06e8bd09f03f",
+                    "role": "listitem",
+                    "name": "",
+                    "nodeId": "n_8f85572da06cd098",
+                    "children": [
+                      {
+                        "ref": "a11y_33b85b2eb63b",
+                        "role": "link",
+                        "name": "About",
+                        "nodeId": "n_9b0199e0c1ff7a3f",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "ref": "a11y_804e0182d48a",
+            "role": "button",
+            "name": "Cart, 0 items",
+            "nodeId": "n_4e9d9e0aaaf4e2dd",
+            "children": []
+          }
+        ]
+      },
+      {
+        "ref": "a11y_3b0ad0efecc7",
+        "role": "main",
+        "name": "",
+        "nodeId": "n_782e50a097f90ed9",
+        "children": [
+          {
+            "ref": "a11y_d0194a4ecf26",
+            "role": "heading",
+            "name": "Your orders",
+            "nodeId": "n_f2de816ebb04618f",
+            "children": [],
+            "level": 1
+          },
+          {
+            "ref": "a11y_7796485c6a5f",
+            "role": "table",
+            "name": "Your orders",
+            "nodeId": "n_3d9b94fdd812599d",
+            "children": [
+              {
+                "ref": "a11y_d61474c269b1",
+                "role": "rowgroup",
+                "name": "",
+                "nodeId": "n_a92341d8cdac2590",
+                "children": [
+                  {
+                    "ref": "a11y_53a207ac61ba",
+                    "role": "row",
+                    "name": "",
+                    "nodeId": "n_feaffaa2cb7387f6",
+                    "children": [
+                      {
+                        "ref": "a11y_c90096d7e0a4",
+                        "role": "columnheader",
+                        "name": "Order",
+                        "nodeId": "n_33c3708d98bb2246",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_9561149f3142",
+                        "role": "columnheader",
+                        "name": "Placed",
+                        "nodeId": "n_007540c5c148ed97",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_ebde23382bec",
+                        "role": "columnheader",
+                        "name": "Status",
+                        "nodeId": "n_b0170588430e92e2",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_6fd4748d3559",
+                        "role": "columnheader",
+                        "name": "Total",
+                        "nodeId": "n_2052e58f79372d93",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "ref": "a11y_9c5404eb4897",
+                "role": "rowgroup",
+                "name": "",
+                "nodeId": "n_ef1c490dda3c1fcc",
+                "children": [
+                  {
+                    "ref": "a11y_2debcc0274e8",
+                    "role": "row",
+                    "name": "",
+                    "nodeId": "n_2c5f9f3c709c8625",
+                    "children": [
+                      {
+                        "ref": "a11y_a440a93c87b9",
+                        "role": "cell",
+                        "name": "NW-10428",
+                        "nodeId": "n_e59f86b575c8ee7f",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_cfc17a2c8ec5",
+                        "role": "cell",
+                        "name": "2026-08-14",
+                        "nodeId": "n_1e23e80652b00fc5",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_c28504697666",
+                        "role": "cell",
+                        "name": "Delivered",
+                        "nodeId": "n_d9a8f66fd6c1b471",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_53f7c007e531",
+                        "role": "cell",
+                        "name": "$30.50",
+                        "nodeId": "n_7d219be565433064",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "ref": "a11y_2c1f2155ba47",
+                    "role": "row",
+                    "name": "",
+                    "nodeId": "n_370ff5ec6e9f58ff",
+                    "children": [
+                      {
+                        "ref": "a11y_1374074e2223",
+                        "role": "cell",
+                        "name": "NW-10391",
+                        "nodeId": "n_1e934bb3cbd64fe0",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_61a25d3d07c8",
+                        "role": "cell",
+                        "name": "2026-07-02",
+                        "nodeId": "n_aec2876a3aa9be3c",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_580143b8bb9d",
+                        "role": "cell",
+                        "name": "Delivered",
+                        "nodeId": "n_2affcc2d97485204",
+                        "children": []
+                      },
+                      {
+                        "ref": "a11y_0840f481489a",
+                        "role": "cell",
+                        "name": "$18.00",
+                        "nodeId": "n_94490914cde078e1",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "ref": "a11y_f4acb6590337",
+            "role": "heading",
+            "name": "Danger zone",
+            "nodeId": "n_5cd4a1379276d461",
+            "children": [],
+            "level": 2
+          },
+          {
+            "ref": "a11y_b86d5c76e6ff",
+            "role": "button",
+            "name": "Delete account",
+            "nodeId": "n_b8fa3bc6dcd3c4e7",
+            "children": []
+          }
+        ]
+      },
+      {
+        "ref": "a11y_0421f480c4ad",
+        "role": "contentinfo",
+        "name": "",
+        "nodeId": "n_ec8cd543a77239a6",
+        "children": []
+      }
+    ]
+  },
+  "steps": [],
+  "outcome": "skipped",
+  "destructive": true,
+  "skipReason": {
+    "cause": "destructive-heuristic",
+    "matchedTerm": "delete",
+    "gapId": "gap_5e8cb74e1ae7"
+  },
+  "gapIds": [
+    "gap_5e8cb74e1ae7"
+  ]
+}

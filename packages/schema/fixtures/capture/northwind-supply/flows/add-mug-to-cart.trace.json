@@ -1,0 +1,413 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "flow-trace",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 5120
+  },
+  "flowId": "add-mug-to-cart",
+  "siteId": "northwind-supply",
+  "kind": "scripted",
+  "name": "Add two mugs to the cart",
+  "description": "Set quantity, add to cart, then open the cart drawer. Exercises the one mutation endpoint the anonymous crawl could reach.",
+  "startRouteId": "product-id--i0--1280x800",
+  "discoveredBy": "a11y-tree",
+  "initialA11yTree": {
+    "ref": "a11y_8d1d185a855a",
+    "role": "RootWebArea",
+    "name": "Blue Enamel Mug, 12oz — Northwind Supply",
+    "children": [
+      {
+        "ref": "a11y_904301a15dfe",
+        "role": "banner",
+        "name": "",
+        "nodeId": "n_f7d3f4dac88cdda3",
+        "children": [
+          {
+            "ref": "a11y_bd9faaa9cfb2",
+            "role": "link",
+            "name": "Northwind Supply",
+            "nodeId": "n_a2b25bfa512412d5",
+            "children": []
+          },
+          {
+            "ref": "a11y_0b672eca1777",
+            "role": "searchbox",
+            "name": "Search supplies",
+            "nodeId": "n_77ba110cbd88b160",
+            "children": []
+          },
+          {
+            "ref": "a11y_ac23e90d9de1",
+            "role": "navigation",
+            "name": "Primary",
+            "nodeId": "n_7508e953ae8d88b6",
+            "children": [
+              {
+                "ref": "a11y_e7a9838f9227",
+                "role": "list",
+                "name": "",
+                "nodeId": "n_ade42dc7dc06ba20",
+                "children": [
+                  {
+                    "ref": "a11y_e898ef1c1f98",
+                    "role": "listitem",
+                    "name": "",
+                    "nodeId": "n_e5cc6231738ae8eb",
+                    "children": [
+                      {
+                        "ref": "a11y_35fc5630887b",
+                        "role": "link",
+                        "name": "Shop",
+                        "nodeId": "n_0dee0163b52f6f6e",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "ref": "a11y_5ebe549a48e6",
+                    "role": "listitem",
+                    "name": "",
+                    "nodeId": "n_8f85572da06cd098",
+                    "children": [
+                      {
+                        "ref": "a11y_f0308692521b",
+                        "role": "link",
+                        "name": "About",
+                        "nodeId": "n_9b0199e0c1ff7a3f",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "ref": "a11y_51fb5b171ec2",
+            "role": "button",
+            "name": "Cart, 0 items",
+            "nodeId": "n_4e9d9e0aaaf4e2dd",
+            "children": []
+          }
+        ]
+      },
+      {
+        "ref": "a11y_71d4402c7b30",
+        "role": "main",
+        "name": "",
+        "nodeId": "n_782e50a097f90ed9",
+        "children": [
+          {
+            "ref": "a11y_be21da808d6c",
+            "role": "navigation",
+            "name": "Breadcrumb",
+            "nodeId": "n_8d2bb0a42ff97c6b",
+            "children": [
+              {
+                "ref": "a11y_5484f6eb41ef",
+                "role": "list",
+                "name": "",
+                "nodeId": "n_e30d70f4e8c25451",
+                "children": [
+                  {
+                    "ref": "a11y_c86154744a70",
+                    "role": "listitem",
+                    "name": "",
+                    "nodeId": "n_41d63057e00cf01f",
+                    "children": [
+                      {
+                        "ref": "a11y_03df3445cd87",
+                        "role": "link",
+                        "name": "Home",
+                        "nodeId": "n_10bc0ac3c01e9307",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "ref": "a11y_3648e6723bc5",
+                    "role": "listitem",
+                    "name": "",
+                    "nodeId": "n_5afe11cc8d63eacb",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "ref": "a11y_e09199ecee95",
+            "role": "heading",
+            "name": "Blue Enamel Mug, 12oz",
+            "nodeId": "n_dfcd13dfa0501762",
+            "children": [],
+            "level": 1
+          },
+          {
+            "ref": "a11y_6b4febf6e592",
+            "role": "spinbutton",
+            "name": "Quantity",
+            "nodeId": "n_9c5361d47fbd421d",
+            "children": [],
+            "value": "1"
+          },
+          {
+            "ref": "a11y_23e49e107d61",
+            "role": "button",
+            "name": "Add Blue Enamel Mug, 12oz to cart",
+            "nodeId": "n_b7d7a2d93ef7ed72",
+            "children": []
+          },
+          {
+            "ref": "a11y_053a525dc937",
+            "role": "button",
+            "name": "Product details",
+            "nodeId": "n_4643745f7d0e941d",
+            "children": [],
+            "expanded": false
+          },
+          {
+            "ref": "a11y_3385701f1b96",
+            "role": "region",
+            "name": "Product details",
+            "nodeId": "n_e9f75c701b76dabf",
+            "children": []
+          },
+          {
+            "ref": "a11y_9536c7f347e9",
+            "role": "heading",
+            "name": "Size guide",
+            "nodeId": "n_4c56e8282c35415f",
+            "children": [],
+            "level": 2
+          }
+        ]
+      },
+      {
+        "ref": "a11y_4cffc8e09209",
+        "role": "contentinfo",
+        "name": "",
+        "nodeId": "n_ec8cd543a77239a6",
+        "children": []
+      }
+    ]
+  },
+  "steps": [
+    {
+      "index": 0,
+      "action": {
+        "type": "type",
+        "ref": "a11y_6b4febf6e592",
+        "text": "2"
+      },
+      "target": {
+        "ref": "a11y_6b4febf6e592",
+        "nodeId": "n_9c5361d47fbd421d",
+        "selector": "#qty",
+        "role": "spinbutton",
+        "name": "Quantity"
+      },
+      "pre": {
+        "url": "https://example.com/product/mug-blue-12oz",
+        "routeId": "product-id--i0--1280x800",
+        "domHash": "baddd4c28ebab16e",
+        "a11yHash": "460f8b1a637fba6b",
+        "focusedRef": null
+      },
+      "post": {
+        "url": "https://example.com/product/mug-blue-12oz",
+        "routeId": "product-id--i0--1280x800",
+        "domHash": "8f3906ae23183abe",
+        "a11yHash": "38505a78af296eab",
+        "focusedRef": "a11y_6b4febf6e592"
+      },
+      "domDelta": {
+        "addedNodeIds": [],
+        "removedNodeIds": [],
+        "attributeChanges": [
+          {
+            "nodeId": "n_9c5361d47fbd421d",
+            "attribute": "value",
+            "from": "1",
+            "to": "2"
+          }
+        ],
+        "textChanges": [],
+        "styleChanges": []
+      },
+      "a11yDelta": {
+        "added": [],
+        "removed": [],
+        "changed": [
+          {
+            "ref": "a11y_6b4febf6e592",
+            "property": "value",
+            "from": "1",
+            "to": "2"
+          }
+        ]
+      },
+      "networkCalls": [],
+      "urlChanged": false,
+      "waitStrategy": "timeout"
+    },
+    {
+      "index": 1,
+      "action": {
+        "type": "click",
+        "ref": "a11y_23e49e107d61"
+      },
+      "target": {
+        "ref": "a11y_23e49e107d61",
+        "nodeId": "n_b7d7a2d93ef7ed72",
+        "selector": ".buy-panel button.btn-primary",
+        "role": "button",
+        "name": "Add Blue Enamel Mug, 12oz to cart"
+      },
+      "pre": {
+        "url": "https://example.com/product/mug-blue-12oz",
+        "routeId": "product-id--i0--1280x800",
+        "domHash": "8f3906ae23183abe",
+        "a11yHash": "38505a78af296eab",
+        "focusedRef": "a11y_6b4febf6e592"
+      },
+      "post": {
+        "url": "https://example.com/product/mug-blue-12oz",
+        "routeId": "product-id--i0--1280x800",
+        "domHash": "07e0cfe82fb0f582",
+        "a11yHash": "ce8f897282f3bc58",
+        "focusedRef": "a11y_23e49e107d61"
+      },
+      "domDelta": {
+        "addedNodeIds": [],
+        "removedNodeIds": [],
+        "attributeChanges": [
+          {
+            "nodeId": "n_4e9d9e0aaaf4e2dd",
+            "attribute": "aria-label",
+            "from": "Cart, 0 items",
+            "to": "Cart, 2 items"
+          }
+        ],
+        "textChanges": [
+          {
+            "nodeId": "n_5df1240d16a95ed5",
+            "from": "Cart (0)",
+            "to": "Cart (2)"
+          }
+        ],
+        "styleChanges": []
+      },
+      "a11yDelta": {
+        "added": [
+          {
+            "ref": "a11y_2d7acc1608de",
+            "role": "status",
+            "name": "Added to cart",
+            "parentRef": "a11y_71d4402c7b30"
+          }
+        ],
+        "removed": [],
+        "changed": [
+          {
+            "ref": "a11y_51fb5b171ec2",
+            "property": "name",
+            "from": "Cart, 0 items",
+            "to": "Cart, 2 items"
+          }
+        ]
+      },
+      "networkCalls": [
+        {
+          "endpointId": "post-api-cart-items",
+          "method": "POST",
+          "url": "https://example.com/api/cart/items",
+          "pathPattern": "/api/cart/items",
+          "status": 201,
+          "isMutation": true
+        }
+      ],
+      "urlChanged": false,
+      "waitStrategy": "network-idle"
+    },
+    {
+      "index": 2,
+      "action": {
+        "type": "click",
+        "ref": "a11y_51fb5b171ec2"
+      },
+      "target": {
+        "ref": "a11y_51fb5b171ec2",
+        "nodeId": "n_4e9d9e0aaaf4e2dd",
+        "selector": "button.cart-button",
+        "role": "button",
+        "name": "Cart, 0 items"
+      },
+      "pre": {
+        "url": "https://example.com/product/mug-blue-12oz",
+        "routeId": "product-id--i0--1280x800",
+        "domHash": "07e0cfe82fb0f582",
+        "a11yHash": "ce8f897282f3bc58",
+        "focusedRef": "a11y_23e49e107d61"
+      },
+      "post": {
+        "url": "https://example.com/product/mug-blue-12oz",
+        "routeId": "product-id--i0--1280x800",
+        "domHash": "882b0b54a7a4c3f1",
+        "a11yHash": "b4ff0739580e345c",
+        "focusedRef": "a11y_51fb5b171ec2"
+      },
+      "domDelta": {
+        "addedNodeIds": [],
+        "removedNodeIds": [],
+        "attributeChanges": [
+          {
+            "nodeId": "n_4e9d9e0aaaf4e2dd",
+            "attribute": "aria-expanded",
+            "from": null,
+            "to": "true"
+          }
+        ],
+        "textChanges": [],
+        "styleChanges": []
+      },
+      "a11yDelta": {
+        "added": [
+          {
+            "ref": "a11y_683c6f3bd44d",
+            "role": "dialog",
+            "name": "Your cart",
+            "parentRef": null
+          }
+        ],
+        "removed": [],
+        "changed": [
+          {
+            "ref": "a11y_51fb5b171ec2",
+            "property": "expanded",
+            "from": null,
+            "to": "true"
+          }
+        ]
+      },
+      "networkCalls": [
+        {
+          "endpointId": "get-api-cart",
+          "method": "GET",
+          "url": "https://example.com/api/cart",
+          "pathPattern": "/api/cart",
+          "status": 200,
+          "isMutation": false
+        }
+      ],
+      "urlChanged": false,
+      "waitStrategy": "network-idle"
+    }
+  ],
+  "outcome": "completed",
+  "destructive": false,
+  "gapIds": []
+}

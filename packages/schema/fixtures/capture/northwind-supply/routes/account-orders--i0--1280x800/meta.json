@@ -1,0 +1,76 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "account-orders--i0--1280x800",
+  "siteId": "northwind-supply",
+  "urlPattern": "/account/orders",
+  "instanceIndex": 0,
+  "viewport": {
+    "width": 1280,
+    "height": 800,
+    "deviceScaleFactor": 1,
+    "isMobile": false,
+    "hasTouch": false
+  },
+  "url": "https://example.com/account/orders",
+  "pathParams": {},
+  "canonicalUrl": "https://example.com/account/orders",
+  "title": "Your orders — Northwind Supply",
+  "status": 200,
+  "redirectChain": [],
+  "templateGuess": {
+    "name": "account-table",
+    "confidence": 0.81,
+    "rationale": "Shares the shell with every route; body is a single data table."
+  },
+  "authState": "authenticated",
+  "requiresAuth": true,
+  "unauthenticatedBehavior": {
+    "kind": "redirect",
+    "to": "/login",
+    "status": 302
+  },
+  "depth": 1,
+  "discoveredFrom": {
+    "kind": "link",
+    "routeId": "root--i0--1280x800",
+    "nodeId": "n_0dee0163b52f6f6e"
+  },
+  "embeddedIn": [],
+  "screenshots": {
+    "full": {
+      "path": "shot.full.png",
+      "sha256": "400d5871e97d9f7b52a6adb0d22b1c339acd656c0ea7988c2f1f78be176e667c",
+      "width": 1280,
+      "height": 900
+    },
+    "scroll": [
+      {
+        "index": 0,
+        "scrollY": 0,
+        "shot": {
+          "path": "scroll/0000.png",
+          "sha256": "592d1932285d91e3a499bc454f0626c7fbd7e96b60d1b1c4f7a2526347ba09f5",
+          "width": 1280,
+          "height": 800
+        }
+      }
+    ]
+  },
+  "pageMetrics": {
+    "scrollHeight": 900,
+    "scrollWidth": 1280,
+    "scrollSteps": 1
+  },
+  "gapIds": [
+    "gap_1982e0d1e2fc",
+    "gap_34a4ad245bd3",
+    "gap_5e8cb74e1ae7"
+  ]
+}

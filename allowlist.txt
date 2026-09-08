@@ -1,0 +1,18 @@
+# siteforge target allowlist (CLAUDE.md §3.1)
+#
+# One host per line. A target is permitted only if its host matches a line
+# here, or the operator passes --i-have-permission on the command line.
+# Lines beginning with '#' are comments. Blank lines are ignored.
+# A leading '.' matches the domain and all subdomains: '.example.com'
+# matches 'example.com' and 'docs.example.com'.
+#
+# Do not add production sites you do not own (CLAUDE.md §13).
+
+# Local development targets
+localhost
+127.0.0.1
+
+# IANA-reserved documentation domains, safe for testing
+example.com
+example.org
+example.net

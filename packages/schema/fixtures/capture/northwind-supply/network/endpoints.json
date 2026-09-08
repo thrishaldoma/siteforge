@@ -1,0 +1,774 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "endpoint-index",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1490
+  },
+  "endpoints": [
+    {
+      "endpointId": "get-api-products",
+      "method": "GET",
+      "pathPattern": "/api/products",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [
+          {
+            "name": "category",
+            "type": "string",
+            "required": false,
+            "examples": [
+              "drinkware",
+              "paper"
+            ]
+          }
+        ],
+        "headers": []
+      },
+      "requestBodySchema": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "observedCount": 1,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "number"
+                },
+                "currency": {
+                  "type": "string",
+                  "enum": [
+                    "USD"
+                  ]
+                },
+                "categoryId": {
+                  "type": "string"
+                },
+                "inStock": {
+                  "type": "boolean"
+                },
+                "imageUrl": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "required": [
+                "sku",
+                "slug",
+                "title",
+                "price",
+                "currency",
+                "categoryId",
+                "inStock"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "samples": [
+        {
+          "sampleId": "sample_feca7922",
+          "status": 200,
+          "contentType": "application/json",
+          "body": [
+            {
+              "sku": "MUG-BLUE-12OZ",
+              "slug": "mug-blue-12oz",
+              "title": "Blue Enamel Mug, 12oz",
+              "price": 18,
+              "currency": "USD",
+              "categoryId": "drinkware",
+              "inStock": true,
+              "imageUrl": "https://example.com/static/img/mug-blue.jpg"
+            },
+            {
+              "sku": "NB-A5-DOT",
+              "slug": "notebook-a5-dot",
+              "title": "A5 Dot-Grid Notebook",
+              "price": 12.5,
+              "currency": "USD",
+              "categoryId": "paper",
+              "inStock": true,
+              "imageUrl": "https://example.com/static/img/notebook-a5.jpg"
+            },
+            {
+              "sku": "PEN-FINE-4PK",
+              "slug": "pens-fine-4pk",
+              "title": "Fineliner Pens, 4-pack",
+              "price": 9,
+              "currency": "USD",
+              "categoryId": "paper",
+              "inStock": false,
+              "imageUrl": "https://example.com/static/img/pens-fine.jpg"
+            }
+          ],
+          "bytes": 608,
+          "observedOn": "root--i0--1280x800"
+        }
+      ],
+      "isMutation": false,
+      "requiresAuth": false,
+      "observedCount": 1,
+      "observedOn": [
+        "root--i0--1280x800"
+      ]
+    },
+    {
+      "endpointId": "get-api-products-id",
+      "method": "GET",
+      "pathPattern": "/api/products/:slug",
+      "origin": "https://example.com",
+      "params": {
+        "path": [
+          {
+            "name": "slug",
+            "type": "string",
+            "required": true,
+            "examples": [
+              "mug-blue-12oz",
+              "notebook-a5-dot"
+            ]
+          }
+        ],
+        "query": [],
+        "headers": []
+      },
+      "requestBodySchema": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "observedCount": 3,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "sku": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "price": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string",
+                "enum": [
+                  "USD"
+                ]
+              },
+              "categoryId": {
+                "type": "string"
+              },
+              "inStock": {
+                "type": "boolean"
+              },
+              "imageUrl": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "sku",
+              "slug",
+              "title",
+              "price",
+              "currency",
+              "categoryId",
+              "inStock"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "status": 404,
+          "contentType": "application/json",
+          "observedCount": 1,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "samples": [
+        {
+          "sampleId": "sample_6bec0b4e",
+          "status": 200,
+          "contentType": "application/json",
+          "body": {
+            "sku": "MUG-BLUE-12OZ",
+            "slug": "mug-blue-12oz",
+            "title": "Blue Enamel Mug, 12oz",
+            "price": 18,
+            "currency": "USD",
+            "categoryId": "drinkware",
+            "inStock": true,
+            "imageUrl": "https://example.com/static/img/mug-blue.jpg"
+          },
+          "bytes": 203,
+          "observedOn": "product-id--i0--1280x800"
+        },
+        {
+          "sampleId": "sample_d14a2338",
+          "status": 200,
+          "contentType": "application/json",
+          "body": {
+            "sku": "NB-A5-DOT",
+            "slug": "notebook-a5-dot",
+            "title": "A5 Dot-Grid Notebook",
+            "price": 12.5,
+            "currency": "USD",
+            "categoryId": "paper",
+            "inStock": true,
+            "imageUrl": "https://example.com/static/img/notebook-a5.jpg"
+          },
+          "bytes": 201,
+          "observedOn": "product-id--i1--1280x800"
+        }
+      ],
+      "isMutation": false,
+      "requiresAuth": false,
+      "observedCount": 3,
+      "observedOn": [
+        "product-id--i0--1280x800",
+        "product-id--i1--1280x800",
+        "product-id--i0--390x844"
+      ]
+    },
+    {
+      "endpointId": "get-api-cart",
+      "method": "GET",
+      "pathPattern": "/api/cart",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [],
+        "headers": [
+          {
+            "name": "cookie",
+            "required": true,
+            "sensitive": true
+          }
+        ]
+      },
+      "requestBodySchema": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "observedCount": 2,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "unitPrice": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "quantity",
+                    "unitPrice"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "subtotal": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "items",
+              "subtotal"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "samples": [
+        {
+          "sampleId": "sample_5c96e39f",
+          "status": 200,
+          "contentType": "application/json",
+          "body": {
+            "id": "cart_0001",
+            "items": [
+              {
+                "sku": "MUG-BLUE-12OZ",
+                "quantity": 2,
+                "unitPrice": 18
+              }
+            ],
+            "subtotal": 36
+          },
+          "bytes": 94,
+          "observedOn": "product-id--i0--1280x800"
+        }
+      ],
+      "isMutation": false,
+      "requiresAuth": false,
+      "observedCount": 2,
+      "observedOn": [
+        "product-id--i0--1280x800"
+      ]
+    },
+    {
+      "endpointId": "post-api-cart-items",
+      "method": "POST",
+      "pathPattern": "/api/cart/items",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [],
+        "headers": [
+          {
+            "name": "cookie",
+            "required": true,
+            "sensitive": true
+          },
+          {
+            "name": "content-type",
+            "required": true,
+            "sensitive": false
+          }
+        ]
+      },
+      "requestBodySchema": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sku",
+          "quantity"
+        ],
+        "additionalProperties": false
+      },
+      "responses": [
+        {
+          "status": 201,
+          "contentType": "application/json",
+          "observedCount": 1,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "unitPrice": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "quantity",
+                    "unitPrice"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "subtotal": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "items",
+              "subtotal"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "samples": [
+        {
+          "sampleId": "sample_d72a5ba1",
+          "status": 201,
+          "contentType": "application/json",
+          "body": {
+            "id": "cart_0001",
+            "items": [
+              {
+                "sku": "MUG-BLUE-12OZ",
+                "quantity": 2,
+                "unitPrice": 18
+              }
+            ],
+            "subtotal": 36
+          },
+          "bytes": 94,
+          "observedOn": "product-id--i0--1280x800"
+        }
+      ],
+      "isMutation": true,
+      "requiresAuth": false,
+      "observedCount": 1,
+      "observedOn": [
+        "product-id--i0--1280x800"
+      ]
+    },
+    {
+      "endpointId": "post-api-checkout",
+      "method": "POST",
+      "pathPattern": "/api/checkout",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [],
+        "headers": [
+          {
+            "name": "cookie",
+            "required": true,
+            "sensitive": true
+          }
+        ]
+      },
+      "requestBodySchema": {
+        "type": "object",
+        "properties": {
+          "cartId": {
+            "type": "string"
+          },
+          "paymentToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cartId",
+          "paymentToken"
+        ],
+        "additionalProperties": false
+      },
+      "responses": [
+        {
+          "status": 201,
+          "contentType": "application/json",
+          "observedCount": 1,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "placed"
+                ]
+              },
+              "total": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "orderId",
+              "status",
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "samples": [
+        {
+          "sampleId": "sample_388fe678",
+          "status": 201,
+          "contentType": "application/json",
+          "body": {
+            "orderId": "NW-10428",
+            "status": "placed",
+            "total": 30.5
+          },
+          "bytes": 53,
+          "observedOn": "product-id--i0--1280x800"
+        }
+      ],
+      "isMutation": true,
+      "requiresAuth": true,
+      "observedCount": 1,
+      "observedOn": [
+        "product-id--i0--1280x800"
+      ]
+    },
+    {
+      "endpointId": "get-api-account-orders",
+      "method": "GET",
+      "pathPattern": "/api/account/orders",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [],
+        "headers": [
+          {
+            "name": "cookie",
+            "required": true,
+            "sensitive": true
+          }
+        ]
+      },
+      "requestBodySchema": null,
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "observedCount": 1,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                },
+                "placedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "placed",
+                    "shipped",
+                    "delivered"
+                  ]
+                },
+                "total": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "orderId",
+                "placedAt",
+                "status",
+                "total"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "samples": [
+        {
+          "sampleId": "sample_4c13b3b1",
+          "status": 200,
+          "contentType": "application/json",
+          "body": [
+            {
+              "orderId": "NW-10428",
+              "placedAt": "2026-08-14T09:02:11.000Z",
+              "status": "delivered",
+              "total": 30.5
+            },
+            {
+              "orderId": "NW-10391",
+              "placedAt": "2026-07-02T16:44:03.000Z",
+              "status": "delivered",
+              "total": 18
+            }
+          ],
+          "bytes": 189,
+          "observedOn": "account-orders--i0--1280x800"
+        }
+      ],
+      "isMutation": false,
+      "requiresAuth": true,
+      "observedCount": 1,
+      "observedOn": [
+        "account-orders--i0--1280x800"
+      ]
+    },
+    {
+      "endpointId": "post-api-auth-login",
+      "method": "POST",
+      "pathPattern": "/api/auth/login",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [],
+        "headers": [
+          {
+            "name": "content-type",
+            "required": true,
+            "sensitive": false
+          }
+        ]
+      },
+      "requestBodySchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "responses": [
+        {
+          "status": 200,
+          "contentType": "application/json",
+          "observedCount": 1,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "userId",
+              "displayName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "status": 401,
+          "contentType": "application/json",
+          "observedCount": 1,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "samples": [
+        {
+          "sampleId": "sample_9f23beda",
+          "status": 200,
+          "contentType": "application/json",
+          "body": {
+            "userId": "usr_0001",
+            "displayName": "[REDACTED:NAME]"
+          },
+          "bytes": 53,
+          "observedOn": "account-orders--i0--1280x800"
+        }
+      ],
+      "isMutation": true,
+      "requiresAuth": false,
+      "observedCount": 2,
+      "observedOn": [
+        "account-orders--i0--1280x800"
+      ]
+    },
+    {
+      "endpointId": "delete-api-account",
+      "method": "DELETE",
+      "pathPattern": "/api/account",
+      "origin": "https://example.com",
+      "params": {
+        "path": [],
+        "query": [],
+        "headers": [
+          {
+            "name": "cookie",
+            "required": true,
+            "sensitive": true
+          }
+        ]
+      },
+      "requestBodySchema": null,
+      "responses": [],
+      "samples": [],
+      "isMutation": true,
+      "requiresAuth": true,
+      "observedCount": 0,
+      "observedOn": [
+        "account-orders--i0--1280x800"
+      ],
+      "stub": {
+        "reason": "insufficient-observations",
+        "gapId": "gap_06dfc30ddfa2"
+      }
+    }
+  ],
+  "har": {
+    "path": "network/session.har",
+    "sha256": "3e36813bf7254413c1911e79848474baae88dbf4d3913d04fe926398484c86de",
+    "entryCount": 64
+  },
+  "thirdPartyOrigins": [
+    {
+      "origin": "https://widgets.example.net",
+      "requestCount": 5,
+      "gapId": "gap_f90257443afc"
+    }
+  ]
+}

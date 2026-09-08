@@ -1,0 +1,8 @@
+packages:
+  - "packages/*"
+
+# pnpm >=11 reads settings here rather than from package.json, and gates
+# dependency postinstall scripts behind an explicit allowlist.
+# esbuild is vitest's transform backend; its postinstall links the platform binary.
+allowBuilds:
+  esbuild: true

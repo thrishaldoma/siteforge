@@ -1,0 +1,85 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "route-meta",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 1840
+  },
+  "routeId": "product-id--i0--1280x800",
+  "siteId": "northwind-supply",
+  "urlPattern": "/product/:id",
+  "instanceIndex": 0,
+  "viewport": {
+    "width": 1280,
+    "height": 800,
+    "deviceScaleFactor": 1,
+    "isMobile": false,
+    "hasTouch": false
+  },
+  "url": "https://example.com/product/mug-blue-12oz",
+  "pathParams": {
+    "id": "mug-blue-12oz"
+  },
+  "canonicalUrl": "https://example.com/product/mug-blue-12oz",
+  "title": "Blue Enamel Mug, 12oz — Northwind Supply",
+  "status": 200,
+  "redirectChain": [],
+  "templateGuess": {
+    "name": "product-detail",
+    "confidence": 0.97,
+    "rationale": "Structural hash matches instance i1 at 0.98 similarity."
+  },
+  "authState": "anonymous",
+  "requiresAuth": false,
+  "unauthenticatedBehavior": {
+    "kind": "accessible"
+  },
+  "depth": 1,
+  "discoveredFrom": {
+    "kind": "link",
+    "routeId": "root--i0--1280x800",
+    "nodeId": "n_8c05c824e215819f"
+  },
+  "embeddedIn": [],
+  "screenshots": {
+    "full": {
+      "path": "shot.full.png",
+      "sha256": "5ae64da1834d015346d3817bb0345079a31b5abf482b7ba18a4a4217ce5a6bbd",
+      "width": 1280,
+      "height": 1400
+    },
+    "scroll": [
+      {
+        "index": 0,
+        "scrollY": 0,
+        "shot": {
+          "path": "scroll/0000.png",
+          "sha256": "37c47e66f9218238bc6b6fc9641b86508d19b74556969b940fa61412aa309e87",
+          "width": 1280,
+          "height": 800
+        }
+      },
+      {
+        "index": 1,
+        "scrollY": 400,
+        "shot": {
+          "path": "scroll/0001.png",
+          "sha256": "7e26fae078ba4d27fddf91387b5849a2891fd4f90a4acaee105708c88af12099",
+          "width": 1280,
+          "height": 800
+        }
+      }
+    ]
+  },
+  "pageMetrics": {
+    "scrollHeight": 1400,
+    "scrollWidth": 1280,
+    "scrollSteps": 2
+  },
+  "gapIds": [
+    "gap_1982e0d1e2fc",
+    "gap_34a4ad245bd3"
+  ]
+}

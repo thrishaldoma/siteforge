@@ -1,0 +1,27 @@
+{
+  "name": "@siteforge/codegen",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stage 3: SiteModel -> generated Next.js app + Fastify mock API.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "typecheck:tests": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@siteforge/schema": "workspace:*",
+    "@siteforge/shared": "workspace:*"
+  }
+}

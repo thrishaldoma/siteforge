@@ -1,0 +1,155 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "style-sheet",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 410
+  },
+  "routeId": "embeds-size-guide--i0--640x420",
+  "propertySet": "siteforge/v1",
+  "table": [
+    {
+      "styleId": "s_53dac453ef7ff41e",
+      "declarations": {
+        "display": "block",
+        "font-family": "Söhne, ui-sans-serif, system-ui, sans-serif",
+        "font-size": "16px",
+        "line-height": "24px",
+        "color": "rgb(28, 25, 23)"
+      },
+      "refCount": 1
+    },
+    {
+      "styleId": "s_0fbea6d6417bb68d",
+      "declarations": {
+        "display": "none"
+      },
+      "refCount": 6
+    },
+    {
+      "styleId": "s_e7b966090129f21d",
+      "declarations": {
+        "display": "block",
+        "background-color": "rgb(255, 255, 255)",
+        "margin-top": "0px",
+        "margin-right": "0px",
+        "margin-bottom": "0px",
+        "margin-left": "0px",
+        "padding-top": "16px",
+        "padding-left": "16px",
+        "padding-right": "16px",
+        "font-size": "13px"
+      },
+      "refCount": 1
+    },
+    {
+      "styleId": "s_3726905419f76846",
+      "declarations": {
+        "display": "table",
+        "width": "100%",
+        "border-collapse": "collapse",
+        "font-size": "14px"
+      },
+      "refCount": 1
+    },
+    {
+      "styleId": "s_4dab2545a7ad9999",
+      "declarations": {
+        "display": "table-header-group"
+      },
+      "refCount": 1
+    },
+    {
+      "styleId": "s_d758d0e1c2e685ad",
+      "declarations": {
+        "display": "table-row"
+      },
+      "refCount": 3
+    },
+    {
+      "styleId": "s_0ae7c10058548347",
+      "declarations": {
+        "display": "table-cell",
+        "text-align": "left",
+        "padding-top": "10px",
+        "padding-bottom": "10px",
+        "border-bottom-width": "1px",
+        "border-bottom-style": "solid",
+        "border-bottom-color": "rgb(231, 229, 228)",
+        "font-weight": "500",
+        "color": "rgb(87, 83, 78)"
+      },
+      "refCount": 4
+    },
+    {
+      "styleId": "s_e0cc9875fc6d4726",
+      "declarations": {
+        "display": "table-row-group"
+      },
+      "refCount": 1
+    },
+    {
+      "styleId": "s_36dc272a34f2e3b7",
+      "declarations": {
+        "display": "table-cell",
+        "padding-top": "12px",
+        "padding-bottom": "12px",
+        "border-bottom-width": "1px",
+        "border-bottom-style": "solid",
+        "border-bottom-color": "rgb(245, 245, 244)"
+      },
+      "refCount": 8
+    }
+  ],
+  "assignments": {
+    "n_ec4aafffaa3799fe": "s_53dac453ef7ff41e",
+    "n_8c14741ff7df75de": "s_0fbea6d6417bb68d",
+    "n_31e9bbd56ef4664c": "s_0fbea6d6417bb68d",
+    "n_0152840963f2c1f7": "s_0fbea6d6417bb68d",
+    "n_272c7a8a9482f7be": "s_0fbea6d6417bb68d",
+    "n_6d8aae3d5ae8f1ec": "s_0fbea6d6417bb68d",
+    "n_1f4a07bf1ac6de05": "s_0fbea6d6417bb68d",
+    "n_caf59219567fd508": "s_e7b966090129f21d",
+    "n_bc37c6a0f68f9672": "s_3726905419f76846",
+    "n_5f92a5653df68c33": "s_4dab2545a7ad9999",
+    "n_4b8cf749c1001532": "s_d758d0e1c2e685ad",
+    "n_04b675093225bee8": "s_0ae7c10058548347",
+    "n_3f58b1d39fec5acc": "s_0ae7c10058548347",
+    "n_cffb59317458f94a": "s_0ae7c10058548347",
+    "n_32e850b3c0162186": "s_0ae7c10058548347",
+    "n_d7f40c295608f601": "s_e0cc9875fc6d4726",
+    "n_4a3434d8a31fd12e": "s_d758d0e1c2e685ad",
+    "n_8466792127df1737": "s_36dc272a34f2e3b7",
+    "n_6f8d09ba475ea869": "s_36dc272a34f2e3b7",
+    "n_38756f0a00372c0e": "s_36dc272a34f2e3b7",
+    "n_306a9aeacef50725": "s_36dc272a34f2e3b7",
+    "n_953b1005b66f4d48": "s_d758d0e1c2e685ad",
+    "n_e61e6fb459f66004": "s_36dc272a34f2e3b7",
+    "n_55dd47d0fd42e053": "s_36dc272a34f2e3b7",
+    "n_db8afa1c3b893b81": "s_36dc272a34f2e3b7",
+    "n_1d8ab52b084453f2": "s_36dc272a34f2e3b7"
+  },
+  "fonts": [
+    {
+      "family": "Söhne",
+      "sources": [
+        {
+          "assetId": "a26b6f69e541e766aea9e13e813c8e779f51338bc4b34c64291d0805037ca36c",
+          "originalUrl": "https://example.com/static/fonts/sohne-buch.woff2",
+          "format": "woff2"
+        }
+      ],
+      "weight": "400",
+      "style": "normal",
+      "display": "swap",
+      "license": "licensed"
+    }
+  ],
+  "stats": {
+    "styledNodeCount": 26,
+    "distinctStyles": 9,
+    "dedupeRatio": 0.3462
+  }
+}

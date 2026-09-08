@@ -1,0 +1,257 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "stage-report",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 41880
+  },
+  "stage": "capture",
+  "siteId": "northwind-supply",
+  "status": "ok-with-gaps",
+  "inputs": [],
+  "outputs": [
+    {
+      "path": "routes/root--i0--1280x800/meta.json",
+      "sha256": "42c8aeb4f714fcde7c9dc2ed6a9a71cd9e715ed2b262a48a7b6dfd620ef372aa",
+      "bytes": 2549
+    },
+    {
+      "path": "routes/root--i0--1280x800/dom.json",
+      "sha256": "031ba5044c89ab0dab2a5f141b06ec519e897c6ef9c1a8aa78a76afe4bc5e0b6",
+      "bytes": 47790
+    },
+    {
+      "path": "routes/root--i0--1280x800/styles.json",
+      "sha256": "442cd24340695f789e25db84e56defcca37fe600b2e2bae231938b55bbabdb45",
+      "bytes": 12801
+    },
+    {
+      "path": "routes/root--i0--1280x800/states.json",
+      "sha256": "5c57ad164b79bb7df2fda83cc2f866b90638c71a2275d95bb0d409b95aa1f728",
+      "bytes": 5256
+    },
+    {
+      "path": "routes/product-id--i0--1280x800/meta.json",
+      "sha256": "4fc651c4727682e56f32fe3fefafbece4690ecd0f25fa69e630e97323b8d3644",
+      "bytes": 2060
+    },
+    {
+      "path": "routes/product-id--i0--1280x800/dom.json",
+      "sha256": "4fc9d29a860e0210ca4dfed5b4811f174f4e07b1d05e63300abf8488403c349f",
+      "bytes": 45506
+    },
+    {
+      "path": "routes/product-id--i0--1280x800/styles.json",
+      "sha256": "f14b163339e1d50daaa118aac615ed62311febe687229d9fc56022345157415c",
+      "bytes": 15292
+    },
+    {
+      "path": "routes/product-id--i0--1280x800/states.json",
+      "sha256": "238d0f1b4743f7cae7632908a9a2a682ca9b860003e666a3a793c71068fe6cb1",
+      "bytes": 3979
+    },
+    {
+      "path": "routes/product-id--i1--1280x800/meta.json",
+      "sha256": "3a13383f00716cc46d0c217061e9328116a3c9eb9a3597cb25cc2866fd5e74ee",
+      "bytes": 2065
+    },
+    {
+      "path": "routes/product-id--i1--1280x800/dom.json",
+      "sha256": "23213d77ff4b0ffa57cb1704f1778b834bf1d40b04d04f1f7f1560a0dda37220",
+      "bytes": 45501
+    },
+    {
+      "path": "routes/product-id--i1--1280x800/styles.json",
+      "sha256": "49ed0df81f07863186c2be53602eb8114dfa3873f01f520ef911b09a39f1db6f",
+      "bytes": 15292
+    },
+    {
+      "path": "routes/product-id--i1--1280x800/states.json",
+      "sha256": "19d233100d1d6cbaac85b2f44551b16edd5a06cf0a15d309f836d47f3e52cf6a",
+      "bytes": 3979
+    },
+    {
+      "path": "routes/product-id--i0--390x844/meta.json",
+      "sha256": "161a3c6e6cf8f7de1183863604b9e9dd91302f132048be9c9dbc64f691f55b16",
+      "bytes": 2333
+    },
+    {
+      "path": "routes/product-id--i0--390x844/dom.json",
+      "sha256": "39a7d4eee86fed1d8296af5016a26be87dab034a66ac86bfad915a15e82f1555",
+      "bytes": 42912
+    },
+    {
+      "path": "routes/product-id--i0--390x844/styles.json",
+      "sha256": "35424621b32cf78b2f994461123c6666c6498845217e52568446e3d5f8e892be",
+      "bytes": 14276
+    },
+    {
+      "path": "routes/product-id--i0--390x844/states.json",
+      "sha256": "75052c6d27d7421558656c1dc18bb1d2454792f6aedd0fd10804778f50db8b20",
+      "bytes": 3978
+    },
+    {
+      "path": "routes/account-orders--i0--1280x800/meta.json",
+      "sha256": "e4a8133e8e06a1783fb9c4ede3ceade912397799ebe2b97f542414aed7d4ab0f",
+      "bytes": 1820
+    },
+    {
+      "path": "routes/account-orders--i0--1280x800/dom.json",
+      "sha256": "b85325c5e43fe50661349a60586b6ab350c8da60b0822e4e77afbe558594aa62",
+      "bytes": 46696
+    },
+    {
+      "path": "routes/account-orders--i0--1280x800/styles.json",
+      "sha256": "fd5a30282edc79abc0899f5f2cc899c72d1b024d223c9f5c8ce71db3802e863a",
+      "bytes": 12205
+    },
+    {
+      "path": "routes/account-orders--i0--1280x800/states.json",
+      "sha256": "290b666bd42d6982dfcfef98ceed6607130f7a8b0b3ddc57221bdf8c967217cb",
+      "bytes": 1680
+    },
+    {
+      "path": "routes/embeds-size-guide--i0--640x420/meta.json",
+      "sha256": "34588eb4cce13d132498f1414d3f977dd35833e23f415921e934e7f44fc21652",
+      "bytes": 2156
+    },
+    {
+      "path": "routes/embeds-size-guide--i0--640x420/dom.json",
+      "sha256": "1211f978c904f456aa35f2d076514f211b5e7190f49cf8186fd1cdb8978c544d",
+      "bytes": 19923
+    },
+    {
+      "path": "routes/embeds-size-guide--i0--640x420/styles.json",
+      "sha256": "c3170541582698f3a52b419fb0f13c1ecb4ff47a4cf14a97379ecbf4f012a1ce",
+      "bytes": 4340
+    },
+    {
+      "path": "routes/embeds-size-guide--i0--640x420/states.json",
+      "sha256": "de5876bca2e5c8dec7e41f8694f74c42ceff624dc0adc98db4d9a2eab9314d14",
+      "bytes": 354
+    },
+    {
+      "path": "assets/index.json",
+      "sha256": "a5c6ebcb4a1bbfb6b25db07d135100ef55e0340ed8337778ce0f882215ad8634",
+      "bytes": 12044
+    },
+    {
+      "path": "network/endpoints.json",
+      "sha256": "402fb4cf40e6e67858121fa8643538ee51fed08449f4138f90d2e24ce7fef54b",
+      "bytes": 19411
+    },
+    {
+      "path": "flows/add-mug-to-cart.trace.json",
+      "sha256": "a420bb8c764ab1ca3813f5780f8a94fc7ead3d6bef9bcc1f4b75b96866273795",
+      "bytes": 11603
+    },
+    {
+      "path": "flows/toggle-product-details.trace.json",
+      "sha256": "c462ad4880be3ada93a8af9b94e20b71f30b6921b63398c0dbb82c7beb177faf",
+      "bytes": 7892
+    },
+    {
+      "path": "flows/delete-account.trace.json",
+      "sha256": "febff7d74e84a20279ad4e421da5762257d52f8f4a4fa77c5225d3cd6fd2ab50",
+      "bytes": 9128
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "d0c0faf304c0e07451ae39eb26a586dccbfdaa30a0b9ad9f747f08d91216232b",
+      "bytes": 2922
+    }
+  ],
+  "warnings": [
+    {
+      "code": "instance-cap-applied",
+      "message": "12 URLs matched /product/:id; captured 3 per §6’s cap.",
+      "path": "routes"
+    },
+    {
+      "code": "closed-shadow-root-absent",
+      "message": "All shadow roots encountered were open; no closed roots needed flattening."
+    }
+  ],
+  "gaps": [
+    {
+      "gapId": "gap_1982e0d1e2fc",
+      "stage": "capture",
+      "category": "iframe-third-party",
+      "severity": "degraded",
+      "subject": {
+        "url": "https://widgets.example.net/reviews?site=northwind"
+      },
+      "summary": "Third-party reviews iframe replaced with a static screenshot.",
+      "detail": "The footer embeds widgets.example.net, a cross-origin frame siteforge cannot recurse into. §11 requires a static screenshot placeholder. The frame is non-interactive in the clone; any task depending on review content will not be reproducible.",
+      "stub": {
+        "kind": "static-screenshot",
+        "assetId": "140e2850d6a6587a24a55b302efa0878094570717c9d9594ec934c05b21e0ecb"
+      }
+    },
+    {
+      "gapId": "gap_34a4ad245bd3",
+      "stage": "capture",
+      "category": "licensed-webfont",
+      "severity": "degraded",
+      "subject": {
+        "url": "https://example.com/static/fonts/sohne-buch.woff2"
+      },
+      "summary": "Söhne is licensed; substituting a metric-compatible open face.",
+      "detail": "§8 forbids rehosting licensed WOFF2. The captured @font-face was recorded for reference but the generated app will load Inter, whose metrics are close enough to keep the visual gate under threshold. Expect small text-width differences on dense pages.",
+      "stub": {
+        "kind": "font-substitute",
+        "originalFamily": "Söhne",
+        "substituteFamily": "Inter",
+        "metricCompatible": true
+      }
+    },
+    {
+      "gapId": "gap_5e8cb74e1ae7",
+      "stage": "capture",
+      "category": "destructive-action-skipped",
+      "severity": "degraded",
+      "subject": {
+        "routeId": "account-orders--i0--1280x800",
+        "flowId": "delete-account"
+      },
+      "summary": "Delete account was not probed (destructive heuristic matched \"delete\").",
+      "detail": "§6 skips destructive actions unless --allow-destructive. The control was discovered via the a11y tree and CDP listeners, but never clicked, so its transition is unknown. The clone renders the button; activating it hits the stubbed endpoint.",
+      "stub": {
+        "kind": "omitted",
+        "detail": "Button renders and is focusable; its click handler posts to the 501 stub."
+      }
+    },
+    {
+      "gapId": "gap_06dfc30ddfa2",
+      "stage": "capture",
+      "category": "endpoint-stubbed",
+      "severity": "degraded",
+      "subject": {
+        "endpointId": "delete-api-account"
+      },
+      "summary": "DELETE /api/account has no observed response; stubbed 501.",
+      "detail": "Because the destructive probe was skipped, no response was ever observed and no schema could be inferred. §7 requires a 501 stub rather than a plausible invention, so a trajectory that reaches it fails visibly instead of silently succeeding against fabricated data.",
+      "stub": {
+        "kind": "http-501",
+        "header": "X-Siteforge-Stub: true",
+        "endpointId": "delete-api-account"
+      }
+    },
+    {
+      "gapId": "gap_f90257443afc",
+      "stage": "capture",
+      "category": "iframe-third-party",
+      "severity": "info",
+      "subject": {
+        "url": "https://widgets.example.net"
+      },
+      "summary": "5 requests to widgets.example.net were recorded but will not be reproduced.",
+      "detail": "§8 forbids outbound network from the clone. These requests are documented here and blocked by the undici agent; nothing in the generated app will attempt them.",
+      "stub": {
+        "kind": "none"
+      }
+    }
+  ]
+}

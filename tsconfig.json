@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/schema" },
+    { "path": "./packages/capture" },
+    { "path": "./packages/infer" },
+    { "path": "./packages/codegen" },
+    { "path": "./packages/verify" },
+    { "path": "./packages/envkit" },
+    { "path": "./packages/cli" }
+  ]
+}

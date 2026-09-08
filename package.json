@@ -1,0 +1,23 @@
+{
+  "name": "siteforge-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "typecheck": "tsc --build --force && pnpm -r --parallel typecheck:tests",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "fixtures": "pnpm --filter @siteforge/schema build && node packages/schema/scripts/build-fixtures.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

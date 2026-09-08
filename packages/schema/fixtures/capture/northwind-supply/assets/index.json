@@ -1,0 +1,366 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "asset-index",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 2260
+  },
+  "byUrl": {
+    "https://example.com/static/logo.svg": {
+      "assetId": "28cd532743fde01c066da47e6854b62050663a30fa6c09ad35827da67430e8af",
+      "originalUrl": "https://example.com/static/logo.svg",
+      "localPath": "assets/files/28cd532743fde01c066da47e6854b62050663a30fa6c09ad35827da67430e8af.svg",
+      "sha256": "28cd532743fde01c066da47e6854b62050663a30fa6c09ad35827da67430e8af",
+      "mime": "image/svg+xml",
+      "bytes": 2841,
+      "kind": "image",
+      "status": 200,
+      "sameOrigin": true,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "dom-attribute",
+          "routeId": "root--i0--1280x800",
+          "nodeId": "n_1f4a07bf1ac6de05",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "root--i0--1280x800",
+          "nodeId": "n_6d494dbc5c4669da",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--1280x800",
+          "nodeId": "n_1f4a07bf1ac6de05",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--1280x800",
+          "nodeId": "n_6d494dbc5c4669da",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i1--1280x800",
+          "nodeId": "n_1f4a07bf1ac6de05",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i1--1280x800",
+          "nodeId": "n_6d494dbc5c4669da",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--390x844",
+          "nodeId": "n_1f4a07bf1ac6de05",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--390x844",
+          "nodeId": "n_6d494dbc5c4669da",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "account-orders--i0--1280x800",
+          "nodeId": "n_1f4a07bf1ac6de05",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "account-orders--i0--1280x800",
+          "nodeId": "n_6d494dbc5c4669da",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "embeds-size-guide--i0--640x420",
+          "nodeId": "n_1f4a07bf1ac6de05",
+          "attribute": "href"
+        }
+      ]
+    },
+    "https://example.com/static/app.css": {
+      "assetId": "a3cd1892e21ee2f648dd253385d75cb17e98753b63f8a2521fd8bf88850ec9f1",
+      "originalUrl": "https://example.com/static/app.css",
+      "localPath": "assets/files/a3cd1892e21ee2f648dd253385d75cb17e98753b63f8a2521fd8bf88850ec9f1.css",
+      "sha256": "a3cd1892e21ee2f648dd253385d75cb17e98753b63f8a2521fd8bf88850ec9f1",
+      "mime": "text/css",
+      "bytes": 18422,
+      "kind": "stylesheet",
+      "status": 200,
+      "sameOrigin": true,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "dom-attribute",
+          "routeId": "root--i0--1280x800",
+          "nodeId": "n_6d8aae3d5ae8f1ec",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--1280x800",
+          "nodeId": "n_6d8aae3d5ae8f1ec",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i1--1280x800",
+          "nodeId": "n_6d8aae3d5ae8f1ec",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--390x844",
+          "nodeId": "n_6d8aae3d5ae8f1ec",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "account-orders--i0--1280x800",
+          "nodeId": "n_6d8aae3d5ae8f1ec",
+          "attribute": "href"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "embeds-size-guide--i0--640x420",
+          "nodeId": "n_6d8aae3d5ae8f1ec",
+          "attribute": "href"
+        }
+      ]
+    },
+    "https://example.com/static/fonts/sohne-buch.woff2": {
+      "assetId": "a26b6f69e541e766aea9e13e813c8e779f51338bc4b34c64291d0805037ca36c",
+      "originalUrl": "https://example.com/static/fonts/sohne-buch.woff2",
+      "localPath": "assets/files/a26b6f69e541e766aea9e13e813c8e779f51338bc4b34c64291d0805037ca36c.woff2",
+      "sha256": "a26b6f69e541e766aea9e13e813c8e779f51338bc4b34c64291d0805037ca36c",
+      "mime": "font/woff2",
+      "bytes": 41208,
+      "kind": "font",
+      "status": 200,
+      "sameOrigin": true,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "font-face",
+          "routeId": "root--i0--1280x800",
+          "family": "Söhne"
+        },
+        {
+          "kind": "font-face",
+          "routeId": "product-id--i0--1280x800",
+          "family": "Söhne"
+        },
+        {
+          "kind": "font-face",
+          "routeId": "product-id--i1--1280x800",
+          "family": "Söhne"
+        },
+        {
+          "kind": "font-face",
+          "routeId": "product-id--i0--390x844",
+          "family": "Söhne"
+        },
+        {
+          "kind": "font-face",
+          "routeId": "account-orders--i0--1280x800",
+          "family": "Söhne"
+        },
+        {
+          "kind": "font-face",
+          "routeId": "embeds-size-guide--i0--640x420",
+          "family": "Söhne"
+        },
+        {
+          "kind": "asset-import",
+          "fromAssetId": "a3cd1892e21ee2f648dd253385d75cb17e98753b63f8a2521fd8bf88850ec9f1"
+        }
+      ]
+    },
+    "https://example.com/static/img/paper-texture.png": {
+      "assetId": "6bd0e168f506102ba943109d21f8827f223c38cfecef0169f3845696d2cbfad7",
+      "originalUrl": "https://example.com/static/img/paper-texture.png",
+      "localPath": "assets/files/6bd0e168f506102ba943109d21f8827f223c38cfecef0169f3845696d2cbfad7.png",
+      "sha256": "6bd0e168f506102ba943109d21f8827f223c38cfecef0169f3845696d2cbfad7",
+      "mime": "image/png",
+      "bytes": 9134,
+      "kind": "image",
+      "status": 200,
+      "sameOrigin": true,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "css-url",
+          "routeId": "root--i0--1280x800",
+          "styleId": "s_937c56bf144c1234",
+          "stylesheetHref": "https://example.com/static/app.css",
+          "property": "background-image"
+        },
+        {
+          "kind": "css-url",
+          "routeId": "product-id--i0--1280x800",
+          "styleId": "s_937c56bf144c1234",
+          "stylesheetHref": "https://example.com/static/app.css",
+          "property": "background-image"
+        },
+        {
+          "kind": "css-url",
+          "routeId": "product-id--i1--1280x800",
+          "styleId": "s_937c56bf144c1234",
+          "stylesheetHref": "https://example.com/static/app.css",
+          "property": "background-image"
+        },
+        {
+          "kind": "css-url",
+          "routeId": "product-id--i0--390x844",
+          "styleId": "s_937c56bf144c1234",
+          "stylesheetHref": "https://example.com/static/app.css",
+          "property": "background-image"
+        },
+        {
+          "kind": "css-url",
+          "routeId": "account-orders--i0--1280x800",
+          "styleId": "s_937c56bf144c1234",
+          "stylesheetHref": "https://example.com/static/app.css",
+          "property": "background-image"
+        }
+      ]
+    },
+    "https://example.com/static/img/mug-blue.jpg": {
+      "assetId": "f5ebc99b1c11dc844ba9f582f18398b195d00fdddb6607ab7a90695917d56704",
+      "originalUrl": "https://example.com/static/img/mug-blue.jpg",
+      "localPath": "assets/files/f5ebc99b1c11dc844ba9f582f18398b195d00fdddb6607ab7a90695917d56704.jpg",
+      "sha256": "f5ebc99b1c11dc844ba9f582f18398b195d00fdddb6607ab7a90695917d56704",
+      "mime": "image/jpeg",
+      "bytes": 87304,
+      "kind": "image",
+      "status": 200,
+      "sameOrigin": true,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "dom-attribute",
+          "routeId": "root--i0--1280x800",
+          "nodeId": "n_bf65007de0aa76af",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--1280x800",
+          "nodeId": "n_142db6a452dbf9ac",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--390x844",
+          "nodeId": "n_142db6a452dbf9ac",
+          "attribute": "src"
+        }
+      ]
+    },
+    "https://example.com/static/img/notebook-a5.jpg": {
+      "assetId": "2c69fd490c27474e2ab5e81819349177d464dca0ae37c6603ea56d0f11506b72",
+      "originalUrl": "https://example.com/static/img/notebook-a5.jpg",
+      "localPath": "assets/files/2c69fd490c27474e2ab5e81819349177d464dca0ae37c6603ea56d0f11506b72.jpg",
+      "sha256": "2c69fd490c27474e2ab5e81819349177d464dca0ae37c6603ea56d0f11506b72",
+      "mime": "image/jpeg",
+      "bytes": 74110,
+      "kind": "image",
+      "status": 200,
+      "sameOrigin": true,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "dom-attribute",
+          "routeId": "root--i0--1280x800",
+          "nodeId": "n_9b1bf3f711a5284f",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i1--1280x800",
+          "nodeId": "n_df0ae4a532b410f1",
+          "attribute": "src"
+        }
+      ]
+    },
+    "https://example.com/static/img/pens-fine.jpg": {
+      "assetId": "afa2e945062d458df2f44648be88ca09981aca882a8e505f7f07b534b2bcab5a",
+      "originalUrl": "https://example.com/static/img/pens-fine.jpg",
+      "localPath": "assets/files/afa2e945062d458df2f44648be88ca09981aca882a8e505f7f07b534b2bcab5a.jpg",
+      "sha256": "afa2e945062d458df2f44648be88ca09981aca882a8e505f7f07b534b2bcab5a",
+      "mime": "image/jpeg",
+      "bytes": 61980,
+      "kind": "image",
+      "status": 200,
+      "sameOrigin": true,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "dom-attribute",
+          "routeId": "root--i0--1280x800",
+          "nodeId": "n_10e3a4c9cb6d27a7",
+          "attribute": "src"
+        }
+      ]
+    },
+    "https://widgets.example.net/reviews?site=northwind": {
+      "assetId": "140e2850d6a6587a24a55b302efa0878094570717c9d9594ec934c05b21e0ecb",
+      "originalUrl": "https://widgets.example.net/reviews?site=northwind",
+      "localPath": "assets/files/140e2850d6a6587a24a55b302efa0878094570717c9d9594ec934c05b21e0ecb.png",
+      "sha256": "140e2850d6a6587a24a55b302efa0878094570717c9d9594ec934c05b21e0ecb",
+      "mime": "image/png",
+      "bytes": 14902,
+      "kind": "image",
+      "status": 200,
+      "sameOrigin": false,
+      "fromCache": false,
+      "referencedBy": [
+        {
+          "kind": "dom-attribute",
+          "routeId": "root--i0--1280x800",
+          "nodeId": "n_e2d8d518b35d8d6a",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--1280x800",
+          "nodeId": "n_e2d8d518b35d8d6a",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i1--1280x800",
+          "nodeId": "n_e2d8d518b35d8d6a",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "product-id--i0--390x844",
+          "nodeId": "n_e2d8d518b35d8d6a",
+          "attribute": "src"
+        },
+        {
+          "kind": "dom-attribute",
+          "routeId": "account-orders--i0--1280x800",
+          "nodeId": "n_e2d8d518b35d8d6a",
+          "attribute": "src"
+        }
+      ]
+    }
+  },
+  "stats": {
+    "assetCount": 8,
+    "distinctFiles": 8,
+    "totalBytes": 309901
+  }
+}

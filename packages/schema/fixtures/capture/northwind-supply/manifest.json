@@ -1,0 +1,128 @@
+{
+  "modelVersion": "1.0.0",
+  "artifact": "capture-manifest",
+  "scrubbed": true,
+  "provenance": {
+    "recordedAt": "2026-09-08T11:24:07.000Z",
+    "runId": "run_a7ff1a530f992ee9",
+    "durationMs": 41880
+  },
+  "siteId": "northwind-supply",
+  "target": {
+    "entryUrl": "http://example.com/",
+    "origin": "https://example.com"
+  },
+  "permission": {
+    "source": "allowlist",
+    "matchedEntry": "example.com"
+  },
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 800,
+      "deviceScaleFactor": 1,
+      "isMobile": false,
+      "hasTouch": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 3,
+      "isMobile": true,
+      "hasTouch": true
+    }
+  ],
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 siteforge/0.1.0",
+  "determinism": {
+    "seed": 42,
+    "frozenEpochMs": 1767225600000,
+    "frozenTimezone": "UTC",
+    "frozenLocale": "en-US",
+    "frozen": [
+      "Date.now",
+      "performance.now",
+      "Math.random",
+      "crypto.randomUUID"
+    ],
+    "prefersReducedMotion": "reduce"
+  },
+  "crawl": {
+    "maxRoutes": 40,
+    "maxDepth": 3,
+    "maxInstancesPerPattern": 3,
+    "sameOriginOnly": true,
+    "allowDestructive": false,
+    "destructiveTerms": [
+      "delete",
+      "remove",
+      "cancel subscription",
+      "deactivate"
+    ]
+  },
+  "auth": {
+    "mode": "storage-state",
+    "storageStatePath": "auth/storage-state.json",
+    "acquiredBy": "interactive-headful",
+    "expiresAt": "2026-09-15T11:24:07.000Z",
+    "credentialSource": "os-keychain"
+  },
+  "toolVersions": {
+    "siteforge": "0.1.0",
+    "playwright": "1.49.1",
+    "browser": "chromium-131.0.6778.85"
+  },
+  "patterns": [
+    {
+      "urlPattern": "/",
+      "observedUrlCount": 1,
+      "routeIds": [
+        "root--i0--1280x800"
+      ]
+    },
+    {
+      "urlPattern": "/product/:id",
+      "observedUrlCount": 12,
+      "routeIds": [
+        "product-id--i0--1280x800",
+        "product-id--i1--1280x800",
+        "product-id--i0--390x844"
+      ]
+    },
+    {
+      "urlPattern": "/account/orders",
+      "observedUrlCount": 1,
+      "routeIds": [
+        "account-orders--i0--1280x800"
+      ]
+    },
+    {
+      "urlPattern": "/embeds/size-guide",
+      "observedUrlCount": 1,
+      "routeIds": [
+        "embeds-size-guide--i0--640x420"
+      ]
+    }
+  ],
+  "routeIds": [
+    "root--i0--1280x800",
+    "product-id--i0--1280x800",
+    "product-id--i1--1280x800",
+    "product-id--i0--390x844",
+    "account-orders--i0--1280x800",
+    "embeds-size-guide--i0--640x420"
+  ],
+  "flowIds": [
+    "add-mug-to-cart",
+    "toggle-product-details",
+    "delete-account"
+  ],
+  "contentHash": "373be36f27ec384bc177cefab5c7e5a67374c9096d5939f2fa05042200a69f88",
+  "counts": {
+    "routes": 6,
+    "patterns": 4,
+    "assets": 8,
+    "endpoints": 8,
+    "flows": 3,
+    "gaps": 5
+  }
+}
