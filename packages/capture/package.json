@@ -1,0 +1,32 @@
+{
+  "name": "@siteforge/capture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stage 1: deterministic Playwright crawler. Target site -> capture/.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "typecheck:tests": "tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@siteforge/schema": "workspace:*",
+    "@siteforge/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "playwright": "^1.63.0",
+    "postcss-selector-parser": "^7.1.6"
+  }
+}

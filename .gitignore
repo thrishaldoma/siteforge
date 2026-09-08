@@ -1,7 +1,14 @@
 # Capture artifacts are sensitive (CLAUDE.md §3.4): they may contain
 # response bodies, storage state, and user content. Never commit them.
-capture/
-# ...except the schema fixtures, which are a capture tree on purpose.
+#
+# Root-anchored. An unanchored `capture/` matches a directory of that name at
+# ANY depth — which silently swallowed the whole `packages/capture/` source
+# package: every "capture:" commit up to 819121b contained schema and docs
+# changes only, and the crawler existed nowhere but a working tree.
+/capture/
+# The schema fixtures are a capture tree on purpose, and no longer need an
+# exception now that the pattern is anchored — kept as a tripwire in case it
+# is ever un-anchored again.
 !/packages/schema/fixtures/capture/
 **/auth/storage-state.json
 
