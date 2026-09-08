@@ -52,6 +52,7 @@ export async function readEventListeners(cdp, backendToSfIdx) {
       const types = [...new Set((listeners ?? []).map((l) => l.type))];
       if (types.length) out.set(sfIdx, types);
       await cdp.send('Runtime.releaseObject', { objectId: object.objectId }).catch(() => {});
+    // operational: the node detached between resolve and release
     } catch { /* detached or non-element */ }
   }
   return out;

@@ -16,8 +16,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
-import { scrubHarFile } from './capture-lib.mjs';
-import { formatFindings, scanCaptureTree } from '../../shared/dist/index.js';
+import { installEscapeGuards, installOriginGuard, scrubHarFile } from './capture-lib.mjs';
+import {
+  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, scanCaptureTree,
+} from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 import * as S from '../../schema/dist/index.js';
 
@@ -75,6 +77,7 @@ function analyseSelector(selectorText) {
     }).processSync(selectorText, { lossless: false });
     base = root;
   } catch {
+    // operational: postcss throws on selectors real stylesheets contain; page context
     // An unparseable selector is recorded as-is and matched as-is; if that also
     // fails, matching yields nothing rather than a wrong set.
     return { states: [...states], base: selectorText, parsed: false };
@@ -212,6 +215,7 @@ const MATCH_SELECTORS = (selectors) =>
       return Array.from(document.querySelectorAll(sel))
         .map((el) => Number(el.getAttribute('data-sf-idx')))
         .filter((n) => Number.isInteger(n));
+    // operational: CDP node lookup on an element that detached mid-pass
     } catch { return []; }
   });
 
@@ -372,7 +376,18 @@ await context.addInitScript(
   { seed: SEED, epoch: FROZEN_EPOCH_MS },
 );
 
+const ALLOWED_ORIGINS = deriveAllowedOrigins({ origin: new URL(TARGET).origin });
+const blockedNavigations = [];
+const onBlocked = (event) => {
+  blockedNavigations.push(event);
+  console.log(`  ⤫ blocked ${event.kind} → ${event.origin ?? event.url}`);
+};
+await installOriginGuard(context, {
+  allowedOrigins: ALLOWED_ORIGINS, onBlocked, decide: decideNavigation,
+});
+
 const page = await context.newPage();
+installEscapeGuards(page, { onBlocked });
 
 /** Content-addressed asset capture (§6: persist every response body). */
 const assetsByUrl = new Map();
@@ -390,6 +405,7 @@ page.on('response', async (response) => {
       arrivedAtScrollStep: scrollStep,
     });
   } catch {
+    // operational: redirects and preflights have no retrievable body
     /* redirects and preflights have no retrievable body */
   }
 });
@@ -462,6 +478,7 @@ for (const [sfIdx, backendNodeId] of sfIdxToBackend) {
     const types = [...new Set((listeners ?? []).map((l) => l.type))];
     if (types.length) listenersBySfIdx.set(sfIdx, types);
     await cdp.send('Runtime.releaseObject', { objectId: object.objectId }).catch(() => {});
+  // operational: the node detached between resolve and release
   } catch { /* detached or non-element node */ }
 }
 console.log(`  listeners: ${listenersBySfIdx.size} elements carry DOM event handlers (CDP)`);
@@ -821,7 +838,11 @@ const manifest = {
   },
   crawl: {
     budget: { maxInstancesPerPattern: 3, maxRoutesPerContext: 40, maxRoutesTotal: 100, maxDepth: 3 },
-    sameOriginOnly: true, allowDestructive: false,
+    sameOriginOnly: true,
+    allowedOrigins: [...ALLOWED_ORIGINS],
+    // Anonymous crawl: no session exists, so there is none to spend.
+    sessionProbePolicy: 'not-applicable',
+    allowDestructive: false,
     destructiveTerms: ['delete', 'remove', 'cancel subscription', 'deactivate'],
   },
   toolVersions: { siteforge: '0.1.0-spike', playwright: '1.x', browser: 'chromium-headless-shell' },
@@ -923,6 +944,8 @@ const observed = {
   subresourceRequests: Object.keys(assetEntries).length,
   // A static page with no API traffic; nothing carried a credential.
   harCredentialedRequests: 0,
+  sessionProbePolicy: 'not-applicable',
+  sessionDestructiveControls: 0,
 };
 const extractedCounts = {
   styleTableEntries: styles.table.length,
@@ -939,6 +962,7 @@ const extractedCounts = {
   interactionCandidates: built.filter((n) => n.nodeType === 'element' && n.interaction).length,
   assets: Object.keys(assetEntries).length,
   endpointsWithAuthEvidence: 0,
+  sessionDestructiveFired: 0,
   a11yNodes: built.filter((n) => n.nodeType === 'element' && n.a11y).length,
 };
 const coverage = {

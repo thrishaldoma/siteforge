@@ -11,6 +11,7 @@
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "typecheck": "tsc --build --force && pnpm -r --parallel typecheck:tests",
+    "lint": "node scripts/lint-catch.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "fixtures": "pnpm --filter @siteforge/schema build && node packages/schema/scripts/build-fixtures.mjs",

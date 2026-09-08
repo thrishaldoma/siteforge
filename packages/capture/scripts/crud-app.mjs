@@ -26,7 +26,7 @@ import { createServer } from 'node:http';
 
 /* --------------------------------------------------------------- the store */
 
-const USER = { id: 'usr_1', email: 'operator@localhost', password: 'pw-8Qv3n2Lx-rung3', displayName: 'Operator' };
+const USER = { id: 'usr_1', email: 'operator@localhost', password: process.env['RUNG3_PASSWORD'] ?? 'pw-local-dev-only', displayName: 'Operator' };
 
 const LISTS = [
   { id: 'lst_1', name: 'Today', colour: 'blue' },
@@ -74,10 +74,14 @@ h1{font-size:28px;margin:0 0 20px}
 .title{flex:1}
 .filters{display:flex;gap:8px;margin-bottom:16px}
 .filters .btn[aria-pressed="true"]{background:var(--ink)}
-/* No CSS rule keys off .is-open: the details panel is JS-driven only, so §6's
-   probing is the only way to discover it. That is deliberate. */
-.panel{display:none}
-.panel.is-open{display:block;padding:8px 0;color:var(--muted);font-size:14px}
+/* The panel's open state exists ONLY as an inline style set by JS. No class is
+   toggled and no selector describes it, so the CSSOM pass genuinely cannot see
+   it and probing is genuinely the only way to find it.
+   It used to toggle an .is-open class that this stylesheet then styled — a
+   fixture claiming a hazard it did not have, and worse, handing the detector
+   exactly the class diff it keys on. §13: a fixture app must be able to inflict
+   its hazard. */
+.panel{display:none;padding:8px 0;color:var(--muted);font-size:14px}
 form{display:flex;gap:8px;margin-top:20px}
 input[type=text],input[type=password]{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px}
 .error{color:#b91c1c;font-size:14px}
@@ -119,7 +123,12 @@ const APP = `<!doctype html>
   <p><button class="btn btn-danger" id="delete-account" type="button">Delete account</button></p>
   <!-- out-of-scope: another origin. Not destructive, just not ours to exercise. -->
   <p><a id="docs" href="https://example.net/help">Help (external)</a>
-     <a id="contact" href="mailto:support@example.net">Email support</a></p>
+     <a id="contact" href="mailto:support@example.net">Email support</a>
+     <!-- No href to classify. §6's boundary used to be "do not follow off-origin
+          links", and this walks straight past that: a click, a foreign origin,
+          no link followed. It is here so the chokepoint has something real to
+          stop. -->
+     <button class="btn" id="popout" type="button">Open partner site</button></p>
 </main>
 <script>
 const listEl = document.getElementById('list');
@@ -160,12 +169,13 @@ listEl.addEventListener('click', async (e) => {
     load();
   }
 });
-// JS-driven only: no CSS selector mentions .is-open, so the CSSOM pass cannot
+// JS-driven only: nothing but an inline style, so the CSSOM pass cannot
 // find this and §6's probing must.
 document.getElementById('details').addEventListener('click', (e) => {
   const p = document.getElementById('panel');
-  p.classList.toggle('is-open');
-  e.currentTarget.textContent = p.classList.contains('is-open') ? 'Hide details' : 'Show details';
+  const open = p.style.display === 'block';
+  p.style.display = open ? '' : 'block';
+  e.currentTarget.textContent = open ? 'Show details' : 'Hide details';
 });
 document.getElementById('new').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -188,6 +198,9 @@ document.getElementById('logout').addEventListener('click', async () => {
 // Never fired by capture. The fetch literal is here because binding it to a URL
 // is exactly what §7.6 does by reading the source — the endpoint is reachable to
 // infer and to a human, and to nothing else.
+document.getElementById('popout').addEventListener('click', () => {
+  window.open('https://example.net/partner', '_blank');
+});
 document.getElementById('delete-account').addEventListener('click', async () => {
   await fetch('/api/account', { method: 'DELETE' });
   location.href = '/login';

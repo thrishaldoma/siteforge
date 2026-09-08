@@ -76,6 +76,7 @@ try {
   run('pnpm install', 'pnpm', ['install', '--silent'], clone);
   run('pnpm build', 'pnpm', ['-s', 'build'], clone);
   run('pnpm typecheck', 'pnpm', ['-s', 'typecheck'], clone);
+  run('pnpm lint', 'pnpm', ['-s', 'lint'], clone);
   run('pnpm test', 'pnpm', ['-s', 'test'], clone);
   run('fixtures regenerate', 'node', ['packages/schema/scripts/build-fixtures.mjs'], clone);
   // Distinct ports: a rung server left running locally must not make the clone
@@ -92,6 +93,7 @@ try {
     RUNG3_PORT: '8890',
   });
 } catch {
+  // operational: run() already printed the failing step and threw a labelled Error
   failed = true;
 } finally {
   if (keep) console.log(`\n  clone kept at ${clone}`);

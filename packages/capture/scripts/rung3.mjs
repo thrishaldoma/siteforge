@@ -18,10 +18,16 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import * as S from '../../schema/dist/index.js';
-import { assertPermitted, scrub, scrubDeep, scrubHarFile, sha256 } from './capture-lib.mjs';
+import {
+  assertPermitted, installEscapeGuards, installOriginGuard, scrub, scrubDeep, scrubHarFile, sha256,
+} from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
-import { formatFindings, scanCaptureTree } from '../../shared/dist/index.js';
+import {
+  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, operationalKind,
+  rethrowIfDefect,
+  scanCaptureTree,
+} from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -74,6 +80,28 @@ const PLAN = [
 const findings = [];
 const finding = (severity, what) => findings.push({ severity, what });
 
+/**
+ * The crawl boundary, from one source (§6, decision 0012).
+ *
+ * Derived from the crawl scope rather than written at each call site, so the
+ * manifest, the router and the post-click check cannot disagree about where the
+ * boundary is.
+ */
+const ALLOWED_ORIGINS = deriveAllowedOrigins({ origin: ORIGIN });
+
+/** Everything the chokepoint refused, for the manifest and the rung gate. */
+const blockedNavigations = [];
+const onBlocked = (event) => {
+  blockedNavigations.push(event);
+  console.log(`      ⤫ blocked ${event.kind} → ${event.origin ?? event.url}`);
+};
+const guardContext = async (context) => {
+  await installOriginGuard(context, {
+    allowedOrigins: ALLOWED_ORIGINS, onBlocked, decide: decideNavigation,
+  });
+  return context;
+};
+
 /* --------------------------------------------------------------------- run */
 
 assertPermitted(ORIGIN);
@@ -125,10 +153,12 @@ const attachApiRecorder = (page, routeIdRef, { anonymousProbe = false } = {}) =>
       const contentType = (response.headers()['content-type'] ?? '').split(';')[0].trim();
       let body;
       if (contentType.includes('json')) {
+        // operational: a 204 has no body; a non-JSON body is not ours to parse
         try { body = JSON.parse(await response.text()); } catch { /* empty 204 */ }
       }
       let requestBody;
       const post = request.postData();
+      // operational: a form-encoded request body is not JSON, which is normal
       if (post) { try { requestBody = JSON.parse(post); } catch { /* form-encoded */ } }
       // `request.headers()` omits cookies — it returns what the page set, not
       // what the network stack sent. Reading auth evidence from it meant
@@ -151,8 +181,9 @@ const attachApiRecorder = (page, routeIdRef, { anonymousProbe = false } = {}) =>
 
 /** §6: sign in by hand is the real path; a local fixture app is scripted. */
 async function acquireStorageState() {
-  const ctx = await browser.newContext({ viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC' });
+  const ctx = await guardContext(await browser.newContext({ viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC' }));
   const page = await ctx.newPage();
+  installEscapeGuards(page, { onBlocked });
   await page.goto(`${ORIGIN}/login`, { waitUntil: 'networkidle' });
   await page.fill('#email', USER);
   await page.fill('#password', PASS);
@@ -172,13 +203,13 @@ const routes = new Map();
 const allAssets = new Map();
 
 for (const context of CONTEXTS) {
-  const ctx = await browser.newContext({
+  const ctx = await guardContext(await browser.newContext({
     viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
     deviceScaleFactor: VIEWPORT.deviceScaleFactor,
     userAgent: UA, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce',
     ...(context.auth.mode === 'storage-state' ? { storageState } : {}),
     recordHar: { path: join(OUT, 'network', `${context.contextId}.har`), content: 'omit' },
-  });
+  }));
   await ctx.addInitScript(({ seed, epoch }) => {
     let state = seed >>> 0;
     Math.random = () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 0x100000000; };
@@ -193,6 +224,8 @@ for (const context of CONTEXTS) {
   }, { seed: SEED, epoch: Date.parse('2026-01-01T00:00:00.000Z') });
 
   const page = await ctx.newPage();
+
+  installEscapeGuards(page, { onBlocked });
   const routeIdRef = { current: null };
   attachApiRecorder(page, routeIdRef);
   page.on('response', async (response) => {
@@ -205,6 +238,7 @@ for (const context of CONTEXTS) {
         sha256: sha256(buf), bytes: buf.length, mime, status: response.status(),
         sameOrigin: new URL(url).origin === ORIGIN,
       });
+    // operational: a redirect response has no retrievable body
     } catch { /* redirect */ }
   });
 
@@ -261,6 +295,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomT
   // §6: each probe runs in a fresh page context, so probes cannot contaminate
   // each other's preconditions.
   const page = await ctx.newPage();
+  installEscapeGuards(page, { onBlocked });
   attachApiRecorder(page, { current: routeId });
   try {
     await page.goto(`${ORIGIN}${record.plan.path}`, { waitUntil: 'networkidle', timeout: 10_000 });
@@ -273,6 +308,11 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomT
       classes: [...document.querySelectorAll('*')].map((e) => e.className).join('|'),
       attrs: [...document.querySelectorAll('*')]
         .map((e) => [...e.attributes].map((a) => `${a.name}=${a.value}`).join(',')).join('|'),
+      // Per-element inline style, as an array so it can be diffed positionally.
+      // A JS-driven state need not touch a class at all — the crud app's details
+      // panel sets `style.display` and nothing else — and a detector that only
+      // reads class diffs finds nothing there while reporting success.
+      inlineStyles: [...document.querySelectorAll('*')].map((e) => e.getAttribute('style') ?? ''),
       focused: document.activeElement?.getAttribute('aria-label') ?? null,
     }));
 
@@ -287,6 +327,16 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomT
     await page.waitForLoadState('networkidle', { timeout: 1500 }).catch(() => {});
     await settleResponses();
     const after = await snap();
+
+    // Second layer. The chokepoint is what *prevents* an off-origin navigation;
+    // this only reports that the chokepoint has a hole. If it ever fires, the
+    // interceptor missed something and that is a defect, not a classification.
+    // operational: a page on about:blank has no origin to compare
+    const afterOrigin = (() => { try { return new URL(after.url).origin; } catch { return null; } })();
+    if (afterOrigin && !ALLOWED_ORIGINS.has(afterOrigin)) {
+      finding('origin-guard-hole', `${label} reached ${afterOrigin} — the interceptor did not stop it`);
+    }
+
     const networkCalls = observations.slice(netBefore);
 
     const changed = before.html !== after.html;
@@ -331,34 +381,46 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomT
     });
 
     // A change no extracted CSSOM rule mentions is JS-driven, which is exactly
-    // the case §6 reserves probing for.
-    if (changed && before.classes !== after.classes) {
-      const newClasses = after.classes.split('|').join(' ').split(/\s+/)
-        .filter((c) => c && !before.classes.includes(c));
-      const unexplained = newClasses.filter((c) => !cssomText.includes(c));
-      if (unexplained.length) {
+    // the case §6 reserves probing for. Two shapes, and the second one used to
+    // be invisible: a class the stylesheet does not describe, or an inline
+    // style with no class involved at all.
+    if (changed) {
+      const newClasses = before.classes === after.classes ? [] :
+        after.classes.split('|').join(' ').split(/\s+/)
+          .filter((c) => c && !before.classes.includes(c));
+      const unexplainedClasses = newClasses.filter((c) => !cssomText.includes(c));
+
+      const attributeChanges = [];
+      const width = Math.min(before.inlineStyles.length, after.inlineStyles.length);
+      for (let i = 0; i < width; i += 1) {
+        if (before.inlineStyles[i] === after.inlineStyles[i]) continue;
+        attributeChanges.push({
+          attribute: 'style',
+          from: before.inlineStyles[i] || null,
+          to: after.inlineStyles[i] || null,
+        });
+      }
+
+      if (unexplainedClasses.length || attributeChanges.length) {
         const list = probedStates.get(routeId) ?? [];
         list.push({
           source: 'probed', nodeId: candidate.nodeId, trigger: 'click',
           reason: 'absent-from-cssom',
-          styleChanges: [], attributeChanges: [],
-          classChanges: { added: [...new Set(unexplained)], removed: [] },
+          styleChanges: [], attributeChanges: attributeChanges.slice(0, 10),
+          classChanges: { added: [...new Set(unexplainedClasses)], removed: [] },
           subtreeChanged: true,
         });
         probedStates.set(routeId, list);
       }
     }
   } catch (err) {
-    // A candidate that cannot be driven is not a probe — a timeout here is
-    // ordinary. A *programming* error is not, and this catch swallowed one:
-    // a stray `probed += 1` left behind by an extraction threw ReferenceError
-    // after the flow was recorded, so every probe looked successful while the
-    // state-detection below silently never ran. statesProbed went 1 → 0 and the
-    // only reason it was caught is that a rung gate asserts it.
-    if (err instanceof ReferenceError || err instanceof TypeError) {
-      finding('probe-internal-error', `${label}: ${err.message}`);
-      console.log(`      ✗ probe raised ${err.constructor.name}: ${err.message}`);
-    }
+    // The taxonomy, at the site that taught us we needed one. A candidate that
+    // cannot be driven is ordinary: a timeout, a detached element, a page that
+    // navigated away. A ReferenceError is not, and this catch used to swallow
+    // one — thrown *after* the flow was recorded, so every probe reported
+    // success while the state detection behind it silently never ran.
+    rethrowIfDefect(err);
+    finding('probe-not-driveable', `${label}: ${operationalKind(err) ?? 'unknown'}`);
   }
   await settleResponses();
   await page.close();
@@ -421,6 +483,8 @@ const ALLOW_DESTRUCTIVE = process.argv.includes('--allow-destructive');
  * the crawl. See the pass below for why a *fresh* session, not a cloned one.
  */
 const sessionDestructive = [];
+let sessionDestructiveFired = 0;
+
 
 /**
  * Target-destructive controls the operator allowed, deferred for the same
@@ -453,10 +517,10 @@ if (authRoute) {
   // probing only for the changes CSS cannot express, so this decides what needs one.
   const cssomText = record.captured.stateRules.map((r) => r.selector).join(' ');
 
-  const probeCtx = await browser.newContext({
+  const probeCtx = await guardContext(await browser.newContext({
     viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
     userAgent: UA, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce', storageState,
-  });
+  }));
   const probeIdRef = { current: routeId };
   let probed = 0;
   const MAX_PROBES = 16;
@@ -587,10 +651,10 @@ await settleResponses();
  * probes for exactly the reason the session pass comes after everything.
  */
 if (deferredDestructive.length) {
-  const ctx = await browser.newContext({
+  const ctx = await guardContext(await browser.newContext({
     viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
     userAgent: UA, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce', storageState,
-  });
+  }));
   let fired = 0;
   for (const item of deferredDestructive) {
     if (await runProbe({ ctx, ...item })) fired += 1;
@@ -603,13 +667,14 @@ if (deferredDestructive.length) {
 if (sessionDestructive.length) {
   for (const item of sessionDestructive) {
     const ownState = await acquireStorageState();
-    const ctx = await browser.newContext({
+    const ctx = await guardContext(await browser.newContext({
       viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
       userAgent: UA, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce',
       storageState: ownState,
-    });
+    }));
     const ran = await runProbe({ ctx, ...item });
     await ctx.close();
+    if (ran) sessionDestructiveFired += 1;
     if (!ran) {
       // It could not be driven. That is `precondition-unmet` — an honest and
       // different claim from "we declined to fire it", which is why the schema
@@ -631,7 +696,7 @@ if (sessionDestructive.length) {
     }
   }
   await settleResponses();
-  console.log(`  session-destructive: fired ${sessionDestructive.length} control(s), each on its own session`);
+  console.log(`  session-destructive: fired ${sessionDestructiveFired} of ${sessionDestructive.length}, each on its own session`);
 }
 
 /**
@@ -644,8 +709,9 @@ if (sessionDestructive.length) {
  * Deliberately GET-only: re-issuing a mutation to learn its auth behaviour would
  * change the target's state, which capture must not do.
  */
-const anonCtx = await browser.newContext({ userAgent: UA, locale: 'en-US', timezoneId: 'UTC' });
+const anonCtx = await guardContext(await browser.newContext({ userAgent: UA, locale: 'en-US', timezoneId: 'UTC' }));
 const anonPage = await anonCtx.newPage();
+installEscapeGuards(anonPage, { onBlocked });
 const anonRouteRef = { current: [...routes.keys()].find((k) => k.includes('anon-desktop')) };
 attachApiRecorder(anonPage, anonRouteRef, { anonymousProbe: true });
 await anonPage.goto(`${ORIGIN}/login`, { waitUntil: 'domcontentloaded' });
@@ -861,6 +927,10 @@ const observed = {
   subresourceRequests: Object.keys(assetEntries).length,
   // Counted from raw header names on the wire, sharing no code with the endpoint
   // inferencer — a bug in one must not move both sides (decision 0008).
+  sessionProbePolicy: 'credentialed',
+  // Counted at discovery, before any of them ran — the observed side of the
+  // invariant must not be derived from what the firing pass produced.
+  sessionDestructiveControls: sessionDestructive.length,
   harCredentialedRequests: observations.filter((o) =>
     (o.requestHeaderNames ?? []).some((h) => ['cookie', 'authorization'].includes(h.toLowerCase()))).length,
 };
@@ -878,6 +948,7 @@ const extracted = {
     .reduce((n, r) => n + r.captured.built.filter((x) => x.interaction).length, 0),
   assets: Object.keys(assetEntries).length,
   endpointsWithAuthEvidence: endpoints.filter((e) => e.authEvidence.length > 0).length,
+  sessionDestructiveFired: sessionDestructiveFired,
   a11yNodes: [...routes.values()]
     .reduce((n, r) => n + r.captured.built.filter((x) => x.a11y).length, 0),
 };
@@ -905,7 +976,12 @@ const manifest = write('manifest.json', S.CaptureManifestSchema, {
   },
   crawl: {
     budget: { maxInstancesPerPattern: 3, maxRoutesPerContext: 40, maxRoutesTotal: 100, maxDepth: 3 },
-    sameOriginOnly: true, allowDestructive: ALLOW_DESTRUCTIVE,
+    sameOriginOnly: true,
+    allowedOrigins: [...ALLOWED_ORIGINS],
+    // Scripted login, credentials from the environment (§3.3), so a replacement
+    // session can be had without a human — session-destructive probes run freely.
+    sessionProbePolicy: 'credentialed',
+    allowDestructive: ALLOW_DESTRUCTIVE,
     destructiveTerms: [...TARGET_DESTRUCTIVE_TERMS, ...SESSION_DESTRUCTIVE_TERMS],
   },
   toolVersions: { siteforge: '0.1.0-rung3', playwright: '1.63.0', browser: 'chromium-headless-shell' },
@@ -974,6 +1050,25 @@ for (const key of spec.expectNonEmpty) {
 console.log('');
 console.log(`  contexts exercised: ${[...new Set([...routes.values()].map((r) => r.context.contextId))].join(', ')}`);
 console.log(`  flows: ${flows.size} (${[...flows.values()].filter((f) => f.outcome === 'skipped').length} skipped destructive) · gaps: ${gaps.length}`);
+/**
+ * The crawl boundary, asserted in the run rather than only in a unit test.
+ *
+ * The fixture has a control that calls `window.open` to another origin — no
+ * href, nothing for a link-following rule to catch. If nothing was blocked,
+ * either the control stopped being probed or the chokepoint has a hole, and
+ * both are worth failing over.
+ */
+const blockedOffOrigin = blockedNavigations.filter((b) => b.kind === 'navigation');
+if (blockedOffOrigin.length === 0) {
+  finding('origin-guard-inert', 'no off-origin navigation was blocked, but the fixture has a control that attempts one');
+} else {
+  console.log(`  boundary: blocked ${blockedOffOrigin.length} off-origin navigation(s), ${blockedNavigations.length - blockedOffOrigin.length} popup/download`);
+}
+// The other half: a guard that blocks everything would also pass the check
+// above, and would break capture on every real site.
+const foreignSubresources = Object.keys(assetEntries).filter((u) => !u.startsWith(ORIGIN));
+console.log(`  boundary: allowed ${foreignSubresources.length} foreign subresource(s)`);
+
 for (const f of failures) finding('rung-gate', `rung 3 expects ${f.key} non-empty, got ${f.actual}`);
 for (const s2 of surprises) finding('rung-declaration-stale', `${s2} is declared known-empty at rung 3 but produced output`);
 
@@ -1001,4 +1096,12 @@ if (findings.length === 0 && !broken.length) {
   for (const f of findings) console.log(`  [${f.severity}] ${f.what}`);
 }
 
-process.exit(failed > 0 || secrets.length > 0 || failures.length > 0 || broken.length > 0 ? 1 : 0);
+// Findings fail the run. A gate that prints a problem and exits 0 is the
+// pattern this whole milestone has been removing: §3.4 was prose, the
+// same-origin rule was prose, and both were satisfied in exactly one direction
+// for as long as nothing failed on them.
+process.exit(
+  failed > 0 || secrets.length > 0 || failures.length > 0 || broken.length > 0 || findings.length > 0
+    ? 1
+    : 0,
+);

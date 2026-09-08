@@ -18,9 +18,19 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 export const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
 /** AX roles §6 treats as interaction candidates. */
+/**
+ * §6's discovery roles.
+ *
+ * `option` is deliberately absent. An `<option>` is not independently
+ * activatable — you drive the `combobox` that owns it — so probing one can only
+ * time out. It was in this set, and every run produced three "could not be
+ * driven" findings that were noise standing between a reader and a real one.
+ * The options themselves are not lost: they are the enum evidence a `<select>
+ * carries (§7.5), read from the DOM rather than by clicking.
+ */
 export const INTERACTIVE_ROLES = new Set([
   'button', 'link', 'textbox', 'checkbox', 'combobox', 'tab', 'menuitem',
-  'radio', 'searchbox', 'slider', 'spinbutton', 'switch', 'option',
+  'radio', 'searchbox', 'slider', 'spinbutton', 'switch',
 ]);
 
 /* --------------------------------------------------------- selector grammar */
@@ -63,6 +73,7 @@ export function analyseSelector(selectorText) {
     }).processSync(selectorText, { lossless: false });
     base = root;
   } catch {
+    // operational: postcss throws on selectors real stylesheets contain; page context, no helpers
     // An unparseable selector is recorded as-is and matched as-is; if that also
     // fails, matching yields nothing rather than a wrong set.
     return { states: [...states], base: selectorText, parsed: false };
@@ -200,6 +211,7 @@ export const MATCH_SELECTORS = (selectors) =>
       return Array.from(document.querySelectorAll(sel))
         .map((el) => Number(el.getAttribute('data-sf-idx')))
         .filter((n) => Number.isInteger(n));
+    // operational: CDP node lookup on an element that detached mid-pass
     } catch { return []; }
   });
 
@@ -362,6 +374,7 @@ export function scrubHarFile({ readFileSync, writeFileSync }, path) {
   try {
     har = JSON.parse(readFileSync(path, 'utf8'));
   } catch {
+    // operational: a HAR that is absent or truncated has nothing to redact
     return { redactedHeaders: 0, redactedCookies: 0 };
   }
   let redactedHeaders = 0;
@@ -389,3 +402,83 @@ export function scrubHarFile({ readFileSync, writeFileSync }, path) {
   writeFileSync(path, JSON.stringify(har));
   return { redactedHeaders, redactedCookies };
 }
+
+/**
+ * The crawl boundary, installed at a chokepoint.
+ *
+ * §6 is same-origin only, and that used to be enforced by not *following*
+ * off-origin links — which a control calling `window.open` or assigning
+ * `location` walks straight past, and §6's behaviour probing clicks controls.
+ * Detection after the fact is not prevention: by the time the post-click origin
+ * check fires, the request has already left for a site we do not own.
+ *
+ * So: one predicate, consulted before anything else, on every request.
+ *
+ * **Subresources to any origin are allowed and recorded.** Fonts, images,
+ * scripts and XHR from CDNs are how real sites render, and §8 localizes them
+ * later. Only main-frame navigations are blocked.
+ */
+export async function installOriginGuard(context, { allowedOrigins, onBlocked, decide }) {
+  const origins = new Set(allowedOrigins);
+
+  // Awaited: `context.route` is async, and a guard registered after the first
+  // navigation has already started is not a chokepoint.
+  await context.route('**/*', async (route) => {
+    const request = route.request();
+    let isMainFrame;
+    try {
+      isMainFrame = request.frame().parentFrame() === null;
+    } catch {
+      // Throws for requests with no attached frame: service workers, some
+      // prefetches — and a popup's first navigation. The predicate decides what
+      // that means, and it depends entirely on whether the request is a
+      // navigation. Reported as 'unknown' rather than guessed here.
+      // operational: Playwright throws when no frame is attached yet.
+      isMainFrame = 'unknown';
+    }
+    const verdict = decide({
+      url: request.url(),
+      isNavigation: request.isNavigationRequest(),
+      isMainFrame,
+      allowedOrigins: origins,
+    });
+    if (!verdict.blocked) return route.continue();
+    onBlocked({ kind: 'navigation', url: request.url(), origin: verdict.origin });
+    return route.abort('blockedbyclient');
+  });
+
+  return origins;
+}
+
+/**
+ * The escapes that never become a request the router can see.
+ *
+ * A popup gets its own page, a download never navigates, and `target="_blank"`
+ * produces the first. Each is recorded and closed; none is crawled.
+ */
+export function installEscapeGuards(page, { onBlocked }) {
+  page.on('popup', async (popup) => {
+    const url = popup.url();
+    onBlocked({ kind: 'popup', url, origin: originOrNull(url) });
+    // Closed immediately and never crawled. Its own main-frame navigation is
+    // already covered by the router — `parentFrame() === null` is true of a
+    // popup's top frame too, which is why the guard is written that way rather
+    // than comparing against one page's mainFrame().
+    await popup.close().catch(() => {});
+  });
+  page.on('download', async (download) => {
+    const url = download.url();
+    onBlocked({ kind: 'download', url, origin: originOrNull(url) });
+    await download.cancel().catch(() => {});
+  });
+}
+
+const originOrNull = (url) => {
+  try {
+    const o = new URL(url).origin;
+    return o && o !== 'null' ? o : null;
+  } catch {
+    // operational: a non-URL (`about:blank`, a blob ref) has no origin.
+    return null;
+  }
+};
