@@ -37,8 +37,13 @@ describe('the catch taxonomy is linted, not remembered', () => {
     // sabotage-tested in scan-walker.test.ts. This assertion is the part that
     // is specific to this linter — files can be found and still not parsed.
     const { lintRepo } = await lint();
-    const { examined } = lintRepo(REPO);
+    const { examined, promiseHandlers } = lintRepo(REPO);
     expect(examined).toBeGreaterThan(10);
+    // Counted separately on purpose. `examined > 10` is satisfied by the
+    // `catch {}` blocks alone, so deleting the promise-handler rule would leave
+    // every test green and the linter still printing ✓ — the vacuous-check
+    // pattern, in the file whose subject is that pattern.
+    expect(promiseHandlers).toBeGreaterThan(5);
   });
 
   it.each([
@@ -90,6 +95,6 @@ describe('the catch taxonomy is linted, not remembered', () => {
   it('does not report the word catch inside a string or a comment', async () => {
     const { lintCatches } = await lint();
     const src = 'const msg = "bare catch { } is banned";\n// catch { } in a comment\n';
-    expect(lintCatches('x.mjs', src)).toEqual({ examined: 0, violations: [] });
+    expect(lintCatches('x.mjs', src)).toEqual({ examined: 0, promiseHandlers: 0, violations: [] });
   });
 });

@@ -105,6 +105,10 @@ const lineOf = (text, index) => text.slice(0, index).split('\n').length;
 export function lintCatches(file, text) {
   const violations = [];
   let examined = 0;
+  // Counted apart from `catch {}` deliberately. A single total lets the
+  // promise-handler rule disappear behind the block rule's count — the caller
+  // asserts `examined > 10` and never notices the second rule stopped running.
+  let promiseHandlers = 0;
   // Code positions come from the blanked copy; the excuse comment is read from
   // the original, because blanking removes comments by design.
   const code = blankNonCode(text);
@@ -150,6 +154,7 @@ export function lintCatches(file, text) {
   const promiseRe = /\.catch\s*\(/g;
   while ((m = promiseRe.exec(code)) !== null) {
     examined += 1;
+    promiseHandlers += 1;
     const open = code.indexOf('(', m.index);
     const handler = spanAt(code, open, ['(', ')']);
     const line = lineOf(code, m.index);
@@ -164,11 +169,12 @@ export function lintCatches(file, text) {
     });
   }
 
-  return { examined, violations };
+  return { examined, promiseHandlers, violations };
 }
 
 export function lintRepo(repo, roots = ['packages', 'scripts'], expect = REPO_SOURCE_EXPECTATION) {
   let examined = 0;
+  let promiseHandlers = 0;
   const violations = [];
   // The walker enforces "this scan reached the directories it claims to cover".
   // It used to be an assertion in this file's test, which is exactly the kind of
@@ -177,15 +183,16 @@ export function lintRepo(repo, roots = ['packages', 'scripts'], expect = REPO_SO
   for (const file of files) {
     const result = lintCatches(relative(repo, file), readFileSync(file, 'utf8'));
     examined += result.examined;
+    promiseHandlers += result.promiseHandlers;
     violations.push(...result.violations);
   }
-  return { files: files.length, examined, violations };
+  return { files: files.length, examined, promiseHandlers, violations };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const repo = process.cwd();
-  const { files, examined, violations } = lintRepo(repo);
-  console.log(`\nlint:catch — ${examined} catch block(s) across ${files} source file(s)\n`);
+  const { files, examined, promiseHandlers, violations } = lintRepo(repo);
+  console.log(`\nlint:catch — ${examined} catch site(s) (${promiseHandlers} promise handler(s)) across ${files} source file(s)\n`);
   if (violations.length > 0) {
     for (const v of violations) console.log(`  ✗ ${v.file}:${v.line}\n      ${v.message}`);
     console.log(`\n✗ ${violations.length} catch block(s) can swallow a defect.`);
