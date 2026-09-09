@@ -285,6 +285,15 @@ export const SABOTAGES = [
     expect: 'every page below it is a login screen',
     change: 'drop the session precondition from assessMeasurementPreconditions',
   },
+  {
+    id: 'grader-moved-after-the-freeze',
+    bug: "a narrowing threshold drops from 0.98 to 0.9 after the grader was pinned, with no decision entry saying why",
+    reachable:
+      'the shape of every metric that ever got tuned. Infer scores 0.94 on narrowing precision, 0.98 looks harsh in the moment, and one character makes the run green. Nothing about the edit says it happened during a scoring run rather than a year earlier — which is the whole reason the pin exists, since "it did not move" is checkable and "I did not read it" is not',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'changed after the freeze',
+    change: 'lower narrowing.precision from 0.98 to 0.9 in the frozen contract',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
