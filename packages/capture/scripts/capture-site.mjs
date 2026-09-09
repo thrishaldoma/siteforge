@@ -407,6 +407,9 @@ function recordSkip({ routeId, record, candidate, flowId, label, cause, matchedT
     cause,
     ...(cause === 'target-destructive' ? { matchedTerm } : { outOfScopeTarget }),
     gapId: id, flowId,
+    // Declined, never driven. There is no element state to have observed, and
+    // the schema rejects a diagnostic on a control nobody fired.
+    diagnostic: null,
   });
 }
 
@@ -514,28 +517,47 @@ async function diagnoseUndriveable({ page, locator, candidate, step, attemptInde
     : box.x === box2.x && box.y === box2.y && box.width === box2.width && box.height === box2.height;
 
   const viewport = page.viewportSize() ?? VIEWPORT;
-  const inViewport = box === null
-    ? null
-    : box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height;
 
-  // The fourth actionability condition, and the one no other field can stand in
-  // for: something painted on top of the element absorbs the pointer, and the
-  // element stays perfectly visible, stable and enabled the whole time.
-  const occlusion = box === null ? null : await ask(() => page.evaluate(({ x, y, w, h }) => {
-    const target = document.elementFromPoint(x + w / 2, y + h / 2);
-    if (target === null) return { hit: null, description: 'nothing at the centre point' };
-    const describe = (el) =>
-      `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}` +
-      `${typeof el.className === 'string' && el.className ? `.${el.className.trim().split(/\s+/).slice(0, 2).join('.')}` : ''}`;
-    return { hit: describe(target), description: describe(target) };
-  }, { x: box.x, y: box.y, w: box.width, h: box.height }));
+  /**
+   * The occlusion check, run **on the element** rather than on the page.
+   *
+   * The first version compared `elementFromPoint`'s tag against the target's
+   * and reported `span.button-text` and `svg` as occluders — the element's own
+   * children, which is what a hit test on a button with an icon inside it
+   * returns. A descendant is not something painted on top; `el.contains(hit)`
+   * is the question, and comparing rendered descriptions was a string stand-in
+   * for it (§13, the substring-for-token family).
+   *
+   * `inViewport` is the **centre point**, not the whole box: the centre is what
+   * a click targets and what `elementFromPoint` is asked about, so a box hanging
+   * one pixel over the fold is not the thing being measured.
+   */
+  const hitTest = await ask(() => locator.evaluate((el, vp) => {
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const centreInViewport = cx >= 0 && cy >= 0 && cx <= vp.width && cy <= vp.height;
+    const hit = document.elementFromPoint(cx, cy);
+    const describe = (node) =>
+      `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}` +
+      `${typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/).slice(0, 2).join('.')}` : ''}`;
+    if (hit === null) {
+      return {
+        centreInViewport,
+        // Distinguished from an occluder on purpose: `elementFromPoint` returns
+        // null when the point is outside the viewport, so this is a different
+        // fact from "something else is on top" and must not be tallied with it.
+        occludedBy: centreInViewport ? 'nothing at the centre point' : 'centre is outside the viewport',
+      };
+    }
+    return {
+      centreInViewport,
+      occludedBy: hit === el || el.contains(hit) ? null : describe(hit),
+    };
+  }, viewport, { timeout: 1000 }));
 
-  const selfDescription = await ask(() => locator.evaluate((el) =>
-    `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}`, undefined, { timeout: 1000 }));
-  const occludedBy =
-    occlusion === null || selfDescription === null || occlusion.hit === null
-      ? (occlusion?.description ?? null)
-      : occlusion.hit.startsWith(selfDescription) ? null : occlusion.description;
+  const inViewport = hitTest === null ? null : hitTest.centreInViewport;
+  const occludedBy = hitTest === null ? null : hitTest.occludedBy;
 
   return {
     step,
@@ -543,9 +565,9 @@ async function diagnoseUndriveable({ page, locator, candidate, step, attemptInde
     attemptIndex,
     visible: await ask(() => locator.isVisible({ timeout: 1000 })),
     stable,
-    // `null` when the box could not be read at all — there is nothing to be on
-    // top of, and reporting `false` would invent an occlusion.
-    receivesPointerEvents: occlusion === null ? null : occludedBy === null,
+    // `null` when the hit test could not run at all — reporting `false` would
+    // invent an occlusion that was never observed.
+    receivesPointerEvents: hitTest === null ? null : occludedBy === null,
     enabled: await ask(() => locator.isEnabled({ timeout: 1000 })),
     inViewport,
     navigationPending,
