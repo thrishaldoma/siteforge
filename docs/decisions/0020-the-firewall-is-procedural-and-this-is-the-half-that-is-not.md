@@ -50,6 +50,22 @@ precision 0.98 → 0.9, one character, green run.
 
 The pin is asserted as a complete set in both directions, because a new scoring
 module added beside the frozen ones is as much a hole as a frozen one changing.
+**And that second direction was unreachable when it was written.**
+`readFrozenFiles` derived its keys from `FROZEN_FILES`, so the files it found
+were a subset of the files pinned by construction and the unpinned-module branch
+could only be entered by a test handing it a synthetic key — the
+unreachable-state vacuity mode, in the gate written to close a hole, exactly the
+shape §13 says to audit for. It now **enumerates** `packages/verify/src/grade/`
+and hashes what is there, so a `thresholds.ts` dropped into that directory
+tomorrow fails the suite; verified by dropping one in and watching it fail.
+Enumeration alone would only relocate the silence, so exclusions are explicit
+too: `NOT_FROZEN` names `freeze.ts` (pinning the pin makes every legitimate
+update a two-step edit against its own hash) and `mutations.ts` (a check *on*
+the metric side, computing no score), each with its reason, and a stale
+exclusion — one naming a file that is gone — is itself a failure, because it
+would silently excuse whatever next takes that path. What makes an exclusion
+safe is structural rather than promised: a test asserts no frozen file imports
+an excused one, so an excused file cannot reach a number.
 
 **The truth side is deliberately outside the pin.** `truth/swagger2.ts` and the
 per-target sources encode what a document *says*, not what counts as a good

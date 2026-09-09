@@ -39,7 +39,7 @@
  * a change to the grader made for the freeze's convenience.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,6 +53,40 @@ export const FROZEN_FILES: readonly string[] = [
   'packages/verify/src/grade/vocabulary.ts',
   'packages/schema/src/grade-contract.ts',
 ];
+
+/**
+ * Where the metric side lives, so the freeze can **enumerate** it rather than
+ * take the pin's word for what it covers.
+ *
+ * The first version of this file derived `readFrozenFiles`'s keys from
+ * `FROZEN_FILES`, which made `actual` a subset of `pinned` by construction: the
+ * "metric-side file with no pin" branch could only ever be reached by a test
+ * handing it a synthetic key. That is the unreachable-state vacuity mode (§13),
+ * in the gate written to close a hole — a new scoring module would have landed
+ * beside the frozen ones and nothing would have said a word. The set has to be
+ * read off the disk for the completeness claim to mean anything.
+ *
+ * Subdirectories are not walked, which is how `truth/` and `baseline/` stay out
+ * without a second rule; the carve-out above says why they belong out.
+ */
+const METRIC_SIDE_DIR = 'packages/verify/src/grade';
+/** Metric-side files living outside that directory. */
+const METRIC_SIDE_ELSEWHERE: readonly string[] = ['packages/schema/src/grade-contract.ts'];
+
+/**
+ * Metric-side files deliberately **not** pinned, each with the reason.
+ *
+ * An exclusion has to be as explicit as a pin, or enumeration just relocates the
+ * silence: a file nobody froze and nobody excused would read as "someone
+ * decided" when it means "nobody looked". Adding a module to the grade
+ * directory now fails the suite until it appears in one list or the other.
+ */
+export const NOT_FROZEN: Readonly<Record<string, string>> = {
+  'packages/verify/src/grade/freeze.ts':
+    'the freeze itself. Pinning it makes every legitimate pin update a two-step edit against its own hash, and it computes no score — nothing in it can shape an inference strategy.',
+  'packages/verify/src/grade/mutations.ts':
+    "the mutation harness (0015 §8). It perturbs the grader's arguments and asserts on the deltas; it is a check *on* the metric side rather than part of it, and no score is computed from it.",
+};
 
 /**
  * sha256 per frozen file, at `d842a31` — Vikunja adopted, infer not started.
@@ -85,6 +119,7 @@ export const GRADER_FREEZE: Readonly<Record<string, string>> = {
 export function assessGraderFreeze(
   actual: Readonly<Record<string, string>>,
   pinned: Readonly<Record<string, string>> = GRADER_FREEZE,
+  excluded: Readonly<Record<string, string>> = NOT_FROZEN,
 ): string[] {
   const problems: string[] = [];
   for (const [file, hash] of Object.entries(pinned)) {
@@ -98,19 +133,41 @@ export function assessGraderFreeze(
     }
   }
   for (const file of Object.keys(actual)) {
-    if (!(file in pinned)) {
+    if (file in pinned || file in excluded) continue;
+    problems.push(
+      `${file} is part of the grader's metric side but carries no pin. The freeze is asserted as a complete set, and the set is read off the disk rather than off the pin — so a new scoring module lands here rather than in silence. Add it to GRADER_FREEZE, or to NOT_FROZEN with the reason it computes no score.`,
+    );
+  }
+  // An exclusion that no longer names a real file is a decision nobody can
+  // check, and it hides the next file that inherits the path.
+  for (const file of Object.keys(excluded)) {
+    if (file in pinned) {
+      problems.push(`${file} is both pinned and excused. It cannot be both; pick one.`);
+    } else if (!(file in actual)) {
       problems.push(
-        `${file} is part of the grader's metric side but carries no pin. The freeze is asserted as a complete set; add it to GRADER_FREEZE or say why it belongs to the truth side.`,
+        `${file} is excused from the grader freeze but is not on the metric side any more. Drop the NOT_FROZEN entry — a stale exclusion excuses whatever next takes that path.`,
       );
     }
   }
   return problems;
 }
 
-/** The hashes as they are right now. The real run's half of the comparison. */
+/**
+ * The metric side as it is on disk right now, hashed.
+ *
+ * **Enumerated, not derived from the pin.** Listing the directory is what makes
+ * the unpinned-file branch reachable by a real run: a `thresholds.ts` dropped
+ * into `grade/` tomorrow appears here, matches neither list, and fails the
+ * suite. Deriving these keys from `FROZEN_FILES` — the first version — made
+ * `actual` a subset of `pinned` and reduced that branch to something only a
+ * synthetic test key could trigger.
+ */
 export function readFrozenFiles(repo = join(HERE, '..', '..', '..', '..')): Record<string, string> {
+  const found = readdirSync(join(repo, METRIC_SIDE_DIR), { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts'))
+    .map((entry) => `${METRIC_SIDE_DIR}/${entry.name}`);
   const out: Record<string, string> = {};
-  for (const file of FROZEN_FILES) {
+  for (const file of [...found, ...METRIC_SIDE_ELSEWHERE].sort()) {
     out[file] = createHash('sha256').update(readFileSync(join(repo, file))).digest('hex');
   }
   return out;
