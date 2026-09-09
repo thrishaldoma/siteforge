@@ -161,6 +161,41 @@ because path normalisation collapses them, and the document calls them
 `/api/v1/{username}/avatar` — genuine drift, and exactly what the divergence
 list exists for.
 
+## The two numbers that were wrong, and how close they came to shipping
+
+Re-running the grade to confirm the table above reported
+`auth.evidence-coverage 0.867 13/15` and `auth.unprobeable-count 0` — against
+`1.000 12/12` and `3` here. Nothing had changed in the grader; `freeze.test.ts`
+was green.
+
+`grade-capture.mjs` reads `packages/verify/dist/`, and `dist/` was holding the
+**sabotaged** build of `probeable-includes-mutations`, with `method === 'GET' &&`
+deleted from `isProbeableRead`. `pnpm sabotage` reverts the source and asserts
+the tree came back byte for byte via `git status --porcelain` — but `dist/` is
+gitignored, so it is outside that comparison by construction, and several gates
+build before they run: `grade:baseline` is
+`pnpm --filter @siteforge/verify build && …`. The patch was compiled, the source
+was restored, and the compiled defect stayed.
+
+Neither wrong number looked wrong. The tell was arithmetic: a denominator of 15
+probeable *reads* in a model holding 13 GETs is impossible, and noticing it was
+luck rather than any gate. `pnpm grade:capture` runs `pnpm -s build` first and
+would have been fine; invoking the script directly is what exposed it, and that
+is the ordinary thing to do.
+
+Fixed at the harness. `buildSignature()` hashes every file under `packages/*/dist`
+(excluding `.tsbuildinfo`, which is expected to move), the run ends by rebuilding
+from the restored source, and `assessBuildResidue(before, after)` asserts the
+rebuild reproduced each byte — the standard already applied to the source,
+extended to the artifact `git status` cannot see. It takes both sides as
+parameters so a test drives it to a failing verdict, and
+`sabotage/build-residue-ignores-javascript.patch` is the edit that blinds it:
+skipping `.js` beside the legitimate `.tsbuildinfo` skip, which reads as
+noise-reduction and removes the entire subject.
+
+The scores in the table above are from a clean build and match the original run
+exactly.
+
 ## Costs of this target, stated
 
 `--tmpfs` mounts (every writable path in the image is root-owned while the
