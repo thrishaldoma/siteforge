@@ -41,9 +41,15 @@ interface Surface {
   staticAssetRequests: number;
 }
 
+/** Segment-wise, like `inUniverse` — a substring test would call `/api/v1` itself outside `/api/v1`. */
+const outsideUniverse = (entry: string, universe: string): boolean => {
+  const path = entry.slice(entry.indexOf(' ') + 1);
+  return path !== universe && !path.startsWith(`${universe}/`);
+};
+
 /** A universe that filters is a prefix the UI's own traffic falls outside of. */
 const filtersAnything = (s: Surface): boolean =>
-  s.universe !== '/' && [...s.xhr, ...s.formActions].some((e) => !e.includes(` ${s.universe}/`));
+  s.universe !== '/' && [...s.xhr, ...s.formActions].some((e) => outsideUniverse(e, s.universe));
 
 const read = (id: string): Surface =>
   JSON.parse(readFileSync(join(FIXTURES, id, 'browser-surface.json'), 'utf8')) as Surface;
@@ -99,6 +105,16 @@ describe('the second criterion, which Gitea satisfied silently', () => {
   it('a universe must be a prefix the browser traffic falls outside of', () => {
     expect(filtersAnything(read('vikunja')), 'vikunja').toBe(true);
     expect(filtersAnything(read('directus')), 'directus').toBe(false);
+  });
+
+  it('counts the universe root as inside it', () => {
+    // No record holds a bare `GET /api/v1` today, so this edge is asserted
+    // rather than observed: a substring test for `/api/v1/` would call the
+    // universe's own root out-of-universe and report a filter that filters.
+    expect(outsideUniverse('GET /api/v1', '/api/v1')).toBe(false);
+    expect(outsideUniverse('GET /api/v1/projects', '/api/v1')).toBe(false);
+    expect(outsideUniverse('GET /api/v11/projects', '/api/v1')).toBe(true);
+    expect(outsideUniverse('GET /', '/api/v1')).toBe(true);
   });
 
   it('and Vikunja is the candidate that passes both', () => {
