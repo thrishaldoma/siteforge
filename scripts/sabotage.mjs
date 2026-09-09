@@ -375,6 +375,15 @@ export const SABOTAGES = [
     change: 'short-circuit both set differences when the two totals are equal',
   },
 
+  {
+    id: 'idempotence-accepts-one-run',
+    bug: 'the idempotence check accepts a single crawl and pronounces it stable',
+    reachable: 'off by one in a guard, and the state it produces is the one M1 was actually in for the whole life of the project — `manifest.contentHash` computed once per run and never compared, which is exactly "one crawl, reported stable". The patch reinstates the condition the tool was written to end',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'THROWS on a single run rather than reporting it stable',
+    change: 'the minimum-runs guard admits one run instead of requiring two',
+  },
+
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
