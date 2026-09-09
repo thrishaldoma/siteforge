@@ -56,7 +56,7 @@ describe('and reports the rest as ungrounded rather than as a score', () => {
     for (const id of ['narrowing.precision', 'narrowing.recall']) {
       expect(metric(id)?.vacuous, id).toBe(true);
       expect(metric(id)?.value, id).toBeNull();
-      expect(metric(id)?.ungrounded, id).toContain('declares no formats at all');
+      expect(metric(id)?.emptyDenominator, id).toContain('declares no formats at all');
     }
   });
 
