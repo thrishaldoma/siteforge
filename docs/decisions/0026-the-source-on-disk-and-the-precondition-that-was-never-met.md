@@ -33,6 +33,14 @@ target — *"`capture-site.mjs` writes the asset index but not the asset bodies 
 so the bundle is not on disk to search."* That half was right. The other half of
 that paragraph was pessimism, and §4 below measures it.
 
+**Three drivers had the same defect**, which is why the writer is now one
+function in `capture-lib.mjs` rather than a loop in each: `capture-site.mjs`,
+`rung3.mjs` and `spike-one-page.mjs` all hashed the body and dropped it, and the
+spike's own comment above the map read *"Content-addressed asset capture (§6:
+persist every response body)"*. Whether an asset is text the scrubber may
+rewrite is a judgement two crawlers must not be able to disagree about — §13 has
+been bitten by that once already, over whether a button was safe to press.
+
 ### The gate that would have caught it
 
 `assessAssetBodies` reconciles the index against a `readdirSync`, **both ways**:
@@ -147,7 +155,16 @@ into view**, and that is where this stops. It is a much narrower question than
 the three it replaces, and it is mechanical rather than speculative. Writing a
 fourth cause here would be the mistake the ruling was issued to prevent.
 
-### An instrument defect the first run exposed
+### Two defects in the instrument itself
+
+`navigationPending` was a required boolean until rung 3 — a second producer,
+which does not track navigations — had to emit one. Forcing `false` there would
+record an observation nobody made in order to satisfy a type, so it is nullable
+like the four beside it. "We did not look" is a third value and the schema has
+to be able to hold it; that is the same argument `requiresAuth` is built on, one
+artifact over.
+
+
 
 The first pass compared `elementFromPoint`'s rendered description against the
 target's and reported `span.button-text` and `svg` as occluders — the element's
