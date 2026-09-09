@@ -37,22 +37,19 @@ describe('the baseline is a legal model, not a transcription of the answer key',
     // It was transcribed from the ground truth, so twelve perfect scores are
     // circular by construction. The deltas below are the finding.
     const scored = harness.baseline.metrics.filter((m) => !m.vacuous);
-    expect(scored.filter((m) => m.value === 1)).toHaveLength(12);
+    expect(scored.filter((m) => m.value === 1)).toHaveLength(13);
     expect(scored.find((m) => m.id === 'auth.under-gate-count')?.value).toBe(0);
   });
 
-  it('and still fails one gate, for a reason that is not about the model', () => {
-    // Every shortfall is a *coverage* number: how much of the surface the
-    // anonymous sweep reached, and how much of the model's auth rests on an
-    // observation §6 is allowed to make. Neither is a claim the baseline got
-    // wrong, which is why the honest thing is to report it rather than pad the
-    // model until it clears.
+  it('and still fails one category, for a reason that is not about the model', () => {
+    // The only shortfall left is a truth side nobody has built. Auth cleared
+    // once evidence coverage stopped averaging probeable reads against
+    // mutations §6 forbids probing — the split, not a relaxed threshold.
     expect(harness.baseline.metrics.filter((m) => !m.passed).map((m) => m.id)).toEqual([
       'identifier.precision',
       'identifier.recall',
-      'auth.evidence-coverage',
     ]);
-    expect(harness.baseline.failedCategories).toEqual(['identifier', 'auth']);
+    expect(harness.baseline.failedCategories).toEqual(['identifier']);
   });
 
   it('covers a slice of the spec, and the report says how much', () => {

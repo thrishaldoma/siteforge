@@ -406,6 +406,34 @@ export const MUTATIONS: readonly Mutation[] = [
     },
   },
   {
+    id: 'unprobeable-operation-added',
+    change: 'add PUT /api/v1/repos/:owner/:repo/topics, a mutation the spec does declare',
+    reachable:
+      'the ordinary case: a crawl that reaches the repo settings page observes the topics form and infer emits the endpoint it posts to. Every mutation infer learns about lands here',
+    // The row that proves the split is a split. Adding a mutation moves the
+    // count and must leave the rate exactly where it was — if evidence coverage
+    // moved, the two populations are still averaged and the split bought nothing.
+    mustMove: [{ metric: 'auth.unprobeable-count', direction: 'up', minimum: 1 }],
+    mustHold: ['auth.evidence-coverage', 'auth.under-gate-count', 'auth.over-gate-rate'],
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      const template = structuredClone(operation(model, 'get-api-v1-repos-owner-repo-topics'));
+      model.operations = [
+        ...model.operations,
+        {
+          ...template,
+          operationId: 'put-api-v1-repos-owner-repo-topics',
+          method: 'PUT',
+          // A mutation §6 never re-issues anonymously, so nothing settles it.
+          requiresAuth: 'unknown',
+          authEvidence: [],
+          responses: [],
+        },
+      ];
+      return { ...input, model: legal(model) };
+    },
+  },
+  {
     id: 'identifier-mispointed',
     change: 'point Label.id.pathParamOf at the milestones endpoint instead',
     reachable:

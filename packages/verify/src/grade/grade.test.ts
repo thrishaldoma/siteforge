@@ -34,12 +34,18 @@ describe('the grader is written before infer, and stays that way', () => {
     // the one nobody predicted. §13's freeze rule.
     const source = readFileSync(join(HERE, 'grade.ts'), 'utf8');
     const imports = [...source.matchAll(/^import[^;]*?from '([^']+)';$/gm)].map((m) => m[1]);
-    expect(imports).toEqual(['@siteforge/schema', './match.js', './fields.js', './truth/gitea.js']);
+    expect(imports).toEqual([
+      '@siteforge/schema',
+      './match.js',
+      './fields.js',
+      './vocabulary.js',
+      './truth/gitea.js',
+    ]);
   });
 
   it('reports the frozen contract it scored against', () => {
     const report = gradeSiteModel(input);
-    expect(report.metricsVersion).toBe(1);
+    expect(report.metricsVersion).toBe(2);
     expect(report.metrics.map((m) => m.id)).toEqual(GRADE_METRICS.map((m) => m.id));
   });
 });
@@ -237,11 +243,28 @@ describe('auth is read through resolveAuthForCodegen, never as a boolean', () =>
     expect(report.auth.unobserved).toBeGreaterThan(0);
   });
 
-  it('reports three unlike denominators separately rather than averaging them', () => {
+  it('reports four unlike denominators separately rather than averaging them', () => {
     const report = gradeSiteModel(input);
     const of = (id: string) => report.metrics.find((m) => m.id === id)!;
-    expect(of('auth.under-gate-count').denominator).not.toBe(of('auth.truth-coverage').denominator);
-    expect(of('auth.evidence-coverage').denominator).toBe(report.matching.matched);
+    // Under-gate is over what the sweep saw as required; truth coverage is over
+    // every graded endpoint; evidence coverage is over probeable reads alone.
+    // Written as bare rates the next reader averages them.
+    expect(of('auth.under-gate-count').denominator).toBe(report.auth.observedRequired);
+    expect(of('auth.truth-coverage').denominator).toBe(report.matching.matched);
+    expect(of('auth.evidence-coverage').denominator).toBeLessThan(report.matching.matched);
+  });
+
+  it('scores evidence coverage over reads capture could probe, not over mutations', () => {
+    // §6 forbids re-issuing a mutation anonymously — it would change the
+    // target's state — so a mutation's verdict can never rest on a probe.
+    // Averaging the two populations bounded the metric below 1 for a reason that
+    // is a property of the API's read/write ratio, not of inference.
+    const report = gradeSiteModel(input);
+    const of = (id: string) => report.metrics.find((m) => m.id === id)!;
+    const probeable = of('auth.evidence-coverage').denominator;
+    expect(probeable + report.auth.unprobeable).toBe(report.matching.matched);
+    expect(of('auth.unprobeable-count').value).toBe(report.auth.unprobeable);
+    expect(of('auth.unprobeable-count').gate).toBeNull();
   });
 });
 

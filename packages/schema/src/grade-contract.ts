@@ -26,8 +26,14 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
-/** Bumped when the shape of the contract changes, not when a number moves. */
-export const METRICS_VERSION = 1;
+/**
+ * Bumped when the shape of the contract changes, not when a number moves.
+ *
+ * v2 (decision 0018 §5): `auth.evidence-coverage` was averaging two populations
+ * with different achievable ceilings, and the fix splits it rather than
+ * relaxing it. A new metric is a shape change, not a number moving.
+ */
+export const METRICS_VERSION = 2;
 
 /**
  * The scored categories (0015 §3).
@@ -226,10 +232,19 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   {
     id: 'auth.evidence-coverage',
     category: 'auth',
-    numerator: 'endpoints resolved from recorded evidence rather than the fail-closed default',
-    denominator: 'ALL GRADED endpoints — this one needs no truth side, only the model',
+    numerator: 'probeable reads resolved from recorded evidence rather than the fail-closed default',
+    denominator:
+      'PROBEABLE READS among graded endpoints — the GETs capture actually issued, which are the only operations §6 permits an anonymous re-issue of',
     gate: atLeast(0.7, 'calibration'),
-    why: 'what stops the degenerate model scoring well: gating everything gives an under-gate count of zero and evidence coverage near zero. Computable from the model alone — whether a verdict rests on a recorded observation is a property of the verdict — so unlike the two above it is genuinely over the whole graded universe',
+    why: 'what stops the degenerate model scoring well: gating everything gives an under-gate count of zero and evidence coverage near zero. Over probeable reads rather than the whole surface, because §6 forbids re-issuing a mutation anonymously — it would change the target’s state — so a mutation’s verdict can never rest on a probe and averaging the two populations bounds the metric below 1 for a reason that is a property of the API rather than of infer. Now 1.0 is achievable and a shortfall means the anonymous crawl missed a read',
+  },
+  {
+    id: 'auth.unprobeable-count',
+    category: 'auth',
+    numerator: 'graded operations whose auth verdict cannot rest on a probe — mutations, and controls capture never fired',
+    denominator: 'reported as a count; there is no denominator and inventing one would re-merge the populations',
+    gate: null,
+    why: 'the other half of the split, kept visible rather than dropped. It is a property of the API surface, not of infer: an API that is mostly mutations simply has more verdicts resting on the fail-closed default, and a reader comparing two evidence-coverage numbers needs to see that before comparing them',
   },
 ];
 
@@ -260,7 +275,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  '532912767657984fdf6197f0e5e0f305b8f2ec973182c566316574d6e8d1957f';
+  'edf720f63b37daf75f2b07c1055b62685f756293e46c8a1e8dd0b68439c68795';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)

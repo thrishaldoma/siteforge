@@ -26,7 +26,6 @@ import {
   GRADE_CONTRACT_DIGEST,
   GRADE_METRICS,
   METRICS_VERSION,
-  JsonStringFormatSchema,
   assessDivergenceBudget,
   resolveAuthForCodegen,
   type DivergenceBudget,
@@ -38,6 +37,7 @@ import {
 } from '@siteforge/schema';
 import { matchEndpoints, type Matching, type MatchedPair, type ObservedEndpoint } from './match.js';
 import { modelFieldPointers, typeAgrees } from './fields.js';
+import { isExpressibleFormat } from './vocabulary.js';
 import type { TruthField, TruthModel } from './truth/gitea.js';
 
 export interface GradeInput {
@@ -102,6 +102,8 @@ export interface GradeReport {
     readonly observedNotRequired: number;
     readonly indeterminate: number;
     readonly unobserved: number;
+    /** Operations whose verdict cannot rest on a probe: a property of the API. */
+    readonly unprobeable: number;
   };
   readonly divergence: DivergenceBudget;
   /** Categories whose truth side the loader does not derive. Vacuous, and named. */
@@ -117,7 +119,10 @@ export interface GradeReport {
  * metric ids — the freeze rule's whole-set form, so a metric renamed in the
  * contract cannot leave a stale entry here reading as a rate.
  */
-const COUNT_METRICS: ReadonlySet<string> = new Set(['auth.under-gate-count']);
+const COUNT_METRICS: ReadonlySet<string> = new Set([
+  'auth.under-gate-count',
+  'auth.unprobeable-count',
+]);
 
 interface Tally {
   numerator: number;
@@ -187,15 +192,6 @@ function modelNarrowing(node: JsonSchemaNode): 'enum' | 'const' | 'format' | nul
 }
 
 /**
- * The formats the model has a word for.
- *
- * Derived from `JsonStringFormatSchema`, not typed out: §13's freeze rule says a
- * set is asserted whole and, where it is open, derived from the schema that
- * defines it — a format added there is covered the day it lands.
- */
-const MODEL_FORMATS: ReadonlySet<string> = new Set(JsonStringFormatSchema.options);
-
-/**
  * What the spec narrowed a field to, **in the vocabulary the model can speak**.
  *
  * Measured on first contact, and it is the auth finding again in a smaller key:
@@ -215,7 +211,7 @@ const MODEL_FORMATS: ReadonlySet<string> = new Set(JsonStringFormatSchema.option
 const truthNarrowing = (field: TruthField): 'enum' | 'format' | null =>
   field.enumValues !== null
     ? 'enum'
-    : field.format !== null && MODEL_FORMATS.has(field.format)
+    : field.format !== null && isExpressibleFormat(field.format)
       ? 'format'
       : null;
 
@@ -361,18 +357,39 @@ interface AuthTallies {
   overGate: Tally;
   truthCoverage: Tally;
   evidenceCoverage: Tally;
+  unprobeable: Tally;
   observedRequired: number;
   observedNotRequired: number;
   indeterminate: number;
   unobserved: number;
 }
 
+/**
+ * Can this operation's auth verdict rest on a recorded probe?
+ *
+ * Only a GET capture actually issued. §6 re-issues "each distinct **GET**
+ * endpoint once anonymously" and never a mutation — "issuing a PATCH or DELETE
+ * without a session to find out what happens changes the target's state, which
+ * capture must not do". And §7.6's `bound-from-control` endpoints were never
+ * fired at all, so there was nothing to re-issue.
+ *
+ * This is why evidence coverage is split rather than relaxed: averaging the two
+ * populations bounds the metric below 1 for a reason that is a property of the
+ * API's read/write ratio, not of inference quality.
+ */
+const isProbeableRead = (operation: MatchedPair['operation']): boolean =>
+  operation.method === 'GET' && operation.discovery.kind === 'observed';
+
 function auth(pairs: readonly MatchedPair[]): AuthTallies {
   const t: AuthTallies = {
     underGate: { numerator: 0, denominator: 0 },
     overGate: { numerator: 0, denominator: 0 },
     truthCoverage: { numerator: 0, denominator: pairs.length },
-    evidenceCoverage: { numerator: 0, denominator: pairs.length },
+    evidenceCoverage: { numerator: 0, denominator: 0 },
+    // Denominator is the graded population, not the count itself: zero
+    // unprobeable operations is a real and good outcome (an all-GET surface),
+    // and a 0/0 here would read vacuous and fail a metric that is reported only.
+    unprobeable: { numerator: 0, denominator: pairs.length },
     observedRequired: 0,
     observedNotRequired: 0,
     indeterminate: 0,
@@ -386,7 +403,14 @@ function auth(pairs: readonly MatchedPair[]): AuthTallies {
     // `unknown` as open and turn the evidence-coverage row of the mutation table
     // into a second under-gate row.
     const gated = resolveAuthForCodegen(pair.operation.requiresAuth);
-    if (pair.operation.requiresAuth !== 'unknown') t.evidenceCoverage.numerator += 1;
+    if (isProbeableRead(pair.operation)) {
+      t.evidenceCoverage.denominator += 1;
+      if (pair.operation.requiresAuth !== 'unknown') t.evidenceCoverage.numerator += 1;
+    } else {
+      // Counted, never rated. A denominator here would re-merge the two
+      // populations the split exists to keep apart.
+      t.unprobeable.numerator += 1;
+    }
 
     switch (pair.truth.auth) {
       case 'required':
@@ -470,6 +494,7 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
     'auth.over-gate-rate': authTallies.overGate,
     'auth.truth-coverage': authTallies.truthCoverage,
     'auth.evidence-coverage': authTallies.evidenceCoverage,
+    'auth.unprobeable-count': authTallies.unprobeable,
   };
 
   /**
@@ -547,6 +572,7 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
       observedNotRequired: authTallies.observedNotRequired,
       indeterminate: authTallies.indeterminate,
       unobserved: authTallies.unobserved,
+      unprobeable: authTallies.unprobeable.numerator,
     },
     divergence: assessDivergenceBudget(divergence, all.pairs.length),
     notDerived: truth.notDerived,

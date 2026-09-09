@@ -114,6 +114,30 @@ This is the auth modality finding in a smaller key: scoring a claim against a
 vocabulary the model does not speak measures the gap between two languages and
 reports it as inference quality.
 
+Removing 22 of 40 misses from a denominator **is the shape of tuning**, and the
+only thing separating this from it is that the exclusion is a property of the
+vocabulary rather than of the score. That distinction has to be checkable, or
+the next restriction gets justified by this one's precedent. So
+`grade/vocabulary.ts` holds it and three assertions enforce it:
+
+- **Its import list is frozen to `@siteforge/schema`.** No reachable path to a
+  model, a report or a score, so the predicate cannot become a function of the
+  misses it removes. `isExpressibleFormat` takes a format string and nothing
+  else, and a test asserts that signature.
+- **No excluded format may be one the model can express.** The anti-tuning line,
+  driven to fire against a synthetic list that excludes `email` with the reason
+  "inconvenient: 396 of these and we matched none". You may exclude a claim the
+  vocabulary cannot make and never one it can.
+- **Every format the truth declares is on one side, by name, with a reason** —
+  and the reason has to be about what a `SiteModel` can carry, not about a
+  count. A refresh introducing `int32`, or a second ground truth, fails the
+  suite until someone writes down which side it is on. Silence is not a default.
+
+`UNEXPRESSIBLE_FORMATS` has two entries today. `uint64`'s reason records
+something worth keeping: unsignedness is a domain constraint the model genuinely
+cannot express *either*, which is a gap in SiteModel rather than a narrowing
+infer failed to make.
+
 ### `resolveAuthForCodegen`, not a boolean
 
 The grader decides "does the clone gate this endpoint" by calling the same
@@ -205,27 +229,72 @@ five zero-parameter endpoints the anonymous sweep observed, and one
 `bound-from-control` delete. 14 of them observed by the (declared) crawl, against
 482 spec operations in the universe.
 
-Twelve metrics read 1.000, which is circular and means nothing. Two results are
-worth reading:
+Thirteen metrics read 1.000, which is circular and means nothing. Two results
+are worth reading:
 
 **`identifier` is vacuous, and the report says why** — "foreign keys derivable
-from the spec — this truth side is not derived". Unbuilt, not missed.
+from the spec — this truth side is not derived". Unbuilt, not missed. It is the
+only failing category, and the harness row that would exercise it stays blocked
+against `truth.notDerived` rather than being unblocked by building a truth side
+to clear a red.
 
-**`auth.evidence-coverage` is 0.667 against a 0.70 gate, and the baseline is not
-wrong.** Ten of fifteen operations carry an observation; the five that do not are
-the four mutations and the bound control. §6 forbids re-issuing a mutation
-anonymously — it would change the target's state — so a mutation's auth verdict
-can *never* rest on an anonymous probe. On an API surface that is roughly 60%
-mutations, a 0.70 floor on evidence coverage is close to structurally
-unreachable, and padding the baseline with read endpoints until it cleared would
-be tuning the input to the metric.
+**`auth.evidence-coverage` first read 0.667 against a 0.70 gate, and the baseline
+was not wrong.** Ten of fifteen operations carried an observation; the five that
+did not were the four mutations and the never-fired control. That measurement is
+what produced §5's split — the metric was averaging two populations with
+different achievable ceilings, and no threshold is right for that. After the
+split it reads 10/10 with an unprobeable count of 5, and auth passes.
 
-Recorded rather than fixed. 0015 §5 says every calibration number is provisional
-until the first Gitea run and that changing one requires a decision note with the
-measured distribution. **This is that first run, and this is that measurement** —
-but a 15-endpoint baseline is thin evidence for recalibrating, and the number to
-recalibrate against is the one a real capture produces. The threshold stays where
-it is until then, failing visibly, which is what §13 asks for.
+---
+
+## 5. `auth.evidence-coverage` — split, not recalibrated
+
+The first measurement put it at 0.667 against a 0.70 gate, and 0018 originally
+recorded that as a threshold worth revisiting once a real capture supplied a
+distribution. That was the wrong diagnosis. The metric was **averaging two
+populations with different achievable ceilings**, and no threshold can be right
+for that.
+
+§6 re-issues "each distinct **GET** endpoint once anonymously" and never a
+mutation — "issuing a PATCH or DELETE without a session to find out what happens
+changes the target's state, which capture must not do". §7.6's
+`bound-from-control` endpoints were never fired at all. So a mutation's auth
+verdict *can never* rest on a probe, and evidence coverage over the whole surface
+is bounded above by (probeable reads)/(all operations) — a property of the API's
+read/write ratio, not of inference quality. On a mutation-heavy API the metric is
+capped well below 1 no matter how good infer is, and a threshold set under that
+cap is measuring the wrong thing rather than measuring it leniently.
+
+**That bound argument is what makes this a definition fix rather than a threshold
+move.** A recalibration would have picked a number that accommodated the cap and
+left the metric unable to distinguish "the anonymous crawl missed a read" from
+"this API has a lot of POSTs". The split makes both legible:
+
+| metric | over | gate |
+|---|---|---|
+| `auth.evidence-coverage` | **probeable reads** — the GETs capture actually issued | ≥ 0.70, unchanged. 1.0 is now achievable and a shortfall means the anonymous crawl missed a read |
+| `auth.unprobeable-count` | a count of operations whose verdict cannot rest on a probe | **reported, never gated.** A property of the API, not of infer |
+
+`METRICS_VERSION` goes to **2** and `GRADE_CONTRACT_DIGEST` moves with it: a new
+metric is a shape change, not a number moving, and 0015 §7 requires a decision
+note stating what was measured — this section is it.
+
+The threshold value stays at 0.70. It is now measurably slack (the baseline
+reads 1.000 against it), and raising it wants the distribution a real capture
+produces rather than a number chosen to look demanding — 0015 §5's discipline,
+applied to the direction that flatters us as well as the one that does not.
+
+A mutation row proves the split is a split: `unprobeable-operation-added` adds
+`PUT /repos/{owner}/{repo}/topics`, which the spec really declares, and asserts
+the count moves **and the rate does not**. If evidence coverage moved, the two
+populations would still be averaged and the split would have bought nothing.
+
+Measured after the split: evidence coverage **10/10**, unprobeable count **5**
+(four mutations and the never-fired control), and `auth` no longer fails.
+`identifier` remains the only failing category, which is correct — its truth side
+is not built, the harness row that would exercise it stays blocked against
+`truth.notDerived`, and building that truth side to clear a red would be the
+purest form of the thing this document is about.
 
 ---
 
