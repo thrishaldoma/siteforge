@@ -122,6 +122,16 @@ const finding = (severity, what) => findings.push({ severity, what });
 
 /** §6's flag. We own the pinned container, so a delete flow could yield real observations. */
 const ALLOW_DESTRUCTIVE = process.argv.includes('--allow-destructive');
+/**
+ * Crawl an already-running container and leave it running.
+ *
+ * For the idempotence measurement only, and it is the discriminator: every
+ * ordinary run does `docker rm -f` and a fresh `docker run`, so two ordinary
+ * runs differ in *both* our timing and the target's state — a fresh database,
+ * new id sequences, new clocks. Holding the container still separates the two
+ * without anyone having to reason about which fields look like target state.
+ */
+const REUSE_CONTAINER = process.argv.includes('--reuse-container');
 
 const gaps = [];
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -965,7 +975,17 @@ async function main() {
   mkdirSync(join(OUT, 'network'), { recursive: true });
   mkdirSync(join(OUT, 'auth'), { recursive: true });
 
-  await boot();
+  if (REUSE_CONTAINER) {
+    // Asserted, not assumed: crawling a container that is not there produces a
+    // capture of connection errors, and this flag exists to make two runs
+    // comparable — a run against nothing is comparable to nothing.
+    const probe = await fetch(`${ORIGIN}${TARGET.apiPrefix}/info`).catch(() => null);
+    if (probe?.status !== 200) {
+      throw new Error(`--reuse-container was passed but nothing is serving ${ORIGIN}${TARGET.apiPrefix}/info`);
+    }
+  } else {
+    await boot();
+  }
   const api = (path, init) => fetch(`${ORIGIN}${path}`, init);
   await PIN.seed({ origin: ORIGIN, api });
   console.log('  seeded');
@@ -1152,7 +1172,7 @@ async function main() {
     await context.close();
   }
   await browser.close();
-  docker('rm', '-f', CONTAINER);
+  if (!REUSE_CONTAINER) docker('rm', '-f', CONTAINER);
 
   // --- §3.4 before anything else touches the tree ---------------------------
   for (const context of CONTEXTS) {
