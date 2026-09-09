@@ -210,6 +210,22 @@ substring-for-token family from §13, found in a tool written to avoid guessing.
 `inViewport` was also the whole box and is now the **centre point**, because the
 centre is what a click targets.
 
+### The ceiling is a coverage number, and deliberately not an invariant
+
+`coverage.extracted` now carries `controlsFired` and `controlsUndriveable`, and
+the run prints the ratio beside the crawl's other coverage. 49 of 51 timeouts
+caps what §6 can observe, what §9's behavioural gate can ever replay, and what
+§7.6 has to recover from source instead — which belongs next to crawl coverage
+rather than in a findings list.
+
+**No coverage invariant is attached, and the absence is a decision.** Every
+invariant in that table has the same shape: *the input held X, so the output
+must hold Y* — they catch extraction dropping something it was given. "Probing
+must succeed" is not that. It is an assertion about the **target's**
+driveability, and a target where nothing is clickable would fail a check that is
+supposed to be about us. The numbers are recorded so a human can see the ceiling
+move; nothing gates on them.
+
 ### And a silent drop next door
 
 19 controls were `locate/not-found`: discovered on the captured page, absent

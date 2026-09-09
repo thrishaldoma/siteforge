@@ -144,7 +144,19 @@ Three sweeps, and the third is the one that answers the attribution question.
 | one container held still ×2 | 474s | **43 of 167** |
 | fresh container ×3, **read-only** (no probing) | **50s** | **4 of 81** |
 
-The shim removed 53 paths, and every `dom.json` but one now reproduces.
+The shim removed 53 paths. Post-fix, exactly one `dom.json` still varies, and
+the read-only sweep below shows it is the same file for a different reason.
+
+**A secondary effect worth recording, because it looks like a lost measurement.**
+The anonymous auth sweep reported *272 distinct GET URLs* before the shim and
+*28* after. Nothing was lost: the sweep de-duplicates by URL, and the avatar's
+cache-busting `?size=50&=<Date.now()>` made every fetch of one image a distinct
+URL, so 244 of those re-issues were the same endpoint asked over and over.
+Every `auth.*` metric scored identically across the change — `evidence-coverage`
+1.0000 (17/17), `truth-coverage` 0.6190 (13/21), `under-gate-count` 0 — which is
+what says the verdicts were never affected. The log line said "GET endpoint(s)"
+over a count of URLs and has been corrected, because a tenfold drop under a
+wrong label is exactly how a fix gets mistaken for a regression.
 
 ### The held-container discriminator does not discriminate, and that is a finding
 
@@ -226,6 +238,12 @@ The comparisons that **do** cross two captures are:
   paths, traceable to one clock — so more runs would have refined a magnitude
   rather than the finding. The read-only crawl costs 50 seconds rather than
   eight minutes, so N there is cheap and the number to raise first.
+- **The instrument is deliberately red by four on this target.** The residue in
+  §5 is the target's own seed-time row timestamps, and it is not exempted
+  because an exemption on `routes/*/dom.json` would hide every future real
+  difference in that file to silence one node. So compare against **4**, not 0,
+  and do not "fix" it by adding an exemption — the number to watch is whether it
+  moves.
 - **The probe pass is non-deterministic and §8 calls that a hard failure.** It
   is not fixed here. What has changed is that it is now measured, bounded to one
   stage, and separated from the target's contribution — the next question is

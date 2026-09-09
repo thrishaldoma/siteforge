@@ -1292,7 +1292,13 @@ async function main() {
     }
     await settle();
     await anonContext.close();
-    console.log(`  auth probe: re-issued ${getUrls.length} GET endpoint(s) anonymously`);
+    // Distinct **URLs**, which is not the same as endpoints and said so wrongly
+    // for a while: this read 272 before the determinism shim and 28 after,
+    // because the avatar's cache-busting `?=<Date.now()>` made every fetch of
+    // one image a distinct URL. The sweep's verdicts never moved — they were
+    // 244 re-issues of the same endpoint — but a label that says "endpoints"
+    // over a count of URLs is how a tenfold drop reads as a lost measurement.
+    console.log(`  auth probe: re-issued ${getUrls.length} distinct GET URL(s) anonymously`);
     for (const f of probeFailures) {
       finding('auth-probe-failed',
         `the anonymous re-issue of ${f.url} did not complete (${f.error}); its requirement stays 'unknown', which §8 resolves to required`);
