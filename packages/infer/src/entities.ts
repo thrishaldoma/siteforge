@@ -19,6 +19,7 @@
  * denominator downstream.
  */
 import type { EndpointDescriptor, EntityField, JsonSchemaNode } from '@siteforge/schema';
+import { MERGE_MIN_SHARED_FIELDS } from '@siteforge/schema';
 import { IDENTITY_KEYS } from '@siteforge/shared';
 
 /** A row shape found in a response, with where it was found. */
@@ -31,6 +32,33 @@ export interface RowShape {
   readonly required: readonly string[];
   /** True when the row was an element of an array — a list rather than an item. */
   readonly fromList: boolean;
+  /**
+   * Set when narrower rows were folded into this one by the containment pass
+   * (decision 0025). Carries the counts the merge was justified on, and nothing
+   * about the route or the declared definitions — reading either would be
+   * fitting to the metric this rule was written to move.
+   */
+  readonly mergedFrom?: MergeEvidence | null;
+  /**
+   * The `shapeIdentity` of every row folded in, so an operation returning the
+   * *narrower* shape still resolves to the surviving entity.
+   *
+   * Without it a merge would make things worse rather than better:
+   * `operationOf` calls `rowOf` on the raw endpoint and looks the result up by
+   * identity, so an absorbed identity missing from the map turns a paired
+   * operation into `effect.entity: null` — the model would stop claiming an
+   * entity for the endpoint that motivated the merge.
+   */
+  readonly mergedIdentities?: readonly string[];
+}
+
+/** The counts a merge was drawn from. `MergeRecordSchema` is checked against these. */
+export interface MergeEvidence {
+  readonly sources: readonly string[];
+  readonly narrowerFields: number;
+  readonly widerFields: number;
+  readonly sharedFields: number;
+  readonly keyField: string;
 }
 
 /**
@@ -95,14 +123,17 @@ export function rowOf(endpoint: EndpointDescriptor): RowShape | null {
  * and including them would let `owner` being present in one response and absent
  * in another split one entity in two.
  *
- * **Exact, and it is the conservative direction.** A list view that returns
- * four of an item view's fourteen fields gets its own identity, so Vikunja's
- * eleven rows became four entities where a human would have said three. Merging
- * on subset would fix that and would also fuse two genuinely different rows
- * that happen to share their scalars — and the two errors are not
- * interchangeable. §7.5's argument one level up: an over-merge makes valid
- * states of the real system unrepresentable, an under-merge only makes the
- * model longer. Splitting is free; merging must be justified.
+ * **Exact, and deliberately so — this is not where projections are handled.** A
+ * list view returning four of an item view's fourteen fields gets its own
+ * identity here, and `mergeContainedRows` below is what folds it back in, under
+ * conditions it has to satisfy and record. Keeping the two passes apart is the
+ * point: identity stays a statement about equal shapes, and every merge beyond
+ * that carries the counts that justified it.
+ *
+ * §7.5's asymmetry is what orders them. An over-merge makes valid states of the
+ * real system unrepresentable; an under-merge only makes the model longer.
+ * Splitting is free; merging must be justified — so the free direction is the
+ * default and the justified one is a second pass with evidence attached.
  */
 export const shapeIdentity = (row: RowShape): string =>
   Object.entries(row.properties)
@@ -112,7 +143,10 @@ export const shapeIdentity = (row: RowShape): string =>
     .join(',');
 
 /** Rows that are the same entity, merged, with their sources kept. */
-export function dedupeRows(rows: readonly RowShape[]): RowShape[] {
+export function dedupeRows(
+  rows: readonly RowShape[],
+  { merge = true }: { merge?: boolean } = {},
+): RowShape[] {
   const byIdentity = new Map<string, RowShape>();
   for (const row of rows) {
     const key = shapeIdentity(row);
@@ -135,7 +169,102 @@ export function dedupeRows(rows: readonly RowShape[]): RowShape[] {
       required: seen.required.filter((f) => row.required.includes(f)),
     });
   }
-  return [...byIdentity.values()];
+  const exact = [...byIdentity.values()];
+  return merge ? mergeContainedRows(exact) : exact;
+}
+
+/** The scalar field names `shapeIdentity` is built from, as a set. */
+const scalarFields = (row: RowShape): Set<string> => new Set(shapeIdentity(row).split(','));
+
+/**
+ * Fold a projection into the row it is a projection of (decision 0025 §2).
+ *
+ * Runs after exact identity, over what that pass left. Four conditions, and
+ * they are declared in 0025 rather than derived from what made the score move:
+ *
+ *  1. **Containment, not similarity.** A list view drops fields and never adds
+ *     one, so the relation between the two observations is subset. Jaccard
+ *     scores four-of-fourteen at 0.29 and so punishes the projection for being
+ *     a projection, which is the case this exists to catch.
+ *  2. **The same key.** A projection keeps the key it is addressed by.
+ *  3. **Exactly one container**, and this is the condition carrying the weight.
+ *     Containment alone over-merges at any floor — `{id, title, description,
+ *     created, updated}` is a subset of almost any wide row — and what defeats
+ *     that is not improbability but ambiguity: a metadata-shaped row is
+ *     contained in *several* wider rows and therefore merges into none. A row
+ *     that could be a projection of two entities is evidence about neither.
+ *     Chains fall out of the same test (`A ⊂ B ⊂ C` gives A two containers), so
+ *     no separate rule is needed and none is written.
+ *  4. **`MERGE_MIN_SHARED_FIELDS`**, which only excludes the degenerate case.
+ *
+ * Splitting is still the free direction (§7.5): every condition above is a
+ * reason *not* to merge, and the pass makes no claim it cannot show the counts
+ * for.
+ */
+function mergeContainedRows(rows: readonly RowShape[]): RowShape[] {
+  const fields = new Map(rows.map((r) => [r, scalarFields(r)] as const));
+  const keyOfRow = new Map(rows.map((r) => [r, keyOf(r.properties)?.field ?? null] as const));
+
+  /** Rows that strictly contain this one and agree with it about the key. */
+  const containersOf = (row: RowShape): RowShape[] => {
+    const mine = fields.get(row)!;
+    const key = keyOfRow.get(row);
+    if (key === null || mine.size < MERGE_MIN_SHARED_FIELDS) return [];
+    return rows.filter((other) => {
+      if (other === row || keyOfRow.get(other) !== key) return false;
+      const theirs = fields.get(other)!;
+      if (theirs.size <= mine.size) return false;
+      // empty: `mine` holds at least MERGE_MIN_SHARED_FIELDS names — the guard
+      // above returned for anything thinner, so the vacuous-subset case where
+      // every() would admit an empty row into any container cannot arrive here.
+      return [...mine].every((f) => theirs.has(f));
+    });
+  };
+
+  const absorbedBy = new Map<RowShape, RowShape[]>();
+  const absorbed = new Set<RowShape>();
+  for (const row of rows) {
+    const containers = containersOf(row);
+    // Ambiguous in either direction is a merge that does not happen. Zero
+    // containers is the ordinary case; two or more is the coincidence the
+    // uniqueness condition exists to reject.
+    if (containers.length !== 1) continue;
+    const into = containers[0]!;
+    absorbed.add(row);
+    absorbedBy.set(into, [...(absorbedBy.get(into) ?? []), row]);
+  }
+
+  return rows
+    .filter((row) => !absorbed.has(row))
+    .map((row) => {
+      const taken = absorbedBy.get(row);
+      if (taken === undefined) return row;
+      const mine = fields.get(row)!;
+      return {
+        ...row,
+        // The container's endpoints first, so `entityNameFor` names the entity
+        // after the item view rather than after whichever projection sorted
+        // first. `/tasks/:task` is a better name than `/tasks/all`.
+        sources: [...new Set([...row.sources, ...taken.flatMap((t) => t.sources)])],
+        // A field the projection did not carry is not required, on the same
+        // argument the exact pass uses one level up.
+        // empty: `taken` is non-empty by construction — `absorbedBy` only ever
+        // gets a key when a row was absorbed into it, so an empty list would
+        // mean this row is not a merge target and the branch above returned.
+        required: row.required.filter((f) => taken.every((t) => t.required.includes(f))),
+        mergedIdentities: taken.map(shapeIdentity),
+        mergedFrom: {
+          sources: [...new Set([...row.sources, ...taken.flatMap((t) => t.sources)])],
+          // The weakest link, where several projections folded into one row:
+          // the schema's floor should be checked against the thinnest evidence
+          // rather than against a flattering summary of it.
+          narrowerFields: Math.min(...taken.map((t) => fields.get(t)!.size)),
+          widerFields: mine.size,
+          sharedFields: Math.min(...taken.map((t) => fields.get(t)!.size)),
+          keyField: keyOfRow.get(row)!,
+        },
+      };
+    });
 }
 
 /**

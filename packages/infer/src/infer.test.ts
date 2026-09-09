@@ -108,13 +108,10 @@ describe('entity identity is what the row is, not where it was found', () => {
     expect(merged[0]!.sources).toEqual(['get-projects', 'get-project']);
   });
 
-  it('does NOT merge a partial list view into its item view, and that is deliberate', () => {
-    // The known cost, asserted so it is a decision rather than a surprise: a
-    // list returning four of an item's fourteen fields becomes its own entity.
-    // Merging on subset would fix it and would also fuse two genuinely
-    // different rows that happen to share their scalars. §7.5 one level up —
-    // an over-merge makes real states unrepresentable, an under-merge only
-    // makes the model longer. Splitting is free.
+  it('does NOT merge a two-field row into its superset — that is the floor, not policy', () => {
+    // Below `MERGE_MIN_SHARED_FIELDS`. The containment pass declines because
+    // `{id, title}` carries no shape to be similar *with*, not because subset
+    // merging is refused on principle — it is not, since 0025.
     expect(dedupeRows([
       row({ id: int, title: str }),
       row({ id: int, title: str, description: str }),
@@ -153,6 +150,109 @@ describe('entity identity is what the row is, not where it was found', () => {
     expect(keyOf({ id: int })).toEqual({ field: 'id', kind: 'surrogate' });
     expect(keyOf({ slug: str })).toEqual({ field: 'slug', kind: 'business' });
     expect(keyOf({ title: str })).toBeNull();
+  });
+});
+
+
+/**
+ * The containment pass (decision 0025), driven to each verdict on synthetic
+ * input rather than only through the baseline.
+ *
+ * The ambiguity case in particular: no perturbation of the real Vikunja capture
+ * is guaranteed to produce one narrow row sitting inside two unmerged wider
+ * ones, and that case is the condition the whole rule leans on. §13 — a gate
+ * takes its inputs as parameters, and something other than the real run has to
+ * be able to call it.
+ */
+describe('a projection folds into the row it projects, under conditions it records', () => {
+  const wide = { id: int, title: str, description: str, created: str, updated: str, done: str };
+  const narrow = { id: int, title: str, created: str, updated: str };
+
+  it('merges a list view into its item view once the floor is met', () => {
+    const merged = dedupeRows([
+      row(narrow, { sources: ['get-tasks-all'] }),
+      row(wide, { sources: ['get-task'] }),
+    ]);
+    expect(merged).toHaveLength(1);
+    // The container survives and keeps its own properties: the item view is the
+    // fuller observation, and the projection told us nothing the item did not.
+    expect(Object.keys(merged[0]!.properties).sort()).toEqual(Object.keys(wide).sort());
+    // Both endpoints keep their claim.
+    expect(merged[0]!.sources).toEqual(['get-task', 'get-tasks-all']);
+  });
+
+  it('records the counts the merge rests on, and they satisfy the schema', () => {
+    const [merged] = dedupeRows([row(narrow), row(wide, { sources: ['get-task'] })]);
+    expect(merged!.mergedFrom).toEqual({
+      sources: ['get-task', 'get-a'],
+      narrowerFields: 4,
+      widerFields: 6,
+      sharedFields: 4,
+      keyField: 'id',
+    });
+    // Containment is `sharedFields === narrowerFields`, which is what
+    // `MergeRecordSchema` checks; asserting it here as well means a pass that
+    // stops producing containment is caught at the source and not only at parse.
+    expect(merged!.mergedFrom!.sharedFields).toBe(merged!.mergedFrom!.narrowerFields);
+  });
+
+  it('carries the absorbed identity, so the projection’s endpoint keeps its entity', () => {
+    // The failure this prevents is a merge that improves the entity list and
+    // damages the operations: `operationOf` looks its row up by identity, so an
+    // absorbed identity missing from the map turns a paired operation into
+    // `effect.entity: null`.
+    const [merged] = dedupeRows([row(narrow), row(wide)]);
+    expect(merged!.mergedIdentities).toEqual([shapeIdentity(row(narrow))]);
+  });
+
+  it('REFUSES to merge when two wider rows could each be the container', () => {
+    // The condition carrying the weight. A metadata-shaped row is contained in
+    // several wider rows and is therefore evidence about none of them — and
+    // this is the direction no legal perturbation of the baseline reaches.
+    const merged = dedupeRows([
+      row(narrow, { sources: ['get-narrow'] }),
+      row(wide, { sources: ['get-wide'] }),
+      row({ ...narrow, hexColor: str, tint: str }, { sources: ['get-other'] }),
+    ]);
+    // Two, not one — and not three: the two wide rows stay apart from each
+    // other as well, since neither contains the other.
+    expect(merged).toHaveLength(3);
+    // Counted rather than `every`, which would pass on an empty result and so
+    // would agree with a pass that merged everything away.
+    expect(merged.filter((r) => r.mergedFrom !== undefined)).toEqual([]);
+  });
+
+  it('refuses a chain, for the same reason — A ⊂ B ⊂ C gives A two containers', () => {
+    const middle = { ...narrow, description: str };
+    const merged = dedupeRows([row(narrow), row(middle), row(wide)]);
+    // `narrow` has two containers and stays; `middle` has one and folds in.
+    expect(merged).toHaveLength(2);
+    expect(merged.map((r) => Object.keys(r.properties).length).sort()).toEqual([4, 6]);
+  });
+
+  it('refuses when the two rows key on different fields', () => {
+    // A projection keeps the key it is addressed by. `slug` and `id` are two
+    // ways of addressing, so these are two entities however the names overlap.
+    const keyed = { slug: str, title: str, created: str, updated: str };
+    const merged = dedupeRows([
+      row(keyed),
+      row({ ...keyed, id: int, description: str }),
+    ]);
+    expect(merged).toHaveLength(2);
+  });
+
+  it('refuses when the narrower row carries a field the wider lacks', () => {
+    // Not containment: a projection drops fields and never adds one.
+    const merged = dedupeRows([
+      row({ ...narrow, onlyHere: str }),
+      row(wide),
+    ]);
+    expect(merged).toHaveLength(2);
+  });
+
+  it('is switchable off, so what it moves can be measured', () => {
+    expect(dedupeRows([row(narrow), row(wide)], { merge: false })).toHaveLength(2);
+    expect(dedupeRows([row(narrow), row(wide)], { merge: true })).toHaveLength(1);
   });
 });
 

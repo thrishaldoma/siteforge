@@ -454,6 +454,19 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
     ],
   },
   {
+    id: 'merge-review',
+    source: '§7.5 Type narrowing, and the evidence it requires',
+    quote:
+      'Any inference that narrows a type records its evidence in the model and lands in GAPS.md as review-required',
+    emits: 'the GAPS.md entry for an entity whose identity was derived rather than observed',
+    reads: [
+      'entities[].mergedFrom.gapId',
+      'entities[].mergedFrom.kind',
+      'entities[].mergedFrom.reviewRequired',
+      'entities[].mergedFrom.sources[]',
+    ],
+  },
+  {
     id: 'site-identity',
     source: '§4 Stage contract',
     quote: 'each stage reads and writes files on disk only',
@@ -678,6 +691,37 @@ export const EVIDENCE_REQUIRED: readonly EvidenceClaim[] = [
     file: 'presentation.ts',
     schema: 'ComponentSchema',
     why: 'a component cannot claim more distinct routes than it names',
+  },
+  {
+    paths: [
+      'entities[].mergedFrom.narrowerFields',
+      'entities[].mergedFrom.widerFields',
+      'entities[].mergedFrom.sharedFields',
+    ],
+    justifies: 'entities[].name',
+    file: 'entities.ts',
+    schema: 'MergeRecordSchema',
+    why:
+      'decision 0025: where two observed row shapes were recorded as one entity, the identity is ' +
+      'derived rather than observed, and §13 requires a derived field to carry the evidence it was ' +
+      'derived from. These three are the evidence proper — containment is `sharedFields === ' +
+      'narrowerFields`, and the floor is on `narrowerFields`. A merge is a narrowing of the identity ' +
+      'claim and is dangerous in the same direction a wrong enum is: §5 turns this model into the ' +
+      'store, so one table where the real system has two puts the wider row’s fields on rows that ' +
+      'never carried them',
+  },
+  {
+    paths: [
+      'entities[].mergedFrom.keyField',
+    ],
+    justifies: 'entities[].key.field',
+    file: 'entities.ts',
+    schema: 'EntitySchema',
+    why:
+      'the merge says both rows keyed on this field, so an entity keying on another one is a record ' +
+      'describing a different merge than the one that happened. Recomputable, therefore recomputed — ' +
+      'checked in `EntitySchema` rather than in `MergeRecordSchema` because the entity’s own key is ' +
+      'what it has to agree with, and the record alone cannot see it',
   },
 ];
 

@@ -22,6 +22,10 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
  */
 const VARIANTS = {
   dedupe: { dedupeEntities: false },
+  // Piece 1b on its own (0025): exact identity still runs, the containment pass
+  // does not. Separate from `dedupe` because they are separately justified
+  // claims, and which of the two moves a metric is the thing worth knowing.
+  merge: { mergeEntities: false },
   narrowings: { carryNarrowings: false },
   presentation: { presentation: false },
 };
@@ -73,6 +77,13 @@ for (const operation of model.operations) {
   effects[operation.effect.kind] = (effects[operation.effect.kind] ?? 0) + 1;
 }
 console.log(`  effects          ${Object.entries(effects).map(([k, n]) => `${k} ${n}`).join(' · ')}`);
+
+if (report.merges.length > 0) {
+  // Printed rather than counted: a merge is review-required, and a number alone
+  // does not tell the reviewer which identity claim to look at.
+  console.log(`\n  ${report.merges.length} entity merge(s), each on containment (0025):`);
+  for (const merge of report.merges) console.log(`      ${merge}`);
+}
 
 if (report.objections.length > 0) {
   console.log(`\n  ✗ ${report.objections.length} narrowing(s) §7.5 does not allow:`);

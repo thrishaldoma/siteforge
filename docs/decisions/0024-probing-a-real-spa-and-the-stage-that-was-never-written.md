@@ -250,6 +250,13 @@ names one `All` and `/api/v1/tasks/:task` names the other `Task`, and
 `dedupeRows` keeps them apart because their scalar field sets differ — the list
 view returns fewer fields than the item view.
 
+> **Corrected by 0025 §5.** That last clause is backwards on this target,
+> measured: `/tasks/all` returns **27** scalar fields and `/tasks/:task` returns
+> **25**. The list is the wider observation and the item view is the projection.
+> It changed nothing about the fix, because the merge rule reads shapes and not
+> routes — but it is the second time a claim about which endpoint is richer was
+> asserted from the shape of the words rather than from the artifact.
+
 That is exactly the under-merge 0023 §2 built the ambiguity rule for, and 0023
 §5 could only demonstrate it by *ablation*, on a model produced with dedup
 switched off. **It now fires on the real model, unmodified.** 0023 recorded the

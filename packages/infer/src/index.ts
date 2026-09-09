@@ -60,6 +60,8 @@ export interface InferReport {
   readonly components: number;
   /** Narrowings §7.5 would not allow, named. Empty on a run that parsed. */
   readonly objections: readonly string[];
+  /** Entity merges the containment pass made, with the counts each rests on. */
+  readonly merges: readonly string[];
 }
 
 /**
@@ -76,6 +78,16 @@ export interface InferReport {
 export interface InferOptions {
   /** Piece 1. Off: one entity per endpoint, so a row seen twice is two entities. */
   readonly dedupeEntities?: boolean;
+  /**
+   * Piece 1b (decision 0025). Off: exact identity only, so a list view that
+   * projects an item view stays a second entity.
+   *
+   * Separately ablatable from `dedupeEntities` because it is a separately
+   * justified claim — exact identity says two equal shapes are one thing, and
+   * this says a projection is an observation of the thing it projects. Knowing
+   * which of the two moves a metric is the whole reason the flags exist.
+   */
+  readonly mergeEntities?: boolean;
   /** Piece 2. Off: no narrowing reaches an entity field, however well evidenced. */
   readonly carryNarrowings?: boolean;
   /** Piece 4. Off: no components and no tokens. */
@@ -109,13 +121,17 @@ function pathParamValues(capture: Capture): Map<string, Set<string>> {
   return out;
 }
 
+/** Deterministic, and the same shape capture mints: a gap is addressable or it is prose. */
+const gapIdFor = (label: string): string => `gap_${shortHash(label).slice(0, 12)}`;
+
 function buildEntities(
   rows: readonly RowShape[],
   keyed: Map<string, string>,
   values: Map<string, Set<string>>,
   carryNarrowings: boolean,
-): { entities: Entity[]; objections: string[] } {
+): { entities: Entity[]; objections: string[]; merges: string[] } {
   const objections: string[] = [];
+  const merges: string[] = [];
   const entities: Entity[] = [];
   for (const row of rows) {
     const name = keyed.get(shapeIdentity(row));
@@ -142,9 +158,33 @@ function buildEntities(
       })
       .sort((a, b) => a.name.localeCompare(b.name));
     if (fields.length === 0) continue;
-    entities.push({ name, key, fields, relations: [], seed: null });
+    // §7.5's treatment, applied to an identity claim rather than a type one:
+    // the counts travel with the merge, review is mandatory, and a gap is
+    // minted — `MergeRecordSchema` rejects a record these do not support, so an
+    // unjustified merge does not parse rather than being caught downstream.
+    const evidence = row.mergedFrom ?? null;
+    const mergedFrom =
+      evidence === null
+        ? null
+        : {
+            kind: 'field-set-containment' as const,
+            sources: [...evidence.sources],
+            narrowerFields: evidence.narrowerFields,
+            widerFields: evidence.widerFields,
+            sharedFields: evidence.sharedFields,
+            keyField: evidence.keyField,
+            reviewRequired: true as const,
+            gapId: gapIdFor(`entity-merge:${[...evidence.sources].sort().join(',')}`),
+          };
+    if (mergedFrom !== null) {
+      merges.push(
+        `${name}: ${mergedFrom.narrowerFields} of ${mergedFrom.widerFields} fields contained, ` +
+          `keyed on ${mergedFrom.keyField}, from ${mergedFrom.sources.join(' + ')}`,
+      );
+    }
+    entities.push({ name, key, fields, relations: [], mergedFrom, seed: null });
   }
-  return { entities, objections };
+  return { entities, objections, merges };
 }
 
 /** One route template per captured pattern, wired to the operations it called. */
@@ -198,6 +238,7 @@ function routeTemplates(
 export function inferSiteModel(capture: Capture, options: InferOptions = {}): InferResult {
   const {
     dedupeEntities = true,
+    mergeEntities = true,
     carryNarrowings = true,
     presentation = true,
   } = options;
@@ -206,7 +247,7 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
   const rows = capture.endpoints.endpoints
     .map(rowOf)
     .filter((row): row is RowShape => row !== null);
-  const deduped = dedupeEntities ? dedupeRows(rows) : rows;
+  const deduped = dedupeEntities ? dedupeRows(rows, { merge: mergeEntities }) : rows;
 
   /** Identity to entity name, so an operation and its entity agree. */
   const keyed = new Map<string, string>();
@@ -217,10 +258,15 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
     while (used.has(name)) name = `${name}Row`;
     used.add(name);
     keyed.set(shapeIdentity(row), name);
+    // Every identity folded into this row resolves to it as well. `operationOf`
+    // calls `rowOf` on the raw endpoint, so without this the endpoint whose
+    // projection motivated the merge would lose its `effect.entity` — a merge
+    // that improves the entity list and damages the operations is not one.
+    for (const absorbed of row.mergedIdentities ?? []) keyed.set(absorbed, name);
   }
 
   // --- piece 2: narrowings, carried only where the evidence justified them
-  const { entities, objections } = buildEntities(
+  const { entities, objections, merges } = buildEntities(
     deduped,
     keyed,
     pathParamValues(capture),
@@ -270,6 +316,7 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
       operations: operations.length,
       components: model.components.length,
       objections,
+      merges,
     },
   };
 }

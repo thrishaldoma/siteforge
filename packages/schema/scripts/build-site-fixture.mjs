@@ -292,6 +292,7 @@ for (const [name, spec] of Object.entries(JUDGEMENTS.entities)) {
     key: { field: spec.key[0], kind: spec.key[1] },
     fields,
     relations: [],
+    mergedFrom: null,
     seed: { rows, derivedFrom: [spec.from], distinctRecords: rows.length },
   });
 }

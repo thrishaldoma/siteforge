@@ -230,7 +230,7 @@ const RAW = {
         { name: 'name', type: 'string', optional: false, generatedBy: 'none', narrowing: null, pathParamOf: [] },
         { name: 'url', type: 'string', optional: true, generatedBy: 'none', narrowing: null, pathParamOf: [] },
       ],
-      relations: [],
+      relations: [], mergedFrom: null,
       seed: null,
     },
     {
@@ -243,7 +243,7 @@ const RAW = {
         { name: 'username', type: 'string', optional: false, generatedBy: 'none', narrowing: null, pathParamOf: [] },
         { name: 'verified', type: 'boolean', optional: false, generatedBy: 'none', narrowing: null, pathParamOf: [] },
       ],
-      relations: [],
+      relations: [], mergedFrom: null,
       seed: null,
     },
     {
@@ -258,7 +258,7 @@ const RAW = {
         { name: 'duration', type: 'string', optional: false, generatedBy: 'none', narrowing: null, pathParamOf: [] },
         { name: 'created', type: 'timestamp', optional: false, generatedBy: 'clock', narrowing: null, pathParamOf: [] },
       ],
-      relations: [],
+      relations: [], mergedFrom: null,
       seed: null,
     },
     {
@@ -288,7 +288,7 @@ const RAW = {
         { name: 'isArchived', type: 'boolean', optional: true, generatedBy: 'none', narrowing: null, pathParamOf: [] },
         { name: 'url', type: 'string', optional: true, generatedBy: 'none', narrowing: null, pathParamOf: [] },
       ],
-      relations: [],
+      relations: [], mergedFrom: null,
       seed: {
         rows: [
           { id: 1, name: 'bug', color: 'd73a4a', description: 'Something is not working', exclusive: false, isArchived: false, url: 'http://localhost:3801/api/v1/repos/octo/hello/labels/1' },
@@ -335,7 +335,7 @@ const RAW = {
         { name: 'createdAt', type: 'timestamp', optional: false, generatedBy: 'clock', narrowing: null, pathParamOf: [] },
         { name: 'updatedAt', type: 'timestamp', optional: false, generatedBy: 'clock', narrowing: null, pathParamOf: [] },
       ],
-      relations: [],
+      relations: [], mergedFrom: null,
       seed: null,
     },
     {
@@ -346,7 +346,7 @@ const RAW = {
         { name: 'name', type: 'string', optional: false, generatedBy: 'none', narrowing: null, pathParamOf: ['delete-api-v1-repos-owner-repo'] },
         { name: 'owner', type: 'string', optional: false, generatedBy: 'none', narrowing: null, pathParamOf: ['delete-api-v1-repos-owner-repo'] },
       ],
-      relations: [],
+      relations: [], mergedFrom: null,
       seed: null,
     },
   ],

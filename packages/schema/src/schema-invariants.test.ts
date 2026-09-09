@@ -21,9 +21,12 @@ import {
   DomDocumentSchema,
   EndpointDescriptorSchema,
   EndpointIndexSchema,
+  EntitySchema,
   FlowTraceSchema,
   GapSchema,
   JsonSchemaNodeSchema,
+  MERGE_MIN_SHARED_FIELDS,
+  MergeRecordSchema,
   RouteCaptureSchema,
   RouteIdSchema,
   RouteMetaSchema,
@@ -361,6 +364,90 @@ describe('narrowing a type requires evidence (decision 0010)', () => {
 });
 
 /* --------------------------------------------------------- JSON Schema subset */
+
+
+describe('merging two rows into one entity requires evidence (decision 0025)', () => {
+  const merge = (over: Record<string, unknown> = {}): unknown => ({
+    kind: 'field-set-containment',
+    sources: ['get-api-v1-tasks-all', 'get-api-v1-tasks-id'],
+    narrowerFields: 4,
+    widerFields: 14,
+    sharedFields: 4,
+    keyField: 'id',
+    reviewRequired: true,
+    gapId: `gap_${'c'.repeat(12)}`,
+    ...over,
+  });
+
+  it('accepts a projection wholly contained in its item view', () => {
+    expect(MergeRecordSchema.safeParse(merge()).success).toBe(true);
+  });
+
+  it('rejects a merge that is not containment — the narrower row had a field of its own', () => {
+    // A list view drops fields and never adds one. `sharedFields < narrowerFields`
+    // means the two rows disagree about what the entity has, which is the
+    // definition of two entities.
+    const result = MergeRecordSchema.safeParse(merge({ sharedFields: 3 }));
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result)).toContain('not a subset');
+  });
+
+  it('rejects a merge below the declared floor, and names the floor', () => {
+    const result = MergeRecordSchema.safeParse(merge({ narrowerFields: 3, sharedFields: 3 }));
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result)).toContain(String(MERGE_MIN_SHARED_FIELDS));
+  });
+
+  it('accepts exactly at the floor — the boundary is a decision, so it is asserted', () => {
+    expect(MergeRecordSchema.safeParse(merge({
+      narrowerFields: MERGE_MIN_SHARED_FIELDS,
+      sharedFields: MERGE_MIN_SHARED_FIELDS,
+    })).success).toBe(true);
+  });
+
+  it('rejects a container narrower than the row it contains', () => {
+    expect(MergeRecordSchema.safeParse(merge({ widerFields: 2 }).valueOf()).success).toBe(false);
+  });
+
+  it('rejects a merge of one endpoint with itself', () => {
+    // Two sources or it is not a merge. `.min(2)` rather than a refinement,
+    // because a one-source record describes nothing that happened.
+    expect(MergeRecordSchema.safeParse(merge({ sources: ['get-api-v1-tasks-id'] })).success).toBe(false);
+  });
+
+  it('rejects a merge whose key is not the key the entity ended up with', () => {
+    // Checked on the entity rather than on the record, because the record alone
+    // cannot see the entity's key. Recomputable, therefore recomputed (§13).
+    const entity = (mergedFrom: unknown): unknown => ({
+      name: 'Task',
+      key: { field: 'id', kind: 'surrogate' },
+      fields: [{ name: 'id', type: 'integer', optional: false, generatedBy: 'counter', narrowing: null, pathParamOf: [] }],
+      relations: [],
+      mergedFrom,
+      seed: null,
+    });
+    expect(EntitySchema.safeParse(entity(null)).success).toBe(true);
+    const wrong = EntitySchema.safeParse(entity(merge({ keyField: 'slug', widerFields: 1 })));
+    expect(wrong.success).toBe(false);
+    expect(JSON.stringify(wrong)).toContain('but Task keys on id');
+  });
+
+  it('rejects a merge claiming a container wider than the entity it produced', () => {
+    // The counts are a claim about this entity's own fields: the wider row won
+    // its properties, so an entity carrying fewer than `widerFields` is a
+    // record of a merge that did not happen here.
+    const result = EntitySchema.safeParse({
+      name: 'Task',
+      key: { field: 'id', kind: 'surrogate' },
+      fields: [{ name: 'id', type: 'integer', optional: false, generatedBy: 'counter', narrowing: null, pathParamOf: [] }],
+      relations: [],
+      mergedFrom: merge(),
+      seed: null,
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result)).toContain('carries 1');
+  });
+});
 
 describe('the JSON Schema subset is closed', () => {
   it('accepts what response inference emits', () => {

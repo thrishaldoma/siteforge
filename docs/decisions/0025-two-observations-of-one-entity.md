@@ -179,7 +179,64 @@ reader can see *why* rather than being told the rule did not fire.
 
 ## 5. Measured
 
-*(filled in after the run — §4 is what it is compared against)*
+Both models graded against the same pinned truth, the second with
+`--without merge`, so "unchanged" is an A/B rather than a memory.
+
+| metric | without merge | with merge | §4 said |
+|---|---|---|---|
+| `entity-identity.precision` | 0.6000 (3/5) | **1.0000 (4/4)** | 1.0000 (4/4) — **right** |
+| `entity-field-presence.precision` | 1.0000 (29/29) | 1.0000 (58/58) | "moves, most likely falls" — moved, **did not fall** |
+| `entity-field-presence.recall` | 0.9063 (29/32) | **0.9355 (58/62)** | "moves" — right, direction **wrong** |
+| `entity-narrowing.recall` | vacuous (0/0) | 0.0000 (0/1) | "possibly non-vacuous" — right |
+| `entity-narrowing.precision` | vacuous | vacuous | — |
+| `entity-identity.recall` | vacuous | vacuous | — (`notDerived`, 0023 §3.1) |
+| **every `capture-fidelity` metric** | — | **identical to the digit** | **right** |
+
+`ambiguous: models.Task ← All | Task` is gone; the report reads `0 ambiguous`.
+
+### Where the prediction was wrong, and what that says
+
+**Field presence did not fall.** The merged entity contributed 29 fields, every
+one of them declared — `entity-field-presence.precision` stayed at 1.0000 with
+its counts doubled, and recall went *up*, from 0.9063 to 0.9355. The reasoning
+behind the prediction was that a wide item view would emit fields the document
+does not declare. It emits none. That is a fact about Vikunja's document being
+complete over this definition, and it is worth more than the guess it replaced:
+the fields infer reads off the wire are all in the spec, so the field-presence
+recall shortfall is four fields infer **missed**, not fields it invented.
+
+**And the containment ran the other way.** 0024 said "the list view returns
+fewer fields than the item view". Measured: `/tasks/all` and
+`/projects/:project/views/:view/tasks` return **27** scalar fields and
+`/tasks/:task` returns **25**. The *list* is the wider observation on this
+target — the item view is the projection.
+
+The rule survived a reversal of the direction its own motivating story assumed,
+and it survived it because it never reads which endpoint is which. §2.1 argues
+containment from the shape of a projection; had it been implemented as "fold the
+list into the item", it would have done nothing here. That is the difference
+between a rule about shapes and a rule about routes, and it is the second time
+in this document that reading the route would have been the mistake.
+
+### The number that did not move, and why it is the assertion
+
+Nine `capture-fidelity` metrics and five auth metrics are identical between the
+two runs — same values, same numerators, same denominators. That is the
+falsifiable half of §4, and it holds: the merge is an inference change and the
+suite beside it scores a capture artifact (0022). Had `response-field-presence`
+twitched, the finding would have been that the merge reached into the capture
+side, and the score would have been the wrong thing to look at.
+
+### One thing got worse, and it is cosmetic
+
+The surviving entity is named **`All`**, because `entityNameFor` names an entity
+from the first source's path and the container's first source is
+`/api/v1/tasks/all`. It was already an open item in 0024; the merge makes it
+more visible rather than causing it. Nothing scored moves — the grader pairs
+through `effect.entity` and never by name (0023 §2) — but codegen would emit a
+table called `All`, and §7.2's rule is that a name comes from what the thing is.
+Left as an open item rather than fixed here, because picking the "better" source
+path is a heuristic that wants its own argument.
 
 ---
 
@@ -191,4 +248,13 @@ reader can see *why* rather than being told the rule did not fire.
   and until it lands every merge here rests on shape rather than on records.
 - A merge is `reviewRequired` and mints a gap, and nothing yet *reads* those
   gaps back — the same standing weakness as every other review-required
-  narrowing.
+  narrowing. `need:merge-review` declares the consumer §7.5 requires; it is not
+  built.
+- **`entityNameFor` names the merged entity `All`.** Cosmetic today and wrong
+  tomorrow: the name reaches codegen as a table name. Choosing between a merge's
+  source paths is a heuristic, and it wants an argument before it gets one.
+- `entity-narrowing.recall` is now `0.0000 (0/1)` rather than vacuous. The
+  denominator is `models.Task.repeat_mode` and infer narrows nothing there, so
+  the enum ladder has been scored on an entity field for the first time and
+  reads zero. Whether that is a defect or the ladder correctly declining thin
+  evidence is a question this document does not answer.

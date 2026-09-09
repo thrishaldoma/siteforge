@@ -79,7 +79,7 @@ const RAW = {
         { name: 'description', type: 'string', optional: true, generatedBy: 'none', narrowing: null, pathParamOf: [] },
         { name: 'hexColor', type: 'string', optional: true, generatedBy: 'none', narrowing: null, pathParamOf: [] },
       ],
-      relations: [],
+      relations: [], mergedFrom: null,
       seed: null,
     },
   ],
