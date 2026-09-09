@@ -134,6 +134,23 @@ const ALLOW_DESTRUCTIVE = process.argv.includes('--allow-destructive');
 const REUSE_CONTAINER = process.argv.includes('--reuse-container');
 /** Boot and seed as usual, then leave the container running for the next crawl. */
 const HOLD_CONTAINER = process.argv.includes('--hold-container');
+/**
+ * Crawl without firing anything — the read-only half, for attribution.
+ *
+ * `--reuse-container` was built to hold the target still and does not, because
+ * **the crawl is not read-only**: §6's probe pass clicks controls, some of which
+ * create and edit rows, so a second crawl of a held instance reads the first
+ * crawl's writes. Measured — two held-container crawls differed on *more* paths
+ * (43) than two fresh-container crawls (34), and the endpoint count fell from 22
+ * to 20. A discriminator that perturbs the thing it is holding still discriminates
+ * nothing, which is 0026's one-shot-reproduction rule wearing a different hat.
+ *
+ * So the read-only crawl is the one that separates the two: no probing, no
+ * writes, a fresh container each time. What varies then is the target's own
+ * state or our own timing, and neither is downstream of us having clicked
+ * something.
+ */
+const NO_PROBE = process.argv.includes('--no-probe');
 
 const gaps = [];
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1195,9 +1212,9 @@ async function main() {
      * sweep's is deliberately uncredentialed and is tagged as such.
      */
     for (const [routeId, record] of routes) {
-      const { fired, attempted, sessionFired, candidates } = await probeRoute({
-        browser, storageState: state, routeId, record,
-      });
+      const { fired, attempted, sessionFired, candidates } = NO_PROBE
+        ? { fired: 0, attempted: 0, sessionFired: 0, candidates: 0 }
+        : await probeRoute({ browser, storageState: state, routeId, record });
       console.log(
         `  probe ${routeId.padEnd(34)} ${String(fired).padStart(2)} fired of ${String(attempted).padStart(2)} attempted, ` +
         `${String(candidates).padStart(3)} distinct candidate(s)` +

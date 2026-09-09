@@ -38,6 +38,7 @@ const siteId = process.argv[2] ?? 'vikunja';
 const runsAt = process.argv.indexOf('--runs');
 const RUNS = runsAt === -1 ? 3 : Number(process.argv[runsAt + 1]);
 const REUSE = process.argv.includes('--reuse-container');
+const NO_PROBE = process.argv.includes('--no-probe');
 
 if (!Number.isInteger(RUNS) || RUNS < 2) {
   console.error(`--runs must be an integer of at least 2; got ${process.argv[runsAt + 1]}`);
@@ -104,7 +105,7 @@ const holding = join(REPO, 'capture', `.idempotence-${siteId}`);
 rmSync(holding, { recursive: true, force: true });
 mkdirSync(holding, { recursive: true });
 
-console.log(`\nidempotence — ${siteId}, ${RUNS} crawl(s)${REUSE ? ', one container held still' : ', a fresh container each time'}\n`);
+console.log(`\nidempotence — ${siteId}, ${RUNS} crawl(s)${REUSE ? ', one container held still' : ', a fresh container each time'}${NO_PROBE ? ', read-only (no probing)' : ''}\n`);
 
 const trees = [];
 const durations = [];
@@ -116,6 +117,7 @@ for (let i = 0; i < RUNS; i += 1) {
   // here — a measurement whose setup is duplicated is one that can be set up
   // two different ways.
   if (REUSE) args.push(i === 0 ? '--hold-container' : '--reuse-container');
+  if (NO_PROBE) args.push('--no-probe');
   const run = spawnSync('node', args, { encoding: 'utf8', cwd: REPO, maxBuffer: 64 * 1024 * 1024 });
   const seconds = ((Date.now() - started) / 1000).toFixed(1);
   durations.push(Number(seconds));
