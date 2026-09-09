@@ -322,6 +322,15 @@ export const SABOTAGES = [
     expect: 'measured nothing',
     change: 'exempt the narrowings piece from assessVariantIsMeasurable',
   },
+  {
+    id: 'truth-allof-alias-unfollowed',
+    bug: 'the truth walk follows only a bare `$ref`, so every `allOf: [{$ref}]` alias resolves to an untyped object',
+    reachable:
+      "the code as shipped, for the life of the project. Gitea's document uses the idiom zero times so nothing was wrong while Gitea was the target, and Vikunja's uses it 32 times — the defect arrived by changing target rather than by editing code, which is the way nobody looks for. It also fails in the flattering direction: the truth side under-claims, so `response-field-presence.recall` went UP and read as `the crawl's reach`",
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'no enum-bearing response fields were enumerated',
+    change: 'drop the soleAllOfRef call from deref, leaving the bare $ref branch',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
@@ -348,6 +357,15 @@ export const SABOTAGES = [
     reachable: 'the ignore list is meant to grow; this is what growing it correctly looks like',
     change: "a fifth ignore pattern, '**/coverage', correctly anchored — the same array the defect un-anchors",
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+  },
+  {
+    kind: 'control',
+    id: 'truth-allof-order-swapped',
+    controlFor: 'truth-allof-alias-unfollowed',
+    reachable:
+      'the ordinary re-spelling of a two-branch lookup as a `??` chain, on the exact line the defect rewrites. Equivalent on every node either committed document contains — none carries both spellings — so it differs only on a node neither has, which is what makes it meaning-preserving here and not merely tidier',
+    change: 'check the allOf alias first and fall back to the bare $ref, instead of the reverse',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
   },
 ];
 

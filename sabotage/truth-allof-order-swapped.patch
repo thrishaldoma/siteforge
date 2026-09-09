@@ -1,0 +1,20 @@
+diff --git a/packages/verify/src/grade/truth/swagger2.ts b/packages/verify/src/grade/truth/swagger2.ts
+index 1c3f38d..28325d9 100644
+--- a/packages/verify/src/grade/truth/swagger2.ts
++++ b/packages/verify/src/grade/truth/swagger2.ts
+@@ -241,10 +241,11 @@ const deref = (spec: Json, node: Json, seen: ReadonlySet<string>): { node: Json;
+   let current = node;
+   const visited = new Set(seen);
+   for (;;) {
+-    // A bare `$ref` first: where both spellings are present the direct one is
+-    // the node's own claim, and `allOf` beside it would be the composition case
+-    // that throws anyway.
+-    const ref = typeof current['$ref'] === 'string' ? current['$ref'] : soleAllOfRef(current);
++    // The alias wrapper first, falling back to the bare `$ref`. Equivalent on
++    // every node either committed document contains — no node carries both
++    // spellings — and it differs only on one that does, which is why this is a
++    // control rather than a defect.
++    const ref = soleAllOfRef(current) ?? (typeof current['$ref'] === 'string' ? current['$ref'] : null);
+     if (ref === null) break;
+     // A cycle is not an error in a schema — Gitea's `Repository.parent` is a
+     // Repository. It is a place to stop, and stopping silently at a fixed depth
