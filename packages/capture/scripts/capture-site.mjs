@@ -64,11 +64,11 @@ import {
   assertPermitted,
   installEscapeGuards,
   installOriginGuard,
-  scrubCounting,
   scrubDeep,
   scrubHarFile,
   selectorClassNames,
   sha256,
+  writeAssetBodies,
 } from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
@@ -1349,53 +1349,18 @@ if (clientRedirectRoutes.length > 0) {
  * The bodies, on disk, content-addressed — §6's "persist **every** response
  * body", which this driver had never done.
  *
- * Text is scrubbed and binary is not (`isTextualAsset` carries that argument).
- * The scrub round-trips through **latin1** rather than utf8: latin1 is a
- * bijection between bytes and code points 0–255, so every byte the regexes do
- * not match comes back exactly as it went in, and a bundle that is not valid
- * UTF-8 is not silently rewritten into replacement characters. The patterns are
- * ASCII, so nothing is lost by decoding this way.
- *
- * A redacted body no longer hashes to the name it is filed under. The file
- * keeps the **wire** hash — that is the asset's identity, what `assetId` is and
- * what a reference resolves through — and `stored` records the divergence, so
- * the mismatch is a stated fact rather than something a reader discovers by
- * hashing the file.
+ * The writer is shared with rung 3 (`writeAssetBodies`), because whether an
+ * asset is text the scrubber may rewrite is a judgement two crawlers must not
+ * be able to disagree about, and §13 has already been bitten by that once.
  */
-const assetEntries = {};
-const assetFiles = [];
-for (const [url, a] of allAssets) {
-  const ext = (a.mime.split('/')[1] ?? 'bin').replace(/[^a-z0-9]/gi, '') || 'bin';
-  const localPath = `assets/files/${a.sha256}.${ext}`;
-  const textual = isTextualAsset(a.mime);
-  const asText = textual ? a.body.toString('latin1') : null;
-  const scrubbed = asText === null ? null : scrubCounting(asText);
-  const changed = scrubbed !== null && scrubbed.redactions > 0;
-  const bytes = changed ? Buffer.from(scrubbed.text, 'latin1') : a.body;
+const { entries: assetEntries, files: assetFiles } = writeAssetBodies({
+  allAssets,
+  outDir: OUT,
+  fs: { mkdirSync, writeFileSync },
+  isTextualAsset,
+  assetKind,
+});
 
-  const abs = join(OUT, localPath);
-  mkdirSync(dirname(abs), { recursive: true });
-  writeFileSync(abs, bytes);
-  assetFiles.push({ localPath, storedSha256: sha256(bytes) });
-
-  assetEntries[url] = {
-    assetId: a.sha256, originalUrl: url, localPath,
-    sha256: a.sha256, mime: a.mime, bytes: a.bytes, kind: assetKind(a.mime),
-    status: a.status, sameOrigin: a.sameOrigin, fromCache: false,
-    stored: changed
-      ? {
-          kind: 'redacted',
-          sha256: sha256(bytes),
-          bytes: bytes.length,
-          // Counted from the difference in length, which is exact because every
-          // replacement is a fixed string: a count of zero would mean nothing
-          // was redacted, and then `verbatim` is the honest kind.
-          redactions: scrubbed.redactions,
-        }
-      : { kind: 'verbatim' },
-    referencedBy: [],
-  };
-}
 /**
  * The index and the directory, reconciled both ways.
  *

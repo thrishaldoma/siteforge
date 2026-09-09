@@ -185,6 +185,75 @@ export function scrubDeep(value) {
   return value;
 }
 
+/**
+ * Write every captured body under `assets/files/<sha256>.<ext>`, and describe
+ * what was written.
+ *
+ * §6: "persist **every** response body content-addressed by sha256." Neither
+ * driver did — both hashed the body, recorded its length and dropped the bytes,
+ * so `assets/index.json` advertised a `localPath` for a file that had never
+ * existed. §7.6, whose job is to find a control's handler *in the captured
+ * source*, had no source to search.
+ *
+ * **One implementation for both crawlers**, not because it is shorter but
+ * because §13 has already been bitten by two drivers disagreeing about the same
+ * judgement — there, whether a button was safe to press. Whether an asset is
+ * text the scrubber may rewrite is the same kind of decision, and a capture
+ * whose redaction policy depends on which script produced it is not one policy.
+ *
+ * ### The scrub, and why it round-trips through latin1
+ *
+ * §3.4 redacts before any artifact is written, and redaction changes the bytes,
+ * so a scrubbed body no longer hashes to the name it is filed under. The file
+ * keeps the **wire** hash — that is the asset's identity, what `assetId` holds
+ * and what a reference resolves through — and `stored` records the divergence,
+ * so a reader who hashes the file and finds a mismatch is reading a stated fact
+ * rather than finding a bug.
+ *
+ * latin1 rather than utf8 because it is a bijection between bytes and code
+ * points 0–255: every byte the patterns do not match comes back exactly as it
+ * went in, so a bundle that is not valid UTF-8 is not quietly rewritten into
+ * replacement characters. The patterns are ASCII, so nothing is lost.
+ *
+ * Text only. A substitution run over a JPEG replaces bytes inside a container
+ * and yields an image that no longer decodes — and that is not a hole in §3.4,
+ * because `scanCaptureTree` reads every file as latin1 and a credential in an
+ * image fails the run instead of being silently rewritten.
+ */
+export function writeAssetBodies({ allAssets, outDir, fs, isTextualAsset, assetKind }) {
+  const entries = {};
+  const files = [];
+  for (const [url, a] of allAssets) {
+    const ext = (a.mime.split('/')[1] ?? 'bin').replace(/[^a-z0-9]/gi, '') || 'bin';
+    const localPath = `assets/files/${a.sha256}.${ext}`;
+    const asText = a.body !== undefined && isTextualAsset(a.mime) ? a.body.toString('latin1') : null;
+    const scrubbed = asText === null ? null : scrubCounting(asText);
+    const changed = scrubbed !== null && scrubbed.redactions > 0;
+    const bytes = changed ? Buffer.from(scrubbed.text, 'latin1') : a.body;
+
+    if (bytes !== undefined) {
+      const abs = join(outDir, localPath);
+      fs.mkdirSync(dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, bytes);
+      files.push({ localPath, storedSha256: sha256(bytes) });
+    }
+
+    entries[url] = {
+      assetId: a.sha256, originalUrl: url, localPath,
+      sha256: a.sha256, mime: a.mime, bytes: a.bytes,
+      // Parsed type/subtype, one table. `includes('css')` matched
+      // `application/x-not-css` and a `charset=x-csserror` parameter alike.
+      kind: assetKind(a.mime),
+      status: a.status, sameOrigin: a.sameOrigin, fromCache: false,
+      stored: changed
+        ? { kind: 'redacted', sha256: sha256(bytes), bytes: bytes.length, redactions: scrubbed.redactions }
+        : { kind: 'verbatim' },
+      referencedBy: [],
+    };
+  }
+  return { entries, files };
+}
+
 /* ------------------------------------------------------------- in-page walk */
 
 /** Stamps every element with its depth-first ordinal, so CDP can map back to it. */

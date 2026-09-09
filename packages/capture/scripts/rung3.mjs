@@ -21,13 +21,13 @@ import * as S from '../../schema/dist/index.js';
 import {
   assertPermitted, boundaryGaps, installEscapeGuards, installOriginGuard, scrub, scrubDeep,
   selectorClassNames,
-  scrubHarFile, sha256,
+  scrubHarFile, sha256, writeAssetBodies,
 } from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
 import {
   allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, operationalKind,
-  assetKind, isUnder, originOf, pathSegments, rethrowIfDefect, sameOrigin,
+  assetKind, isTextualAsset, isUnder, originOf, pathSegments, rethrowIfDefect, sameOrigin,
   scanCaptureTree,
   NEVER_FIRE_NAMES, SESSION_DESTRUCTIVE_TERMS, TARGET_DESTRUCTIVE_TERMS, classifyControlHazard,
 } from '../../shared/dist/index.js';
@@ -240,6 +240,9 @@ for (const context of CONTEXTS) {
       allAssets.set(url, {
         sha256: sha256(buf), bytes: buf.length, mime, status: response.status(),
         sameOrigin: sameOrigin(url, ORIGIN),
+        // Kept, not dropped: §6 says persist every response body, and an index
+        // naming a file nobody wrote is a claim the artifact cannot support.
+        body: buf,
       });
     // operational: a redirect response has no retrievable body
     } catch { /* redirect */ }
@@ -912,18 +915,15 @@ for (const [routeId, record] of routes) {
   write(`routes/${routeId}/states.json`, S.StateDeltasDocumentSchema, states);
 }
 
-const assetEntries = {};
-for (const [url, a] of allAssets) {
-  const ext = (a.mime.split('/')[1] ?? 'bin').replace(/[^a-z0-9]/gi, '') || 'bin';
-  assetEntries[url] = {
-    assetId: a.sha256, originalUrl: url, localPath: `assets/files/${a.sha256}.${ext}`,
-    sha256: a.sha256, mime: a.mime, bytes: a.bytes,
-    // Parsed type/subtype, one table. `includes('css')` matched
-    // `application/x-not-css` and a `charset=x-csserror` parameter alike.
-    kind: assetKind(a.mime),
-    status: a.status, sameOrigin: a.sameOrigin, fromCache: false, referencedBy: [],
-  };
-}
+// The same writer the site driver uses. Two crawlers must not be able to
+// disagree about whether an asset is text the scrubber may rewrite (§13).
+const { entries: assetEntries } = writeAssetBodies({
+  allAssets,
+  outDir: OUT,
+  fs: { mkdirSync, writeFileSync },
+  isTextualAsset,
+  assetKind,
+});
 const assetIndex = {
   ...envelope('asset-index'),
   byUrl: assetEntries,

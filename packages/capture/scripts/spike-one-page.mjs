@@ -16,9 +16,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
-import { boundaryGaps, installEscapeGuards, installOriginGuard, scrubHarFile } from './capture-lib.mjs';
+import { boundaryGaps, installEscapeGuards, installOriginGuard, scrubHarFile, writeAssetBodies } from './capture-lib.mjs';
 import {
-  allowedOrigins as deriveAllowedOrigins, assetKind, decideNavigation, formatFindings,
+  allowedOrigins as deriveAllowedOrigins, assetKind, decideNavigation, formatFindings, isTextualAsset,
   hostMatchesAllowEntry, isAbsoluteUrl, originOf, sameOrigin, scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
@@ -404,6 +404,9 @@ page.on('response', async (response) => {
       sameOrigin: sameOrigin(url, new URL(TARGET).origin),
       fromCache: false,
       arrivedAtScrollStep: scrollStep,
+      // §6's "persist every response body", which the comment above this map
+      // claimed and the code did not do.
+      body,
     });
   } catch {
     // operational: redirects and preflights have no retrievable body
@@ -723,20 +726,16 @@ const states = {
 
 const harBytes = readFileSync(join(OUT, 'network', 'session.har'));
 const harJson = JSON.parse(harBytes.toString('utf8'));
-const assetEntries = {};
-for (const [url, a] of assetsByUrl) {
-  const ext = (a.mime.split('/')[1] ?? 'bin').replace(/[^a-z0-9]/gi, '') || 'bin';
-  assetEntries[url] = {
-    assetId: a.sha256, originalUrl: url,
-    localPath: `assets/files/${a.sha256}.${ext}`,
-    sha256: a.sha256, mime: a.mime, bytes: a.bytes,
-    // One parsed table, shared with rung 3. Written twice as an ordered
-    // `includes` chain, the two spellings had already drifted apart.
-    kind: assetKind(a.mime),
-    status: a.status, sameOrigin: a.sameOrigin, fromCache: a.fromCache,
-    referencedBy: [],
-  };
-}
+// The shared writer, as in the site driver and rung 3. This file's own comment
+// already said "persist every response body" and it was the third place the
+// bytes were hashed and dropped.
+const { entries: assetEntries } = writeAssetBodies({
+  allAssets: assetsByUrl,
+  outDir: OUT,
+  fs: { mkdirSync, writeFileSync },
+  isTextualAsset,
+  assetKind,
+});
 const absolute = (u) => { try { return new URL(u, extracted.url).href; } catch { return null; } };
 for (let i = 0; i < extracted.nodes.length; i += 1) {
   const raw = extracted.nodes[i];
