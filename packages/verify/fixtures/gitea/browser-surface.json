@@ -29,6 +29,7 @@
     "POST /sfadmin/hello/issues/new",
     "POST /user/login"
   ],
+  "staticAssetRequests": 0,
   "describedByDocument": [],
   "verdict": "disjoint"
 }

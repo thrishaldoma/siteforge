@@ -41,6 +41,7 @@
     "POST /auth/refresh"
   ],
   "formActions": [],
+  "staticAssetRequests": 0,
   "describedByDocument": [
     "GET /activity",
     "GET /collections",

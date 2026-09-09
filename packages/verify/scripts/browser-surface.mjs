@@ -29,7 +29,7 @@
  * script beside it. The committed JSON is what `verify:clean` reads.
  */
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -53,6 +53,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
  * container and throws it away, so these are not credentials for anything (§3.3
  * governs a *target's* credentials, which are never written down).
  */
+/** One fixture account, so a password literal appears once. Never a real credential (§3.3). */
+const LOGIN = { username: 'sfadmin', password: 'sf-local-fixture-only' };
+
 const TARGETS = {
   gitea: {
     image: PIN.image,
@@ -128,9 +131,112 @@ const TARGETS = {
       await page.keyboard.press('Enter');
       await wait(4000);
     },
+    /** Checked after login, for the reason the Vikunja entry documents. */
+    loggedOutPath: '/admin/login',
     pages: [
       '/admin/content', '/admin/users', '/admin/files', '/admin/settings/data-model',
       '/admin/settings/roles', '/admin/activity', '/admin/settings/project',
+    ],
+  },
+
+  /**
+   * The candidate the Directus measurement asked for: a document whose API sits
+   * under a path prefix the UI does not share. Directus passes the overlap test
+   * and serves its API at `/`, which makes `inUniverse` admit the entire SPA —
+   * a universe that does not filter (0019).
+   *
+   * Vikunja is a todo app, which is §12's named M3 shape, and its document is
+   * Swagger 2.0 with `basePath: /api/v1`, which the existing truth loader reads.
+   */
+  vikunja: {
+    image: 'vikunja/vikunja@sha256:ed1f3ed467fecec0b57e9de7bc6607f8bbcbb23ffced6a81f5dfefc794cdbe3b',
+    tagAtPull: '0.24',
+    containerPort: 3456,
+    port: 3811,
+    // Its sqlite file and upload directory both need a writable path, and every
+    // candidate location in the image is owned by root while the process runs as
+    // uid 1000. tmpfs rather than a volume: the container is thrown away.
+    runArgs: ['--tmpfs', '/db', '--tmpfs', '/files'],
+    env: {
+      VIKUNJA_SERVICE_JWTSECRET: 'sf-local-fixture-only-secret',
+      VIKUNJA_DATABASE_TYPE: 'sqlite',
+      VIKUNJA_DATABASE_PATH: '/db/vikunja.db',
+      VIKUNJA_FILES_BASEPATH: '/files',
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: 'true',
+    },
+    rootUrlEnv: 'VIKUNJA_SERVICE_PUBLICURL',
+    spec: { path: '/api/v1/docs.json', auth: 'none' },
+    universe: '/api/v1',
+    readyPath: '/api/v1/info',
+    async seed({ api }) {
+      const json = async (path, body, token) => {
+        const response = await api(path, {
+          method: body.method ?? 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(body.data),
+        });
+        // Checked, not assumed. A seed that half-failed produces a crawl of an
+        // empty instance, and an empty instance makes no API calls — which
+        // reads as "this target's browser does not call its API", the exact
+        // verdict this script exists to pronounce.
+        const text = await response.text();
+        if (!response.ok) throw new Error(`seed ${path} → ${response.status}: ${text.slice(0, 200)}`);
+        return text;
+      };
+      await json('/api/v1/register', {
+        data: { username: LOGIN.username, email: 'sfadmin@localhost.test', password: LOGIN.password },
+      });
+      const token = JSON.parse(
+        await json('/api/v1/login', {
+          data: { username: LOGIN.username, password: LOGIN.password },
+        }),
+      ).token;
+      // PUT creates in Vikunja's API; POST updates. Worth stating, because a
+      // 405 here would look like a wrong path rather than a wrong verb.
+      await json('/api/v1/projects', { method: 'PUT', data: { title: 'Seeded project' } }, token);
+      for (const title of [
+        'Write the truth loader',
+        'Measure the surface',
+        'Transcribe a baseline',
+        'Ship the grader',
+      ]) await json('/api/v1/projects/2/tasks', { method: 'PUT', data: { title } }, token);
+      for (const title of ['bug', 'enhancement', 'question'])
+        await json('/api/v1/labels', { method: 'PUT', data: { title } }, token);
+    },
+    /** Where the SPA sits when nobody is signed in. Checked after login. */
+    loggedOutPath: '/login',
+    /** Signed in: like Directus, the SPA is the whole surface. */
+    login: async (page, origin) => {
+      await page.goto(`${origin}/login`, { waitUntil: 'networkidle', timeout: 30_000 });
+      // Typed, not filled, and clicked rather than submitted with Enter: Vue's
+      // v-model on this form does not see `fill`'s single input event, and
+      // Enter does not submit. Then a settle wait, because the SPA hydrates
+      // *over* the field it has already painted and eats whatever was typed
+      // before it finished — `sfadmin` arrived as `in`, and the login failed
+      // with a message about a wrong password that was entirely true.
+      //
+      // Read back and checked. Every part of this is a silent wrong answer
+      // otherwise: the run measures a login screen eight times and reports the
+      // target's browser does not call its API.
+      await wait(2500);
+      for (const [selector, value] of [
+        ['#username', LOGIN.username],
+        ['#password', LOGIN.password],
+      ]) {
+        await page.click(selector);
+        await page.type(selector, value, { delay: 30 });
+        const typed = await page.inputValue(selector);
+        if (typed !== value) throw new Error(`${selector} holds "${typed}" after typing "${value}"`);
+      }
+      await page.click('button:has-text("Login")');
+      await wait(5000);
+    },
+    pages: [
+      '/', '/projects', '/projects/2', '/tasks/1', '/labels', '/teams',
+      '/user/settings/general', '/projects/1',
     ],
   },
 };
@@ -150,6 +256,29 @@ const shapeOf = (path) =>
         : s,
     )
     .join('/');
+
+/**
+ * Extensions that make a request a static subresource rather than a candidate
+ * API call.
+ *
+ * `resourceType` cannot separate these: Vikunja is a PWA, and its service
+ * worker precaches the whole bundle — 236 locale chunks, icons and a
+ * webmanifest — as `fetch`. Left in, the denominator becomes "how big is the
+ * JavaScript bundle" and the criterion measures nothing.
+ *
+ * **Shrinking a denominator is the shape of tuning**, and the same three things
+ * that make the narrowing exclusion legitimate are asserted here: the predicate
+ * reads the observed path and nothing else — never the document, never the
+ * verdict, never which entries happened to match; the list is one closed set of
+ * file extensions with a stated reason; and it must be **inert against every
+ * verdict already committed**, which `browser-surface.test.ts` checks by
+ * applying it to the recorded paths and requiring that none drop.
+ */
+const STATIC_ASSET =
+  /\.(js|mjs|cjs|css|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|wasm|webmanifest|html|txt|xml)$/i;
+
+/** Reads the path. Not the document, not the score. */
+export const isCandidateApiCall = (path) => !STATIC_ASSET.test(path);
 
 const METHODS = ['get', 'post', 'patch', 'put', 'delete'];
 
@@ -176,7 +305,7 @@ async function boot(id, target) {
   const env = Object.entries({ ...target.env, [target.rootUrlEnv]: `${origin}/` }).flatMap(
     ([k, v]) => ['-e', `${k}=${v}`],
   );
-  const run = docker('run', '-d', '--name', name, '-p', `${target.port}:${target.containerPort}`, ...env, target.image);
+  const run = docker('run', '-d', '--name', name, '-p', `${target.port}:${target.containerPort}`, ...(target.runArgs ?? []), ...env, target.image);
   if (run.status !== 0) throw new Error(`docker run failed: ${run.stderr}`);
 
   const api = (path, init) => fetch(`${origin}${path}`, init);
@@ -211,10 +340,14 @@ async function measure(target, origin) {
   const browser = await chromium.launch();
   const context = await browser.newContext();
   const xhr = new Set();
+  const staticAssets = new Set();
   context.on('request', (request) => {
     const type = request.resourceType();
     if (type !== 'xhr' && type !== 'fetch') return;
-    xhr.add(`${request.method()} ${new URL(request.url()).pathname}`);
+    const path = new URL(request.url()).pathname;
+    // Counted rather than discarded: the exclusion has to be visible in the
+    // committed record, or it is a denominator shrunk out of sight.
+    (isCandidateApiCall(path) ? xhr : staticAssets).add(`${request.method()} ${path}`);
   });
 
   const formActions = new Set();
@@ -224,7 +357,19 @@ async function measure(target, origin) {
   // capture artifact — so there is nothing to record into and no session to leak.
   // unguarded: measurement harness against a container it booted itself
   const page = await context.newPage();
-  if (target.login) await target.login(page, origin);
+  if (target.login) {
+    await target.login(page, origin);
+    // A crawl that silently stayed logged out measures a login screen eight
+    // times and reports `disjoint` — indistinguishable from the Gitea finding
+    // and completely wrong. Vikunja's form ignores Playwright's `fill`, which
+    // is how this was found: the login posted an empty credential, the SPA
+    // stayed put, and the run printed a confident verdict.
+    if (target.loggedOutPath && page.url().includes(target.loggedOutPath)) {
+      throw new Error(
+        `login did not take: still at ${page.url()}. Every page below would be the login screen, and the verdict would be 'disjoint' for a reason that has nothing to do with the target.`,
+      );
+    }
+  }
   for (const path of target.pages) {
     // operational: a page that will not load is a page with no surface to record
     await page.goto(origin + path, { waitUntil: 'networkidle', timeout: 30_000 }).catch(() => {});
@@ -240,7 +385,11 @@ async function measure(target, origin) {
     for (const form of forms) formActions.add(form);
   }
   await browser.close();
-  return { xhr: [...xhr].sort(), formActions: [...formActions].sort() };
+  return {
+    xhr: [...xhr].sort(),
+    formActions: [...formActions].sort(),
+    staticAssets: [...staticAssets].sort(),
+  };
 }
 
 async function remeasure(id) {
@@ -274,10 +423,15 @@ async function remeasure(id) {
     declaredOperations: declared.size,
     xhr: observed.xhr,
     formActions: observed.formActions,
+    /** Fetches excluded as static subresources. A number, so the cut is visible. */
+    staticAssetRequests: observed.staticAssets.length,
     /** The strong criterion: the document declares an operation of this shape. */
     describedByDocument: described,
     verdict: described.length === 0 ? 'disjoint' : 'overlapping',
   };
+  // A new candidate has no fixture directory, and the measurement is expensive
+  // enough that losing one to ENOENT after the crawl is a real cost.
+  mkdirSync(dirname(recordPath(id)), { recursive: true });
   writeFileSync(recordPath(id), `${JSON.stringify(record, null, 2)}\n`);
 
   console.log(`  document          ${declared.size} operation shape(s)`);
