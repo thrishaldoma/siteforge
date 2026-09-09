@@ -42,6 +42,9 @@ const HEALTHY_OBSERVED: CoverageObserved = {
   harCredentialedRequests: 36,
   sessionProbePolicy: 'credentialed',
   sessionDestructiveControls: 1,
+  domSelectElements: 6,
+  domRadioGroups: 2,
+  bodyScalarKinds: 3,
 };
 
 const HEALTHY_EXTRACTED: CoverageExtracted = {
@@ -59,6 +62,12 @@ const HEALTHY_EXTRACTED: CoverageExtracted = {
   a11yNodes: 39,
   endpointsWithAuthEvidence: 3,
   sessionDestructiveFired: 1,
+  controlsFired: 12,
+  controlsUndriveable: 0,
+  uiConstraintSelects: 6,
+  uiConstraintRadioGroups: 2,
+  uiConstraintsBindable: 4,
+  scalarKindsWithExamples: 3,
 };
 
 /**
@@ -133,6 +142,31 @@ const SABOTAGE: Sabotage[] = [
     bug: '"Sign out" skipped as destructive, leaving POST /api/auth/logout uncaptured while §10 depends on it',
     drop: { sessionDestructiveFired: 0 },
     silence: { sessionDestructiveControls: 0 },
+  },
+  {
+    id: 'selects-imply-option-set-controls',
+    bug: "the extractor queried `select[name], select[id]`, and Vikunja's six selects carry only `data-v-321f61a6`",
+    // Not zero. A total loss is what happened here, but the reason this is an
+    // equality rather than a non-emptiness is the *partial* case, so that is
+    // what the sabotage models: four of six extracted still satisfies `> 0`
+    // while a third of §7.5's primary evidence is gone.
+    drop: { uiConstraintSelects: 4 },
+    silence: { domSelectElements: 0 },
+  },
+  {
+    id: 'radio-groups-imply-option-set-controls',
+    bug: 'radio groups keyed by element rather than by shared `name`, so one group of three counted as three',
+    drop: { uiConstraintRadioGroups: 1 },
+    silence: { domRadioGroups: 0 },
+  },
+  {
+    id: 'scalar-values-imply-recorded-examples',
+    bug: "`examples` recorded inside `inferSchema`'s `string` branch only, so 0 of 68 numeric nodes carried an observed value",
+    // Two of three, not zero: with the bug, booleans and integers were lost
+    // together — but a driver that lost only integers must fail this as well,
+    // and would not fail a check on a single total.
+    drop: { scalarKindsWithExamples: 2 },
+    silence: { bodyScalarKinds: 0 },
   },
   {
     id: 'tall-document-implies-scroll-steps',

@@ -215,7 +215,35 @@ export function inferSchema(values, ctx = {}) {
       ...(nullable ? { nullable: true } : {}),
     };
   }
-  return { type: kind, ...(nullable ? { nullable: true } : {}) };
+  /**
+   * Every other scalar — and it records what was seen, which it did not.
+   *
+   * `examples` lived inside the `string` branch alone, so this line dropped the
+   * observed values of every integer, number and boolean in the capture: **0 of
+   * 68 numeric nodes carried a value, against 273 of 324 string nodes.** Silent,
+   * and it is not a grading concern — §8 seeds the mock store "from real
+   * captured responses", so every numeric field in the clone was seeding from
+   * nothing at all.
+   *
+   * Recording an observation is not narrowing. `examples` constrains nothing and
+   * §7.5's rule runs the other way: widening is free, and what was actually seen
+   * is the cheapest evidence there is. `null` carries no value worth recording,
+   * so it is the one kind excluded.
+   *
+   * Sorted with a numeric comparator rather than the default lexicographic one.
+   * `[2, 10].sort()` is `[10, 2]`, and this array is written into an artifact
+   * that `capture-idempotence` compares byte for byte.
+   */
+  if (kind === 'null') return { type: kind, ...(nullable ? { nullable: true } : {}) };
+  const distinct = [...new Set(nonNull)];
+  distinct.sort((a, b) => (typeof a === 'number' && typeof b === 'number'
+    ? a - b
+    : String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));
+  return {
+    type: kind,
+    ...(distinct.length > 0 ? { examples: distinct.slice(0, 5) } : {}),
+    ...(nullable ? { nullable: true } : {}),
+  };
 }
 
 /**

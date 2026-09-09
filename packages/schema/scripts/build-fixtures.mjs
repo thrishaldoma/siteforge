@@ -1037,6 +1037,20 @@ const allStates = [...routes.values()]
   .map((r) => stateEntriesFor(r.spec.routeId, r, { ...r.spec, viewport: contextById.get(r.spec.contextId).viewport }));
 const flat = allStates.flat();
 const capturedRoutes = [...routes.values()].filter((r) => !r.spec.sharedWith);
+/** Which of integer/number/boolean appear as leaves in these response schemas. */
+const scalarKindsOf = (endpoints) => {
+  const kinds = new Set();
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return;
+    const types = Array.isArray(node.type) ? node.type : [node.type];
+    for (const t of types) if (['integer', 'number', 'boolean'].includes(t)) kinds.add(t);
+    for (const child of Object.values(node.properties ?? {})) walk(child);
+    walk(node.items);
+  };
+  for (const e of endpoints) for (const r of e.responses ?? []) walk(r.schema);
+  return kinds.size;
+};
+
 const observed = {
   stylesheets: 2,
   cssPseudoClassRules: flat.filter((e) => e.source === 'cssom' && e.stateSelectors.some((x) => x.startsWith(':'))).length,
@@ -1058,6 +1072,21 @@ const observed = {
   harCredentialedRequests: ENDPOINTS
     .filter((e) => e.params.headers.some((h) => h.name === 'cookie'))
     .reduce((n, e) => n + e.observedCount, 0),
+  // Derived from the fixture's own DOM, like every other count here.
+  domSelectElements: capturedRoutes.reduce(
+    (n, r) => n + findAll(r.root, (x) => x.tag === 'select').length, 0),
+  domRadioGroups: new Set(
+    capturedRoutes.flatMap((r) =>
+      findAll(r.root, (x) => x.tag === 'input' && x.attributes?.type === 'radio')
+        .map((x) => x.attributes?.name)
+        .filter((v) => v !== undefined && v !== '')),
+  ).size,
+  // A synthetic fixture has no wire, so — as with `harCredentialedRequests`
+  // above — this is read back off the descriptors rather than from bodies that
+  // do not exist. It makes the invariant a consistency check on the fixture
+  // rather than an independent one; the independent version runs in the drivers,
+  // where there are real bodies to walk.
+  bodyScalarKinds: scalarKindsOf(ENDPOINTS),
 };
 const extracted = {
   styleTableEntries: capturedRoutes.reduce((n, r) => n + r.table.length, 0),
@@ -1082,6 +1111,10 @@ const extracted = {
   controlsFired: 1,
   controlsUndriveable: 1,
   sessionDestructiveFired: 0,
+  uiConstraintSelects: observed.domSelectElements,
+  uiConstraintRadioGroups: observed.domRadioGroups,
+  uiConstraintsBindable: observed.domSelectElements + observed.domRadioGroups,
+  scalarKindsWithExamples: observed.bodyScalarKinds,
   a11yNodes: capturedRoutes.reduce(
     (n, r) => n + findAll(r.root, (x) => x.a11y !== undefined).length, 0),
 };

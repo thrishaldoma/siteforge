@@ -44,6 +44,9 @@ import * as S from '../../schema/dist/index.js';
 import {
   allowedOrigins as deriveAllowedOrigins,
   assessAssetBodies,
+  countOptionSetsInDom,
+  scalarKindsInBodies,
+  scalarKindsWithExamples,
   assetKind,
   decideNavigation,
   isTextualAsset,
@@ -62,8 +65,10 @@ import {
 } from '../../shared/dist/index.js';
 import {
   assertPermitted,
+  collectUiConstraints,
   installEscapeGuards,
   installOriginGuard,
+  scrub,
   scrubDeep,
   scrubHarFile,
   selectorClassNames,
@@ -1326,15 +1331,9 @@ const { routes, anonymousOutcomes } = await main();
  * Ground truth about the domain, and the only kind: the API cannot receive an
  * option the UI has no way to send.
  */
-const uiConstraints = new Map();
-for (const [routeId, record] of routes) {
-  for (const node of record.captured.selectControls ?? []) {
-    if (!node.name || node.optionValues.length === 0) continue;
-    uiConstraints.set(node.name.toLowerCase(), {
-      control: node.control, routeId, nodeId: node.nodeId, optionValues: node.optionValues,
-    });
-  }
-}
+const { byFieldName: uiConstraints, tally: uiConstraintTally } = collectUiConstraints({
+  routes, scrub,
+});
 
 /** Routes whose anonymous verdict a client-side redirect left unsettled. */
 const clientRedirectRoutes = [];
@@ -1594,6 +1593,31 @@ const observed = {
   ),
   harCredentialedRequests: observations.filter((o) =>
     (o.requestHeaderNames ?? []).some((h) => ['cookie', 'authorization'].includes(h.toLowerCase()))).length,
+  // From the written DOM tree, never from the extractor's own selector — which
+  // is the side that had the bug. See `countOptionSetsInDom`.
+  ...[...routeArtifacts.values()]
+    .map((r) => countOptionSetsInDom(r.dom.root))
+    .reduce(
+      (acc, c) => ({
+        domSelectElements: acc.domSelectElements + c.selects,
+        domRadioGroups: acc.domRadioGroups + c.radioGroups,
+      }),
+      { domSelectElements: 0, domRadioGroups: 0 },
+    ),
+  // Walked from the raw bodies, sharing no code with `inferSchema` — the pass
+  // whose `string`-only `examples` branch this invariant exists to catch.
+  bodyScalarKinds: scalarKindsInBodies(
+    observations.map((o) => {
+      try {
+        return JSON.parse(o.body ?? 'null');
+      } catch {
+        // operational: a non-JSON body has no scalar leaves to count. Counting
+        // it as zero is the safe direction — it can only make the invariant
+        // vacuous, never make it pass over a real drop.
+        return null;
+      }
+    }),
+  ).size,
 };
 const extracted = {
   styleTableEntries: [...routeArtifacts.values()].reduce((n, r) => n + r.styles.table.length, 0),
@@ -1618,6 +1642,12 @@ const extracted = {
    */
   controlsFired: [...flows.values()].filter((f) => f.outcome === 'completed').length,
   controlsUndriveable: undriveable.length,
+  uiConstraintSelects: uiConstraintTally.select,
+  uiConstraintRadioGroups: uiConstraintTally.radioGroup,
+  uiConstraintsBindable: uiConstraintTally.named,
+  scalarKindsWithExamples: scalarKindsWithExamples(
+    endpoints.flatMap((e) => [...e.responses.map((r) => r.schema), e.request?.schema ?? null]),
+  ).size,
   sessionDestructiveFired: [...flows.values()].filter(
     (f) => f.outcome === 'completed' && f.destructive === false &&
       SESSION_DESTRUCTIVE_TERMS.some((t) => f.name.toLowerCase().includes(t)),

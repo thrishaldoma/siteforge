@@ -9,4 +9,5 @@ export * from './crawl-scope.js';
 export * from './probe-schedule.js';
 export * from './repo-hygiene.js';
 export * from './asset-bodies.js';
+export * from './option-sets.js';
 export * from './capture-idempotence.js';

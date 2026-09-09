@@ -69,6 +69,26 @@ export const CoverageObservedSchema = z.strictObject({
   sessionProbePolicy: SessionProbePolicySchema,
   /** Controls classified session-destructive, counted at discovery. */
   sessionDestructiveControls: z.int().nonnegative(),
+  /**
+   * `<select>` elements in the captured DOM, counted from `dom.json`'s node
+   * tree — **never from the extractor's own `querySelectorAll`.**
+   *
+   * That independence is the whole point of the rule and it is what this
+   * particular invariant needs most: the bug was *in the selector*. An observed
+   * side that asked the page the same question the extractor asked would have
+   * returned zero too, and the check would have read green over a page holding
+   * six of them. `dom.json` is built by a different traversal, for a different
+   * purpose, and cannot agree with the extractor by sharing its mistake.
+   */
+  domSelectElements: z.int().nonnegative(),
+  /** Distinct `name` values among `input[type=radio]` nodes in `dom.json`. */
+  domRadioGroups: z.int().nonnegative(),
+  /**
+   * How many of `integer` / `number` / `boolean` appear as leaves in the raw
+   * response bodies. Walked with a crude recursive descent that shares no code
+   * with `inferSchema` — no dedup, no identity, no depth cap.
+   */
+  bodyScalarKinds: z.int().nonnegative().max(3),
 });
 
 /** What extraction produced from those inputs. */
@@ -120,6 +140,41 @@ export const CoverageExtractedSchema = z.strictObject({
   controlsFired: z.int().nonnegative(),
   /** Discovered, activated, and would not resolve. The other half of the ceiling. */
   controlsUndriveable: z.int().nonnegative(),
+  /**
+   * Option-set controls extraction produced, **split by kind**.
+   *
+   * Split for decision 0008's reason: an aggregate lets one category mask
+   * another's loss, and these two are extracted by different rules — `<select>`
+   * by tag alone, radio groups by shared `name`, which is load-bearing for a
+   * radio and incidental for a select. A single total would let surviving radio
+   * groups hide every select disappearing, which is exactly the shape that kept
+   * `statesCssom` green while attribute states were entirely broken.
+   */
+  uiConstraintSelects: z.int().nonnegative(),
+  uiConstraintRadioGroups: z.int().nonnegative(),
+  /**
+   * Of those, the ones §7.5's ladder can currently *use*: they offer at least
+   * one option value and they carry a name to key on.
+   *
+   * Reported without an invariant, deliberately. A control extraction saw and
+   * declined to index is not a silent drop — the count above proves it was
+   * seen, and the gap between the two is the size of the binding problem
+   * (docs/decisions/0029), not a defect. Asserting on it would be asserting
+   * that a target names its form controls, which is not ours to require.
+   */
+  uiConstraintsBindable: z.int().nonnegative(),
+  /**
+   * How many of those kinds have at least one schema node carrying `examples`.
+   *
+   * Compared against `bodyScalarKinds` for equality. Kind is the granularity at
+   * which the two sides are comparable at all — one counts values in bodies,
+   * the other nodes in a schema, and dedup, array folding and the depth cap
+   * legitimately separate the two populations. It is also granular enough:
+   * `examples` was recorded only in the `string` branch, so booleans and
+   * integers were lost together here, but a driver that lost only integers
+   * fails this too, and would not fail a single total.
+   */
+  scalarKindsWithExamples: z.int().nonnegative().max(3),
 });
 
 export type CoverageObserved = z.infer<typeof CoverageObservedSchema>;
@@ -219,6 +274,40 @@ export const COVERAGE_INVARIANTS: readonly CoverageInvariant[] = [
     description: 'an a11y tree with interactive roles must produce interaction candidates',
     vacuous: (o) => o.axInteractiveRoles === 0,
     holds: (_o, e) => e.interactionCandidates > 0,
+  },
+  {
+    // Added after the Vikunja crawl. `entity-narrowing.recall` and
+    // `narrowing.recall` were both reported as model-side floors on the strength
+    // of six `<select>` elements sitting in the captured DOM that extraction
+    // produced nothing from: the selector was `select[name], select[id]` and
+    // every one of them carried only `data-v-321f61a6`. Six in, zero out,
+    // nothing failed — §6's standing rule names exactly this.
+    //
+    // An equality, not a non-emptiness: the loss was total here, but a
+    // framework that names four selects of six would satisfy `> 0` while
+    // dropping a third of the primary evidence §7.5 ranks first.
+    id: 'selects-imply-option-set-controls',
+    description: 'every <select> in the captured DOM must produce an option-set control',
+    vacuous: (o) => o.domSelectElements === 0,
+    holds: (o, e) => e.uiConstraintSelects === o.domSelectElements,
+  },
+  {
+    id: 'radio-groups-imply-option-set-controls',
+    description: 'every radio group in the captured DOM must produce an option-set control',
+    vacuous: (o) => o.domRadioGroups === 0,
+    holds: (o, e) => e.uiConstraintRadioGroups === o.domRadioGroups,
+  },
+  {
+    // Added with the Vikunja crawl, from the same audit as the two above.
+    // `examples` was recorded inside `inferSchema`'s `string` branch only, so
+    // the terminal `return { type: kind }` dropped every observed integer,
+    // number and boolean: 0 of 68 numeric nodes carried a value against 273 of
+    // 324 string nodes. §8 seeds the mock store from captured responses, so
+    // every numeric field in the clone was seeding from nothing.
+    id: 'scalar-values-imply-recorded-examples',
+    description: 'every scalar kind seen in a response body must have some schema node recording observed values',
+    vacuous: (o) => o.bodyScalarKinds === 0,
+    holds: (o, e) => e.scalarKindsWithExamples === o.bodyScalarKinds,
   },
   {
     id: 'subresources-imply-assets',

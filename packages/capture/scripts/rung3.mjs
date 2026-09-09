@@ -19,14 +19,17 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import * as S from '../../schema/dist/index.js';
 import {
-  assertPermitted, boundaryGaps, installEscapeGuards, installOriginGuard, scrub, scrubDeep,
+  assertPermitted, boundaryGaps, collectUiConstraints, installEscapeGuards, installOriginGuard,
+  scrub, scrubDeep,
   selectorClassNames,
   scrubHarFile, sha256, writeAssetBodies,
 } from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
 import { inferEndpoints } from './infer-endpoints.mjs';
 import {
-  allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, operationalKind,
+  allowedOrigins as deriveAllowedOrigins, countOptionSetsInDom, decideNavigation, formatFindings,
+  scalarKindsInBodies, scalarKindsWithExamples,
+  operationalKind,
   assetKind, isTextualAsset, isUnder, originOf, pathSegments, rethrowIfDefect, sameOrigin,
   scanCaptureTree,
   NEVER_FIRE_NAMES, SESSION_DESTRUCTIVE_TERMS, TARGET_DESTRUCTIVE_TERMS, classifyControlHazard,
@@ -798,15 +801,9 @@ await browser.close();
  * `<select name=x>` and radio groups say what values the API can receive,
  * whatever the sampling happened to show.
  */
-const uiConstraints = new Map();
-for (const [routeId, record] of routes) {
-  for (const node of record.captured.selectControls ?? []) {
-    if (!node.name || node.optionValues.length === 0) continue;
-    uiConstraints.set(node.name.toLowerCase(), {
-      control: node.control, routeId, nodeId: node.nodeId, optionValues: node.optionValues,
-    });
-  }
-}
+const { byFieldName: uiConstraints, tally: uiConstraintTally } = collectUiConstraints({
+  routes, scrub,
+});
 
 /** Every narrowing lands in GAPS.md as review-required (§7). */
 const narrowingGaps = [];
@@ -987,6 +984,30 @@ const observed = {
   sessionDestructiveControls: sessionDestructive.length,
   harCredentialedRequests: observations.filter((o) =>
     (o.requestHeaderNames ?? []).some((h) => ['cookie', 'authorization'].includes(h.toLowerCase()))).length,
+  // From the written DOM tree, not from the extractor's selector.
+  ...[...routeArtifacts.values()]
+    .map((r) => countOptionSetsInDom(r.dom.root))
+    .reduce(
+      (acc, c) => ({
+        domSelectElements: acc.domSelectElements + c.selects,
+        domRadioGroups: acc.domRadioGroups + c.radioGroups,
+      }),
+      { domSelectElements: 0, domRadioGroups: 0 },
+    ),
+  // Walked from the raw bodies, sharing no code with `inferSchema` — the pass
+  // whose `string`-only `examples` branch this invariant exists to catch.
+  bodyScalarKinds: scalarKindsInBodies(
+    observations.map((o) => {
+      try {
+        return JSON.parse(o.body ?? 'null');
+      } catch {
+        // operational: a non-JSON body has no scalar leaves to count. Counting
+        // it as zero is the safe direction — it can only make the invariant
+        // vacuous, never make it pass over a real drop.
+        return null;
+      }
+    }),
+  ).size,
 };
 const extracted = {
   styleTableEntries: [...routeArtifacts.values()].reduce((n, r) => n + r.styles.table.length, 0),
@@ -1008,6 +1029,12 @@ const extracted = {
   // hazards it tests (§13), and that is invisible without a count.
   controlsFired: [...flows.values()].filter((f) => f.outcome === 'completed').length,
   controlsUndriveable: skippedControls.filter((c) => c.cause === 'precondition-unmet').length,
+  uiConstraintSelects: uiConstraintTally.select,
+  uiConstraintRadioGroups: uiConstraintTally.radioGroup,
+  uiConstraintsBindable: uiConstraintTally.named,
+  scalarKindsWithExamples: scalarKindsWithExamples(
+    endpoints.flatMap((e) => [...e.responses.map((r) => r.schema), e.request?.schema ?? null]),
+  ).size,
   sessionDestructiveFired: sessionDestructiveFired,
   a11yNodes: [...routes.values()]
     .reduce((n, r) => n + r.captured.built.filter((x) => x.a11y).length, 0),

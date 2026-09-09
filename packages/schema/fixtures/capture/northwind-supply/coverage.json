@@ -29,7 +29,10 @@
     "subresourceRequests": 8,
     "sessionProbePolicy": "credentialed",
     "sessionDestructiveControls": 0,
-    "harCredentialedRequests": 5
+    "harCredentialedRequests": 5,
+    "domSelectElements": 1,
+    "domRadioGroups": 0,
+    "bodyScalarKinds": 3
   },
   "extracted": {
     "styleTableEntries": 195,
@@ -47,6 +50,10 @@
     "controlsFired": 1,
     "controlsUndriveable": 1,
     "sessionDestructiveFired": 0,
+    "uiConstraintSelects": 1,
+    "uiConstraintRadioGroups": 0,
+    "uiConstraintsBindable": 1,
+    "scalarKindsWithExamples": 3,
     "a11yNodes": 159
   },
   "invariants": [
@@ -107,6 +114,24 @@
     {
       "id": "interactive-roles-imply-candidates",
       "description": "an a11y tree with interactive roles must produce interaction candidates",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "selects-imply-option-set-controls",
+      "description": "every <select> in the captured DOM must produce an option-set control",
+      "vacuous": false,
+      "holds": true
+    },
+    {
+      "id": "radio-groups-imply-option-set-controls",
+      "description": "every radio group in the captured DOM must produce an option-set control",
+      "vacuous": true,
+      "holds": true
+    },
+    {
+      "id": "scalar-values-imply-recorded-examples",
+      "description": "every scalar kind seen in a response body must have some schema node recording observed values",
       "vacuous": false,
       "holds": true
     },

@@ -18,7 +18,9 @@ import { chromium } from 'playwright';
 import selectorParser from 'postcss-selector-parser';
 import { boundaryGaps, installEscapeGuards, installOriginGuard, scrubHarFile, writeAssetBodies } from './capture-lib.mjs';
 import {
-  allowedOrigins as deriveAllowedOrigins, assetKind, decideNavigation, formatFindings, isTextualAsset,
+  allowedOrigins as deriveAllowedOrigins, assetKind, countOptionSetsInDom, decideNavigation,
+  scalarKindsWithExamples,
+  formatFindings, isTextualAsset,
   hostMatchesAllowEntry, isAbsoluteUrl, originOf, sameOrigin, scanCaptureTree,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
@@ -968,6 +970,16 @@ const observed = {
   harCredentialedRequests: 0,
   sessionProbePolicy: 'not-applicable',
   sessionDestructiveControls: 0,
+  // Counted from this page's own DOM tree, by the shared counter — an honest
+  // count rather than an honest zero, because unlike the behaviour ceiling
+  // below this driver genuinely performs the extraction being checked.
+  ...(() => {
+    const c = countOptionSetsInDom(dom.root);
+    return { domSelectElements: c.selects, domRadioGroups: c.radioGroups };
+  })(),
+  // A static page with no API traffic: no bodies, so no scalar kinds. The
+  // invariant is vacuous here rather than trivially satisfied.
+  bodyScalarKinds: 0,
 };
 const extractedCounts = {
   styleTableEntries: styles.table.length,
@@ -989,6 +1001,13 @@ const extractedCounts = {
   // control was driven" and "the count was never taken" must not read alike.
   controlsFired: 0,
   controlsUndriveable: 0,
+  uiConstraintSelects: (extracted.uiConstraints ?? []).filter((c) => c.control === 'select').length,
+  uiConstraintRadioGroups: (extracted.uiConstraints ?? []).filter((c) => c.control === 'radio-group').length,
+  uiConstraintsBindable: (extracted.uiConstraints ?? [])
+    .filter((c) => c.name && c.optionValues.length > 0).length,
+  scalarKindsWithExamples: scalarKindsWithExamples(
+    endpoints.endpoints.flatMap((e) => [...e.responses.map((r) => r.schema), e.request?.schema ?? null]),
+  ).size,
   sessionDestructiveFired: 0,
   a11yNodes: built.filter((n) => n.nodeType === 'element' && n.a11y).length,
 };

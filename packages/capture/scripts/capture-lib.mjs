@@ -464,16 +464,45 @@ export const EXTRACT = (properties) => {
    * the DOM constrains it, not because we did not look at enough rows.
    */
   const constraints = [];
-  for (const select of document.querySelectorAll('select[name], select[id]')) {
+  /**
+   * **Every `<select>`, whatever it is spelled with.** The selector was
+   * `select[name], select[id]`, which is a name requirement wearing a
+   * selector's clothes — and on a Vue SPA it matched *none of six*, because
+   * every one of them carries nothing but `data-v-321f61a6`. A control's
+   * identity is that it is a `<select>`; `name` and `id` are how a *form* posts
+   * it, and a component framework that binds through `v-model` has no reason to
+   * emit either. Requiring them made the primary evidence for §7.5 unreachable
+   * on any framework-rendered page, silently.
+   *
+   * Emitted even when no option carries a usable value. A select that offers
+   * nothing is not a constraint and the consumer drops it — but *dropping it
+   * here* would put the decision inside the thing coverage counts, and
+   * `selects-imply-option-set-controls` compares this count against `<select>`
+   * nodes in `dom.json` for equality. An extractor that silently declines is
+   * indistinguishable from one that never looked, which is the bug being fixed.
+   */
+  for (const select of document.querySelectorAll('select')) {
     const values = [...select.options].map((o) => o.value).filter((v) => v !== '');
-    if (values.length === 0) continue;
     constraints.push({
       control: 'select',
-      name: select.getAttribute('name') ?? select.id,
+      // Null, not `''`: absent and empty are different observations, and `??`
+      // on `getAttribute` already returns `null` rather than falling through to
+      // `select.id`. The old expression read `name ?? id` and produced `''` for
+      // an unnamed select — falsy, so the consumer's `!node.name` guard dropped
+      // it a second time.
+      name: select.getAttribute('name') || select.id || null,
       sfIdx: Number(select.getAttribute('data-sf-idx')),
       optionValues: [...new Set(values)],
     });
   }
+  /**
+   * Radio groups keep their `[name]` requirement, and that is not the same rule.
+   *
+   * HTML groups radios *by name* — it is what makes several inputs one control
+   * rather than several. A nameless radio is not a member of an option set with
+   * nothing to read, it is not a member of an option set at all. So the
+   * attribute is load-bearing here and incidental on `<select>`.
+   */
   const radioGroups = new Map();
   for (const radio of document.querySelectorAll('input[type=radio][name]')) {
     const name = radio.getAttribute('name');
@@ -481,7 +510,6 @@ export const EXTRACT = (properties) => {
     if (radio.value !== '') radioGroups.get(name).values.push(radio.value);
   }
   for (const [name, g] of radioGroups) {
-    if (g.values.length === 0) continue;
     constraints.push({
       control: 'radio-group', name, sfIdx: g.sfIdx, optionValues: [...new Set(g.values)],
     });
@@ -498,6 +526,54 @@ export const EXTRACT = (properties) => {
     scrollWidth: document.documentElement.scrollWidth,
   };
 };
+
+/**
+ * Fold every route's option-set controls into one field-name index, and tally
+ * what was seen on the way.
+ *
+ * One implementation because there were two, byte-identical, in `capture-site`
+ * and `rung3` — and both carried the same `!node.name` guard, so the extractor
+ * fix alone would have been undone twice over. §13's schema-drift rule applies
+ * to a consumer as much as to a schema.
+ *
+ * **The tally and the index are deliberately different populations.** The index
+ * is what §7.5's ladder can actually use *today*, and its key is a field name,
+ * so a control with no name cannot be a member of it — that is a property of
+ * the data structure, not a filter someone chose. The tally counts every
+ * control extraction saw, which is what `selects-imply-option-set-controls`
+ * compares against `dom.json`. Reporting only the index would say "0 controls"
+ * for a page holding six, which is the state this whole change came out of.
+ */
+export function collectUiConstraints({ routes, scrub }) {
+  const byFieldName = new Map();
+  const tally = { select: 0, radioGroup: 0, withOptions: 0, named: 0, unnamed: 0 };
+  for (const [routeId, record] of routes) {
+    for (const node of record.captured.selectControls ?? []) {
+      if (node.control === 'select') tally.select += 1;
+      else tally.radioGroup += 1;
+      // Offers no value: not a domain, and nothing to bind. Counted above, so a
+      // placeholder-only control is visible rather than absent.
+      if (node.optionValues.length === 0) continue;
+      tally.withOptions += 1;
+      if (!node.name) {
+        tally.unnamed += 1;
+        continue;
+      }
+      tally.named += 1;
+      byFieldName.set(node.name.toLowerCase(), {
+        control: node.control,
+        routeId,
+        nodeId: node.nodeId,
+        // §3.4. Option text is authored content and a real one reads
+        // "Assign to alice@example.com" — the scrubber runs before any of it
+        // can reach `NarrowingRecord.uiConstraint.optionValues` and from there
+        // into the model.
+        optionValues: node.optionValues.map((v) => scrub(v)),
+      });
+    }
+  }
+  return { byFieldName, tally };
+}
 
 /**
  * Redact credentials from a HAR that Playwright has already written.
