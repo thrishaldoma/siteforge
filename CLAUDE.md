@@ -436,6 +436,7 @@ Milestone gates. Do not start a milestone before the previous one's gate is gree
   | **target limitation** | nowhere — the target genuinely has no such thing | permanent, until the target changes | the ground truth is silent (Vikunja declares no `format`, so `narrowing.precision` has no truth side) |
   | **driver limitation** | the measurement harness | work not yet done | the artifact the category reads is empty and a run could fill it |
   | **unimplemented stage** | the product, usually in a *different package* | work not yet done | the artifact is **full** and the category is still empty |
+  | **declined on evidence** | *nowhere — nothing is missing* | not work at all; permanent while the evidence is | the producer ran and its rule correctly returned nothing (§7.5's ladder declining an enum) |
 
   All three are **work not done**, and the first question is whether that is the situation at all: a category can also be empty because the producer *ran and declined*. `entity-narrowing.precision` is vacuous because §7.5's enum ladder found nothing meeting its evidence bar, which is the ladder working as specified rather than a stage missing — and the two demand opposite responses, since work not done is a thing to go and do while a decline is only a problem if it was wrong. Ask which before reaching for the table.
 
