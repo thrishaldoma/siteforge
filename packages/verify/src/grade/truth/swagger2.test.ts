@@ -19,12 +19,11 @@ import { describe, expect, it } from 'vitest';
 import {
   TruthLoadError,
   type Snapshot,
-  buildGiteaTruth,
   classifyAnonymousStatus,
-  loadGiteaTruth,
   pathParameterNames,
   pathShape,
-} from './gitea.js';
+} from './swagger2.js';
+import { buildGiteaTruth, loadGiteaTruth } from './gitea.js';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures', 'gitea');
 
@@ -91,7 +90,7 @@ describe('the pinned Gitea snapshot is the ground truth', () => {
   it('names the category whose truth side it does not derive', () => {
     // Rather than letting it score. §6 makes an empty truth side vacuous and
     // failing; this says the failure is "unbuilt", not "infer missed it".
-    expect(truth.notDerived).toEqual(['identifier']);
+    expect(truth.notDerived.map((n) => n.category)).toEqual(['identifier']);
   });
 });
 
@@ -169,7 +168,7 @@ describe('a truth that did not load reports nothing (§6)', () => {
 
   it('throws with an instruction when there is no snapshot at all', () => {
     const empty = mkdtempSync(join(tmpdir(), 'sf-truth-empty-'));
-    expect(() => loadGiteaTruth({ root: empty })).toThrow(/gitea-snapshot\.mjs --write/);
+    expect(() => loadGiteaTruth({ root: empty })).toThrow(/snapshot\.mjs gitea --write/);
   });
 
   /**

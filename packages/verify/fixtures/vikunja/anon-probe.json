@@ -1,0 +1,131 @@
+{
+  "image": "vikunja/vikunja@sha256:ed1f3ed467fecec0b57e9de7bc6607f8bbcbb23ffced6a81f5dfefc794cdbe3b",
+  "basePath": "/api/v1",
+  "entries": [
+    {
+      "method": "GET",
+      "specPath": "/backgrounds/unsplash/search",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/info",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "specPath": "/labels",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/microsoft-todo/auth",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/microsoft-todo/status",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/ticktick/status",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/todoist/auth",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/todoist/status",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/trello/auth",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/trello/status",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/migration/vikunja-file/status",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/notifications",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/projects",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/routes",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/tasks/all",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/teams",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/tokens",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/settings/avatar",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/settings/token/caldav",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/settings/totp",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/settings/totp/qrcode",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/user/timezones",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/users",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "specPath": "/webhooks/events",
+      "status": 401
+    }
+  ]
+}

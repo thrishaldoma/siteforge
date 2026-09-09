@@ -1,0 +1,29 @@
+{
+  "target": "vikunja",
+  "specFile": "docs.json",
+  "image": "vikunja/vikunja@sha256:ed1f3ed467fecec0b57e9de7bc6607f8bbcbb23ffced6a81f5dfefc794cdbe3b",
+  "tagAtPull": "0.24",
+  "containerName": "siteforge-vikunja-truth",
+  "hostPort": 3802,
+  "containerPort": 3456,
+  "specPath": "/api/v1/docs.json",
+  "basePath": "/api/v1",
+  "runArgs": [
+    "--tmpfs",
+    "/db",
+    "--tmpfs",
+    "/files"
+  ],
+  "env": {
+    "VIKUNJA_SERVICE_JWTSECRET": "sf-local-fixture-only-secret",
+    "VIKUNJA_SERVICE_PUBLICURL": "http://localhost:3802/",
+    "VIKUNJA_DATABASE_TYPE": "sqlite",
+    "VIKUNJA_DATABASE_PATH": "/db/vikunja.db",
+    "VIKUNJA_FILES_BASEPATH": "/files"
+  },
+  "volatileFields": [],
+  "specSha256": "575f1dfc67d29e7237160a4a951fe52999a3171198a792c39e3c93d4188fc181",
+  "paths": 103,
+  "operations": 143,
+  "definitions": 80
+}

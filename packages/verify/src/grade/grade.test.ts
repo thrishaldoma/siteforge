@@ -16,7 +16,8 @@ import { GITEA_BASELINE, GITEA_OBSERVED } from './baseline/gitea.js';
 import { gradeSiteModel, type GradeInput } from './grade.js';
 import { inUniverse, matchEndpoints } from './match.js';
 import { modelFieldPointers, typeAgrees } from './fields.js';
-import { MAX_FIELD_DEPTH, loadGiteaTruth, pathShape, type TruthModel } from './truth/gitea.js';
+import { loadGiteaTruth } from './truth/gitea.js';
+import { MAX_FIELD_DEPTH, pathShape, type TruthModel } from './truth/swagger2.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const truth = loadGiteaTruth();
@@ -39,7 +40,7 @@ describe('the grader is written before infer, and stays that way', () => {
       './match.js',
       './fields.js',
       './vocabulary.js',
-      './truth/gitea.js',
+      './truth/swagger2.js',
     ]);
   });
 
@@ -201,7 +202,7 @@ describe('a zero denominator is a scored outcome (§6)', () => {
     expect(identifier?.emptyDenominator).toContain('not derived');
     // Read as unbuilt rather than as infer emitting nothing — the reason the
     // loader names the category at all.
-    expect(report.notDerived).toContain('identifier');
+    expect(report.notDerived.map((n) => n.category)).toContain('identifier');
   });
 
   it('a metric with no gate still passes: reporting is not scoring', () => {

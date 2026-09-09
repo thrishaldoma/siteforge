@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * The Gitea ground truth: pin it, fetch it, and prove the committed copy still
- * matches what the pinned image serves.
+ * A ground truth: pin it, fetch it, and prove the committed copy still matches
+ * what the pinned image serves.
  *
  * Decision 0015 §1. Two modes, one script on purpose — amendment 2 requires the
  * container's launch to be pinned in the same committed file that fetches from
@@ -9,8 +9,12 @@
  * how the server was started, and a launch that drifts produces a diff meaning
  * "the port moved" that reads as "the spec changed".
  *
- *   node gitea-snapshot.mjs            # staleness gate: boot, fetch, compare, fail on any difference
- *   node gitea-snapshot.mjs --write    # update the committed snapshot; the diff is the review
+ *   node snapshot.mjs <target>          # staleness gate: boot, fetch, compare, fail on any difference
+ *   node snapshot.mjs <target> --write  # update the committed snapshot; the diff is the review
+ *
+ * One script, a `PINS` table, one target per entry. A second target arriving as
+ * a copy of this file would be two staleness gates drifting apart, and the
+ * launch-is-part-of-the-pin argument below applies to each of them equally.
  *
  * The comparison is a **sha256 of the whole document**, with no normalisation
  * and no exempted fields. That is not optimism, it is a measurement: two
@@ -31,17 +35,16 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const FIXTURES = join(HERE, '..', 'fixtures', 'gitea');
-const SPEC_FILE = join(FIXTURES, 'swagger.v1.json');
-const PIN_FILE = join(FIXTURES, 'pin.json');
-const PROBE_FILE = join(FIXTURES, 'anon-probe.json');
+const fixtureDir = (id) => join(HERE, '..', 'fixtures', id);
 
 /**
  * The pin. Every field here is part of the launch, not a comment about it: the
  * container is started from exactly this, so a snapshot taken by this script is
  * reproducible by running this script.
  */
-export const PIN = {
+export const PINS = {
+ gitea: {
+  specFile: 'swagger.v1.json',
   image: 'gitea/gitea@sha256:87a67ee09d3ae0d1df5fda5dcda3e2a1f9236a45b0a59025d6e00e46adc43bef',
   tagAtPull: '1.27.3',
   containerName: 'siteforge-gitea-truth',
@@ -64,7 +67,53 @@ export const PIN = {
    * two observations that justify it and deletes an assertion in `truth.test.ts`.
    */
   volatileFields: [],
+ },
+
+ /**
+  * Vikunja, adopted as the M3 ground truth (0019, 0021).
+  *
+  * Gitea's browser and Gitea's document are disjoint, so a Gitea capture is
+  * ungradeable — every category vacuous. Vikunja passes both selection
+  * criteria: 16 of 18 observed browser paths are declared by its own document,
+  * and `/api/v1` is a real prefix the SPA shell falls outside of, so the
+  * universe filter still filters.
+  */
+ vikunja: {
+  specFile: 'docs.json',
+  image: 'vikunja/vikunja@sha256:ed1f3ed467fecec0b57e9de7bc6607f8bbcbb23ffced6a81f5dfefc794cdbe3b',
+  tagAtPull: '0.24',
+  containerName: 'siteforge-vikunja-truth',
+  hostPort: 3802,
+  containerPort: 3456,
+  specPath: '/api/v1/docs.json',
+  /** The document's own `basePath`, and a prefix the UI does not share. */
+  basePath: '/api/v1',
+  /**
+   * Every writable path in the image is root-owned while the process runs as
+   * uid 1000, so sqlite and the upload directory need mounts. tmpfs rather than
+   * volumes: the container is thrown away, and a volume would make the snapshot
+   * depend on whatever the last run left behind.
+   */
+  runArgs: ['--tmpfs', '/db', '--tmpfs', '/files'],
+  env: {
+    VIKUNJA_SERVICE_JWTSECRET: 'sf-local-fixture-only-secret',
+    VIKUNJA_SERVICE_PUBLICURL: 'http://localhost:3802/',
+    VIKUNJA_DATABASE_TYPE: 'sqlite',
+    VIKUNJA_DATABASE_PATH: '/db/vikunja.db',
+    VIKUNJA_FILES_BASEPATH: '/files',
+  },
+  /** Measured across two boots on different ports and PUBLICURLs. Empty. */
+  volatileFields: [],
+ },
 };
+
+/** The target this invocation is about. */
+const TARGET = process.argv.find((a) => Object.hasOwn(PINS, a)) ?? 'gitea';
+const PIN = PINS[TARGET];
+const FIXTURES = fixtureDir(TARGET);
+const SPEC_FILE = join(FIXTURES, PIN.specFile);
+const PIN_FILE = join(FIXTURES, 'pin.json');
+const PROBE_FILE = join(FIXTURES, 'anon-probe.json');
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
@@ -73,7 +122,7 @@ const docker = (...args) => spawnSync('docker', args, { encoding: 'utf8' });
 function requireDocker() {
   const info = docker('info', '--format', '{{.ServerVersion}}');
   if (info.status !== 0) {
-    console.error('\nthis needs a running Docker daemon — it boots the pinned Gitea.');
+    console.error(`\nthis needs a running Docker daemon — it boots the pinned ${TARGET}.`);
     console.error('It is milestone-gate work and deliberately absent from verify:clean.\n');
     process.exit(1);
   }
@@ -92,7 +141,7 @@ async function bootAndFetch() {
   const started = docker(
     'run', '-d', '--name', PIN.containerName,
     '-p', `127.0.0.1:${PIN.hostPort}:${PIN.containerPort}`,
-    ...env, PIN.image,
+    ...(PIN.runArgs ?? []), ...env, PIN.image,
   );
   if (started.status !== 0) throw new Error(`could not start the pinned container:\n${started.stderr}`);
 
@@ -209,7 +258,7 @@ const summarise = (spec) => ({
 async function main() {
   const write = process.argv.includes('--write');
   requireDocker();
-  console.log(`\ngitea ground truth — ${write ? 'refreshing the snapshot' : 'checking the committed snapshot is not stale'}`);
+  console.log(`\n${TARGET} ground truth — ${write ? 'refreshing the snapshot' : 'checking the committed snapshot is not stale'}`);
   console.log(`  ${PIN.image}\n`);
 
   let body;
@@ -231,7 +280,7 @@ async function main() {
 
   if (write) {
     writeFileSync(SPEC_FILE, body);
-    writeFileSync(PIN_FILE, `${JSON.stringify({ ...PIN, specSha256: digest, ...counts }, null, 2)}\n`);
+    writeFileSync(PIN_FILE, `${JSON.stringify({ target: TARGET, ...PIN, specSha256: digest, ...counts }, null, 2)}\n`);
     writeFileSync(PROBE_FILE, `${JSON.stringify({ image: PIN.image, basePath: PIN.basePath, entries: probe }, null, 2)}\n`);
     console.log('✓ snapshot written. The diff is the review — a ground truth that changes\n  silently is not a ground truth.\n');
     return;

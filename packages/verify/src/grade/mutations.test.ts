@@ -100,7 +100,7 @@ describe('every mutation moves the metric it names', () => {
     expect(harness.staleBlocks).toEqual([]);
     const blocked = harness.results.filter((r) => r.blocked).map((r) => r.mutation.id);
     expect(blocked).toEqual(['identifier-mispointed']);
-    expect(harness.baseline.notDerived).toContain('identifier');
+    expect(harness.baseline.notDerived.map((n) => n.category)).toContain('identifier');
   });
 });
 

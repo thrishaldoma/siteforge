@@ -17,7 +17,7 @@
  * vocabularies and asserts the pointer sets are equal.
  */
 import type { JsonSchemaNode } from '@siteforge/schema';
-import { MAX_FIELD_DEPTH } from './truth/gitea.js';
+import { MAX_FIELD_DEPTH } from './truth/swagger2.js';
 
 /** One addressable claim the model makes about a payload's shape. */
 export interface ModelField {

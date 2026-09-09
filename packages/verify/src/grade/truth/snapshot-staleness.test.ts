@@ -22,7 +22,9 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error — a .mjs script with no type declarations. Importing it must
 // not boot a container; `main()` is behind the entry-point guard.
-import { assessSnapshot, PIN } from '../../../scripts/gitea-snapshot.mjs';
+import { assessSnapshot, PINS } from '../../../scripts/snapshot.mjs';
+
+const PIN = PINS.gitea;
 
 interface ProbeEntry {
   method: string;

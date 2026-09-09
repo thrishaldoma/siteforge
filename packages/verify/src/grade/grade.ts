@@ -38,7 +38,7 @@ import {
 import { matchEndpoints, type Matching, type MatchedPair, type ObservedEndpoint } from './match.js';
 import { modelFieldPointers, typeAgrees } from './fields.js';
 import { isExpressibleFormat } from './vocabulary.js';
-import type { TruthField, TruthModel } from './truth/gitea.js';
+import type { NotDerived, TruthField, TruthModel } from './truth/swagger2.js';
 
 export interface GradeInput {
   readonly model: SiteModel;
@@ -107,7 +107,7 @@ export interface GradeReport {
   };
   readonly divergence: DivergenceBudget;
   /** Categories whose truth side the loader does not derive. Vacuous, and named. */
-  readonly notDerived: readonly GradeCategoryId[];
+  readonly notDerived: readonly NotDerived[];
   /** Every gated metric passed and none was vacuous. */
   readonly passed: boolean;
   /** Categories that failed, so a failure reads as a list rather than a boolean. */
@@ -456,7 +456,7 @@ function exclusions(entries: readonly KnownDivergence[]): Map<GradeCategoryId, S
 export function gradeSiteModel(input: GradeInput): GradeReport {
   const { model, truth, observed, divergence } = input;
   const excluded = exclusions(divergence);
-  const notDerived = new Set(truth.notDerived);
+  const notDerived = new Map(truth.notDerived.map((n) => [n.category, n.reason]));
 
   const all = matchEndpoints(model.operations, truth, observed);
   /** The pairs a category scores over, after its own exclusions. */
@@ -477,8 +477,6 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
   const narrowings = fieldCategories(pairsFor('narrowing'));
   const authTallies = auth(pairsFor('auth'));
 
-  const ungroundedIdentifier =
-    'foreign keys derivable from the spec — this truth side is not derived (0015 modality table)';
   const byMetric: Record<string, Tally> = {
     'endpoint-identity.precision': identity.precision,
     'endpoint-identity.recall': identity.recall,
@@ -491,8 +489,10 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
     'field-type.accuracy': fields.fieldType,
     'narrowing.precision': narrowings.narrowingPrecision,
     'narrowing.recall': narrowings.narrowingRecall,
-    'identifier.precision': { ...ZERO, ungrounded: ungroundedIdentifier },
-    'identifier.recall': { ...ZERO, ungrounded: ungroundedIdentifier },
+    // No special case: `identifier` is ungrounded because the truth says so,
+    // like any other category, and the truth says why.
+    'identifier.precision': ZERO,
+    'identifier.recall': ZERO,
     'synthesized-endpoint.precision': synthesized({ ...all, pairs: pairsFor('synthesized-endpoint') }),
     'auth.under-gate-count': authTallies.underGate,
     'auth.over-gate-rate': authTallies.overGate,
@@ -526,7 +526,7 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
   const metrics: MetricResult[] = GRADE_METRICS.map((metric) => {
     const tally = byMetric[metric.id] ?? ZERO;
     const ungrounded =
-      emptyTruth ?? (notDerived.has(metric.category) ? ungroundedIdentifier : tally.ungrounded);
+      emptyTruth ?? notDerived.get(metric.category) ?? tally.ungrounded;
     const kind: MetricKind = COUNT_METRICS.has(metric.id) ? 'count' : 'rate';
     const vacuous = ungrounded !== undefined || tally.denominator === 0;
     const value = vacuous

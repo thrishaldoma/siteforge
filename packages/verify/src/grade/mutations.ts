@@ -37,7 +37,7 @@ import {
   type SiteModel,
 } from '@siteforge/schema';
 import { gradeSiteModel, type GradeInput, type GradeReport, type MetricResult } from './grade.js';
-import type { TruthModel } from './truth/gitea.js';
+import type { TruthModel } from './truth/swagger2.js';
 
 export interface MustMove {
   readonly metric: string;
@@ -687,7 +687,8 @@ const show = (m: MetricResult): string => (m.vacuous ? 'vacuous' : String(m.valu
 export function runMutation(baseline: GradeReport, mutation: Mutation, input: GradeInput): MutationResult {
   const report = gradeSiteModel(mutation.apply(input));
   const failures: string[] = [];
-  const blocked = mutation.blockedBy !== undefined && baseline.notDerived.includes(mutation.blockedBy);
+  const ungrounded = new Set(baseline.notDerived.map((n) => n.category));
+  const blocked = mutation.blockedBy !== undefined && ungrounded.has(mutation.blockedBy);
 
   const deltas = GRADE_METRICS.map((metric) => {
     const before = valueOf(baseline.metrics, metric.id);
@@ -770,7 +771,11 @@ export function runMutationHarness(
 ): HarnessResult {
   const baseline = gradeSiteModel(input);
   const staleBlocks = mutations
-    .filter((m) => m.blockedBy !== undefined && !baseline.notDerived.includes(m.blockedBy))
+    .filter(
+      (m) =>
+        m.blockedBy !== undefined &&
+        !baseline.notDerived.some((n) => n.category === m.blockedBy),
+    )
     .map((m) => m.id);
   return {
     baseline,

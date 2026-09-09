@@ -18,7 +18,7 @@
  */
 import type { ApiOperation } from '@siteforge/schema';
 import { isSegmentPrefix } from '@siteforge/shared';
-import { pathShape, type TruthEndpoint, type TruthModel } from './truth/gitea.js';
+import { pathShape, type TruthEndpoint, type TruthModel } from './truth/swagger2.js';
 
 /** An endpoint capture saw on the wire. The recall denominator, frozen as data. */
 export interface ObservedEndpoint {

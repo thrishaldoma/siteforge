@@ -33,7 +33,9 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync } from 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { PIN } from './gitea-snapshot.mjs';
+import { PINS } from './snapshot.mjs';
+
+const PIN = PINS.gitea;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(HERE, '..', 'fixtures');
