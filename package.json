@@ -20,7 +20,6 @@
     "rung3": "node packages/capture/scripts/rung3-run.mjs",
     "verify:clean": "node scripts/verify-clean.mjs",
     "sabotage": "node scripts/sabotage.mjs",
-    "test:manifest-claims": "pnpm -s --filter @siteforge/schema build && pnpm -s test --project shared",
     "gitea:snapshot": "node packages/verify/scripts/gitea-snapshot.mjs",
     "capture:site": "pnpm -s build && node packages/capture/scripts/capture-site.mjs",
     "infer": "pnpm -s build && node packages/infer/scripts/infer-run.mjs",

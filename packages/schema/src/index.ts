@@ -24,6 +24,7 @@ export * from './json-schema.js';
 export * from './a11y.js';
 export * from './gap.js';
 export * from './manifest.js';
+export * from './manifest-claims.js';
 export * from './route.js';
 export * from './dom.js';
 export * from './styles.js';

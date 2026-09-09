@@ -23,7 +23,8 @@
  * than the day someone remembers.
  */
 import { describe, expect, it } from 'vitest';
-import { CaptureManifestSchema, schemaLeafPaths } from '@siteforge/schema';
+import { CaptureManifestSchema } from './manifest.js';
+import { schemaLeafPaths } from './site-model/needs.js';
 import { assessManifestClaims, type ManifestClaim } from './manifest-claims.js';
 
 /**
