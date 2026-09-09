@@ -280,6 +280,55 @@ const STATIC_ASSET =
 /** Reads the path. Not the document, not the score. */
 export const isCandidateApiCall = (path) => !STATIC_ASSET.test(path);
 
+
+/**
+ * Did this measurement actually measure anything?
+ *
+ * **The sharp form of the rule: a measurement whose failure mode produces its
+ * own expected output carries no information about its own validity.** This one
+ * has three ways to reach nothing, and all three render as `disjoint` — the
+ * same verdict the real Gitea finding produces, printed with the same
+ * confidence:
+ *
+ * 1. the session never established, so every page below it is a login screen
+ *    (observed: Vikunja ignores Playwright's `fill`, the SPA ate the first five
+ *    typed characters, and the run reported `2 of 4 … disjoint`);
+ * 2. the pages did not load — a wrong path list, a container that fell over
+ *    mid-crawl — so no page issued a request;
+ * 3. the document did not arrive or did not parse, so it declares nothing for
+ *    the browser's requests to match.
+ *
+ * A verdict is only meaningful downstream of all three, so they are asserted as
+ * the primary gate and the comparison runs after. Pure, and the real run is one
+ * caller: the failing branches cannot be reached from a working container, so a
+ * check only callable from one would be a check nobody could prove fires.
+ */
+export function assessMeasurementPreconditions({
+  pagesRequested,
+  pagesLoaded,
+  declaredOperations,
+  loginRequired,
+  endedOnLoginPath,
+}) {
+  const problems = [];
+  if (loginRequired && endedOnLoginPath) {
+    problems.push(
+      'the session never established: the crawl ended on the login route, so every page below it is a login screen and the verdict would be `disjoint` for a reason that has nothing to do with the target.',
+    );
+  }
+  if (pagesLoaded < pagesRequested) {
+    problems.push(
+      `only ${pagesLoaded} of ${pagesRequested} page(s) loaded. A page that did not load issues no requests, and a crawl that reached nothing is indistinguishable from a site that calls no API.`,
+    );
+  }
+  if (declaredOperations === 0) {
+    problems.push(
+      'the document declares no operations. An empty or unparsed document describes none of the browser\'s requests, which reads as `disjoint` and means the fetch failed.',
+    );
+  }
+  return problems;
+}
+
 const METHODS = ['get', 'post', 'patch', 'put', 'delete'];
 
 /** `METHOD shape` for every operation the document declares, Swagger 2 or OAS 3. */
@@ -365,14 +414,20 @@ async function measure(target, origin) {
     // is how this was found: the login posted an empty credential, the SPA
     // stayed put, and the run printed a confident verdict.
     if (target.loggedOutPath && page.url().includes(target.loggedOutPath)) {
+      // Thrown here as well as checked in the gate below: there is no point
+      // crawling eight login screens first, and the message is the same one.
       throw new Error(
         `login did not take: still at ${page.url()}. Every page below would be the login screen, and the verdict would be 'disjoint' for a reason that has nothing to do with the target.`,
       );
     }
   }
+  let pagesLoaded = 0;
   for (const path of target.pages) {
+    // Counted rather than shrugged at: every page failing renders identically
+    // to a site whose pages call no API, and the count is what tells them apart.
     // operational: a page that will not load is a page with no surface to record
-    await page.goto(origin + path, { waitUntil: 'networkidle', timeout: 30_000 }).catch(() => {});
+    const loaded = await page.goto(origin + path, { waitUntil: 'networkidle', timeout: 30_000 }).catch(() => null);
+    if (loaded !== null) pagesLoaded += 1;
     await wait(1000);
     // `$$eval` is Playwright's DOM query — it runs the callback in the page, and
     // is unrelated to JavaScript's `eval`.
@@ -384,11 +439,18 @@ async function measure(target, origin) {
       .catch(() => []);
     for (const form of forms) formActions.add(form);
   }
+  const endedOnLoginPath =
+    target.loggedOutPath !== undefined && target.loggedOutPath !== null
+      ? page.url().includes(target.loggedOutPath)
+      : false;
   await browser.close();
   return {
     xhr: [...xhr].sort(),
     formActions: [...formActions].sort(),
     staticAssets: [...staticAssets].sort(),
+    pagesRequested: target.pages.length,
+    pagesLoaded,
+    endedOnLoginPath,
   };
 }
 
@@ -409,6 +471,19 @@ async function remeasure(id) {
     docker('rm', '-f', name);
   }
 
+  const preconditions = assessMeasurementPreconditions({
+    pagesRequested: observed.pagesRequested,
+    pagesLoaded: observed.pagesLoaded,
+    declaredOperations: declared.size,
+    loginRequired: target.login !== null,
+    endedOnLoginPath: observed.endedOnLoginPath,
+  });
+  if (preconditions.length > 0) {
+    throw new Error(
+      `this measurement did not measure anything, and its failure looks exactly like its expected output:\n  - ${preconditions.join('\n  - ')}`,
+    );
+  }
+
   const entries = [...observed.xhr, ...observed.formActions];
   const describedBy = (entry) => declared.has(`${methodOf(entry)} ${shapeOf(pathOf(entry))}`);
   const described = entries.filter(describedBy);
@@ -425,6 +500,8 @@ async function remeasure(id) {
     formActions: observed.formActions,
     /** Fetches excluded as static subresources. A number, so the cut is visible. */
     staticAssetRequests: observed.staticAssets.length,
+    /** The preconditions this verdict rests on, recorded rather than assumed. */
+    pagesLoaded: observed.pagesLoaded,
     /** The strong criterion: the document declares an operation of this shape. */
     describedByDocument: described,
     verdict: described.length === 0 ? 'disjoint' : 'overlapping',

@@ -15,6 +15,7 @@
  * Blocking them would break capture on every site worth cloning, so the rule is
  * narrow on purpose: *main-frame navigations* only.
  */
+import { isSegmentPrefix } from './identifiers.js';
 
 export interface NavigationDecision {
   blocked: boolean;
@@ -90,9 +91,10 @@ export function isUnder(url: string, scope: { origin: string; pathPrefix?: strin
     // here would be a defect in URL itself; treat as out of scope regardless.
     return false;
   }
-  const want = segments(scope.pathPrefix);
-  const got = segments(pathname);
-  return want.every((seg, i) => got[i] === seg);
+  // `pathPrefix: ''` and `pathPrefix: '/'` used to widen the crawl boundary to
+  // the whole origin without saying so. `undefined` already means that, and it
+  // is the spelling a reader can see; an empty one now throws.
+  return isSegmentPrefix(segments(scope.pathPrefix), segments(pathname));
 }
 
 export function decideNavigation(request: {
