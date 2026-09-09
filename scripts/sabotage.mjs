@@ -376,6 +376,15 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'manifest-field-added-unclassified',
+    bug: 'a field is added to the manifest schema without anyone deciding what backs it or reads it',
+    reachable: "how both of the manifest's fictions got there. `determinism.frozen` named four globals no shim froze, and `prefersReducedMotion` asserted `reduce` while four of six contexts did not set it — neither was findable by reading the manifest, because a claim with nothing behind it looks exactly like one that works. The patch adds an ordinary optional field, which is the least ceremonious way anyone adds one",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'networkWaitSeconds',
+    change: 'an optional field is added to CaptureManifestSchema and left out of the claim ledger',
+  },
+
+  {
     id: 'select-extraction-requires-a-name',
     bug: 'the option-set extractor queries `select[name], select[id]`, so a framework-rendered select is invisible',
     reachable: "HEAD until this turn, and the state every Vikunja capture was taken in — six `<select>` elements and 632 `<option>`s produced zero UI constraints because a Vue SPA binds through `v-model` and emits neither attribute. Nobody writes an attribute filter to exclude anything; it gets written because `[name]` is how a *form* posts a control, and that reflex survives into a codebase where the control is read rather than posted",

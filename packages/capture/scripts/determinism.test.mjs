@@ -67,5 +67,30 @@ describe('the manifest claims exactly the clocks the shim freezes', () => {
     const manifest = source.slice(source.indexOf("write('manifest.json'"));
     expect(manifest).toContain('frozen: DETERMINISM_FROZEN');
     expect(manifest).toContain('frozenEpochMs: FROZEN_EPOCH_MS');
+    // The three the audit found typed out. Each agreed with the contexts by
+    // coincidence, and `prefersReducedMotion` did not agree with four of six.
+    expect(manifest).toContain('frozenTimezone: CONTEXT_DEFAULTS.timezoneId');
+    expect(manifest).toContain('frozenLocale: CONTEXT_DEFAULTS.locale');
+    expect(manifest).toContain('prefersReducedMotion: CONTEXT_DEFAULTS.reducedMotion');
+  });
+
+  it('every context carries the options the manifest asserts', () => {
+    // §6's `prefers-reduced-motion: reduce` is a *newContext option*, so it
+    // cannot be added by `guardContext` after the fact — which is exactly how
+    // four of six contexts came to be missing it while the manifest claimed it
+    // on all six. The constructor is the chokepoint; there is one, and every
+    // context goes through it.
+    const defaults = source.slice(source.indexOf('const CONTEXT_DEFAULTS ='));
+    const body = defaults.slice(0, defaults.indexOf('\n};'));
+    for (const option of ['viewport', 'userAgent', 'locale', 'timezoneId', 'reducedMotion']) {
+      expect(body, `CONTEXT_DEFAULTS does not pin ${option}`).toContain(`${option}:`);
+    }
+    // The member call, not the bare word: prose in this file mentions
+    // `newContext()` and a docstring is not a second policy.
+    const constructed = [...source.matchAll(/\.newContext\(/g)];
+    // Exactly one: the one inside `newGuardedContext`. A second is a context
+    // built from whatever its call site remembered to type.
+    expect(constructed.length).toBe(1);
+    expect(source).toContain('browser.newContext({ ...CONTEXT_DEFAULTS, ...extra })');
   });
 });

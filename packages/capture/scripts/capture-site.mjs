@@ -353,6 +353,8 @@ const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
  * and the manifest, so the artifact cannot claim a freeze that did not happen.
  */
 const FROZEN_EPOCH_MS = Date.parse('2026-01-01T00:00:00.000Z');
+const FROZEN_TIMEZONE = 'UTC';
+const FROZEN_LOCALE = 'en-US';
 const DETERMINISM_FROZEN = ['Date.now', 'performance.now', 'Math.random', 'crypto.randomUUID'];
 
 const freezeClocks = ({ seed, epoch }) => {
@@ -378,11 +380,52 @@ const freezeClocks = ({ seed, epoch }) => {
  * a second thing to remember. Six call sites here, and the one that mattered
  * was whichever got added last.
  */
+/**
+ * The context options every manifest asserts, in the one place that applies them.
+ *
+ * `determinism.prefersReducedMotion: 'reduce'` was written into every manifest
+ * this driver produced, and **four of six contexts did not set it** — including
+ * both crawl contexts, the ones that capture every route, every screenshot and
+ * every DOM. The two that did were the probe contexts. §6 opens with
+ * `prefers-reduced-motion: reduce` as a setup requirement, and the field
+ * asserting it was true on the two contexts that mattered least.
+ *
+ * The same shape as `determinism.frozen`, in the same file, one audit later: a
+ * claim that reads exactly like the working version from inside the manifest.
+ * `locale`, `timezoneId`, `userAgent` and `viewport` were repeated as literals
+ * at six call sites and happened to agree — backed by coincidence, which is
+ * indistinguishable from backed until the day someone edits five of six.
+ *
+ * `reducedMotion` is a `newContext` option and not settable afterwards, so the
+ * chokepoint has to be the *constructor* rather than the wrapper. That is why
+ * `guardContext` was not enough on its own: it takes a context that already
+ * exists, so it can add an init script and a route handler and can never fix an
+ * option that was already wrong.
+ */
+const CONTEXT_DEFAULTS = {
+  viewport: VIEWPORT,
+  userAgent: UA,
+  locale: FROZEN_LOCALE,
+  timezoneId: FROZEN_TIMEZONE,
+  reducedMotion: 'reduce',
+};
+
 const guardContext = async (context) => {
   await installOriginGuard(context, { allowedOrigins: ALLOWED_ORIGINS, onBlocked, decide: decideNavigation });
   await context.addInitScript(freezeClocks, { seed: SEED, epoch: FROZEN_EPOCH_MS });
   return context;
 };
+
+/**
+ * The only way this driver makes a context.
+ *
+ * Both halves at one call: the pinned options above, and the origin guard plus
+ * determinism shim `guardContext` installs. A `newContext` that skips this is a
+ * context with a live clock, no origin guard, or animations running — and
+ * `determinism.test.mjs` fails on a bare one.
+ */
+const newGuardedContext = async (browser, extra = {}) =>
+  guardContext(await browser.newContext({ ...CONTEXT_DEFAULTS, ...extra }));
 
 
 // ---------------------------------------------------------------------------
@@ -526,9 +569,7 @@ const step = async (stepName, run) => {
  * *server-side* session and a cloned `storageState` shares it.
  */
 async function acquireStorageState(browser) {
-  const ctx = await guardContext(await browser.newContext({
-    viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
-  }));
+  const ctx = await newGuardedContext(browser);
   // unguarded: guarded on the next line
   const page = await ctx.newPage();
   installEscapeGuards(page, { onBlocked });
@@ -927,10 +968,7 @@ async function probeRoute({ browser, storageState, routeId, record }) {
     policy: 'credentialed',
   });
 
-  const ctx = await guardContext(await browser.newContext({
-    viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
-    reducedMotion: 'reduce', storageState,
-  }));
+  const ctx = await newGuardedContext(browser, { storageState });
   let fired = 0;
   let attempted = 0;
   let sessionFired = 0;
@@ -974,10 +1012,7 @@ async function probeRoute({ browser, storageState, routeId, record }) {
      */
     if (phase === 'session-destructive') {
       const ownState = await acquireStorageState(browser);
-      const ownCtx = await guardContext(await browser.newContext({
-        viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
-        reducedMotion: 'reduce', storageState: ownState,
-      }));
+      const ownCtx = await newGuardedContext(browser, { storageState: ownState });
       const ran = await runProbe({
         ctx: ownCtx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex: attempted,
       });
@@ -1129,10 +1164,9 @@ async function main() {
 
   // --- anonymous context: what does a visitor with no session get? ----------
   {
-    const context = await guardContext(await browser.newContext({
-      viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
+    const context = await newGuardedContext(browser, {
       recordHar: { path: join(OUT, 'network', 'anon-desktop.har'), content: 'omit' },
-    }));
+    });
     const routeIdRef = { current: null };
     // unguarded: guarded on the next line — installEscapeGuards cannot be called
     // on a page that does not exist yet
@@ -1163,10 +1197,9 @@ async function main() {
 
   // --- authenticated context: the real crawl --------------------------------
   {
-    const context = await guardContext(await browser.newContext({
-      viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
+    const context = await newGuardedContext(browser, {
       recordHar: { path: join(OUT, 'network', 'auth-desktop.har'), content: 'omit' },
-    }));
+    });
     // The sign-in exchange happens before any route is entered, and it is a
     // real observation of a real endpoint. It gets the login route's id rather
     // than null: `observedOn` is a list of route ids, and a null in it is a
@@ -1244,9 +1277,7 @@ async function main() {
     const getUrls = [...new Set(
       observations.filter((o) => o.method === 'GET' && !o.anonymousProbe).map((o) => o.url),
     )].sort();
-    const anonContext = await guardContext(await browser.newContext({
-      viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
-    }));
+    const anonContext = await newGuardedContext(browser);
     const anonRef = { current: 'probe--anon-desktop--i0' };
     // unguarded: guarded on the next line
     const anonPage = await anonContext.newPage();
@@ -1674,9 +1705,13 @@ write('manifest.json', S.CaptureManifestSchema, {
     // Both halves from the constants the shim itself uses. A hand-written list
     // beside an uninstalled shim is what this manifest said for three crawls.
     seed: SEED, frozenEpochMs: FROZEN_EPOCH_MS,
-    frozenTimezone: 'UTC', frozenLocale: 'en-US',
+    // Read from `CONTEXT_DEFAULTS`, which is what every context is actually
+    // built with. Typed out here they agreed with four of six contexts and
+    // asserted `reduce` on two — true of the manifest, false of the crawl.
+    frozenTimezone: CONTEXT_DEFAULTS.timezoneId,
+    frozenLocale: CONTEXT_DEFAULTS.locale,
     frozen: DETERMINISM_FROZEN,
-    prefersReducedMotion: 'reduce',
+    prefersReducedMotion: CONTEXT_DEFAULTS.reducedMotion,
   },
   crawl: {
     budget: { maxInstancesPerPattern: 3, maxRoutesPerContext: 40, maxRoutesTotal: 100, maxDepth: 3 },
