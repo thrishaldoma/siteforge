@@ -157,10 +157,38 @@ Three claims are now **excluded by observation** rather than by argument:
 - *the element was not there yet* — `visible` is true in all 51, and the two
   genuine outliers are one disabled control and one covered by an `svg`.
 
-**What is still not known is why Playwright's auto-scroll does not bring them
-into view**, and that is where this stops. It is a much narrower question than
-the three it replaces, and it is mechanical rather than speculative. Writing a
-fourth cause here would be the mistake the ruling was issued to prevent.
+### The discriminating measurement, and what it rules out
+
+The obvious next question — *can it not be scrolled into view, or does it scroll
+and get intercepted?* — is one measurement rather than a fourth hypothesis. The
+probe now calls `scrollIntoViewIfNeeded` after the failure and looks again:
+
+```
+scrollIntoView    succeeded 51 · (not attempted) 19
+in view after     false 49 · null 19 · true 2
+occluded after    (nothing) 69 · svg 1
+```
+
+**`scrollIntoViewIfNeeded` succeeded on all fifty-one, and forty-nine centres
+are still outside the viewport afterwards, with nothing on top of them.**
+
+Both candidate explanations are out. It is not that Playwright cannot scroll the
+element — the call resolves, every time. It is not that it arrives and something
+intercepts — after the scroll, sixty-nine of seventy report nothing at the
+centre point at all, and the one exception is an `svg`.
+
+What is left is narrower and entirely mechanical: **the scroll reports success
+and the element's centre remains off-screen.** That is the signature of an
+element whose position no scroll can change — inside a clipped or transformed
+container, or one whose scrollable ancestor is not the viewport — so
+`scrollIntoViewIfNeeded` correctly finds nothing to scroll and returns, while the
+element never becomes clickable.
+
+**Why it is that, on this page, is still not established here**, and the ruling
+is the reason: three diagnoses were wrong and a fourth would cost more than the
+unknown. What has changed is that the question now has one candidate rather than
+three, and answering it means reading the SPA's layout for those controls rather
+than reasoning about Playwright.
 
 ### Two defects in the instrument itself
 
@@ -324,8 +352,9 @@ Not decided here.
 
 ## Open
 
-- Why an off-screen element is not scrolled into view. Narrow, mechanical, and
-  the only thing left of the timeout question.
+- Why an element whose scroll *succeeds* stays off-screen. One candidate — a
+  clipped or transformed container — and it is answered by reading the SPA's
+  layout for those controls, not by another probe-side experiment.
 - §7.6 itself: the input is on disk and the hard part is linking a literal to
   the control that calls it, not finding the literal.
 - Asset bodies are stored but no `referencedBy` is populated, so the index still

@@ -151,6 +151,35 @@ confidence is low, record the fact, not the verdict.
 
 ---
 
+## 6. Measured
+
+The one merge on the pinned target, audited:
+
+```
+All: 25 of 27 fields contained, keyed on id,
+     from get-api-v1-tasks-all + get-api-v1-projects-project-views-view-tasks
+        + get-api-v1-tasks-task + post-api-v1-tasks-task
+     — 1 of 1 key values shared — the same records, observed twice
+```
+
+**The observation agrees with the inference.** The endpoints the containment
+rule merged did return the same record, so on this target the shape heuristic
+reached 1.000 for a reason the evidence supports rather than by coincidence.
+
+**And the evidence is thin, which the report says rather than hides.** *One* of
+one: the item view returned a single task, so the intersection is as large as it
+can be and still rests on one value. That is a corroboration and not a proof,
+and the wording is chosen so a reader cannot mistake it for the second — which
+is the entire reason `distinctObserved` and the smallest-side denominator are in
+the record. A version of this that printed "100% overlap" would have been read
+as much stronger than it is.
+
+The remaining sources contribute nothing to the check: `post-api-v1-tasks-task`
+is a mutation whose response is one row, and the two list endpoints share the
+same key field. The audit reports what it had.
+
+---
+
 ## Open
 
 - Composite keys. `keyOf` returns one field, so a row keyed on a pair records
