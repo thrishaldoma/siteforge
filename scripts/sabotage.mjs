@@ -379,7 +379,11 @@ export const SABOTAGES = [
     id: 'manifest-field-added-unclassified',
     bug: 'a field is added to the manifest schema without anyone deciding what backs it or reads it',
     reachable: "how both of the manifest's fictions got there. `determinism.frozen` named four globals no shim froze, and `prefersReducedMotion` asserted `reduce` while four of six contexts did not set it — neither was findable by reading the manifest, because a claim with nothing behind it looks exactly like one that works. The patch adds an ordinary optional field, which is the least ceremonious way anyone adds one",
-    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    // Builds `schema` first. `shared` resolves `@siteforge/schema` to `dist`,
+    // so a patch to the schema *source* is invisible to this gate without it —
+    // and a sabotage the gate cannot see reads exactly like a gate that works,
+    // which is the failure this whole harness exists to stop.
+    gate: ['pnpm', '-s', 'test:manifest-claims'],
     expect: 'networkWaitSeconds',
     change: 'an optional field is added to CaptureManifestSchema and left out of the claim ledger',
   },
