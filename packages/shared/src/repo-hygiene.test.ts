@@ -32,6 +32,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  assessGraderFirewall,
   assessGitignoreAnchoring,
   assessToolingHostileSource,
   assessTrackedPackages,
@@ -204,5 +205,57 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
       }
       expect(ignored, `${path} should still be ignored`).toBe(true);
     }
+  });
+});
+
+describe('the grader/infer firewall, in the half a machine can hold (0020)', () => {
+  const infer = join(REPO, 'packages', 'infer');
+
+  it('objects when infer imports the grader', () => {
+    // Driven to fail against a synthetic subject: the real one passes, and a
+    // rule that can only be run against input it passes on is a rule nobody can
+    // prove fires. Note the deep specifier — the reach spelled around a
+    // whole-name check is the one somebody would actually write.
+    const findings = assessGraderFirewall({
+      package: 'packages/infer',
+      imports: ['@siteforge/schema', '@siteforge/verify/dist/grade/grade.js'],
+      dependencies: ['@siteforge/schema'],
+    });
+    expect(findings.map((f) => f.rule)).toEqual(['firewall-import']);
+    expect(findings[0]!.message).toContain('fitting to the metric');
+  });
+
+  it('objects to the dependency nothing imports yet', () => {
+    const findings = assessGraderFirewall({
+      package: 'packages/infer',
+      imports: ['@siteforge/schema'],
+      dependencies: ['@siteforge/schema', '@siteforge/verify'],
+    });
+    expect(findings.map((f) => f.rule)).toEqual(['firewall-dependency']);
+  });
+
+  it.skipIf(!isRepo)('holds against the real packages/infer', () => {
+    const manifest = JSON.parse(readFileSync(join(infer, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const { files } = walkFiles({
+      root: infer,
+      within: ['src'],
+      profile: 'source',
+      // The package is a scaffold today, so the repo-wide floor does not apply
+      // — but the walk still has to reach something, or this passes by walking
+      // nothing on the day infer is fifty files.
+      expect: { minFiles: 1, mustReach: ['src'] },
+    });
+    const imports = files.flatMap((file) =>
+      [...readFileSync(file, 'utf8').matchAll(/from '([^']+)';/g)].map((m) => m[1]!),
+    );
+    const findings = assessGraderFirewall({
+      package: 'packages/infer',
+      imports,
+      dependencies: Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }),
+    });
+    expect(findings.map((f) => f.message)).toEqual([]);
   });
 });

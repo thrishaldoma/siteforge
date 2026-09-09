@@ -20,6 +20,7 @@ export interface HygieneFinding {
     | 'unanchored-pattern'
     | 'package-untracked'
     | 'package-ignored'
+    | FirewallRule
     | ToolingHostileRule;
   readonly subject: string;
   readonly message: string;
@@ -182,5 +183,57 @@ export function assessToolingHostileSource(file: string, bytes: Uint8Array): Hyg
     at('lone-cr', loneCr, 'a carriage return with no newline after it; every scanner here counts lines by \n, so reported line numbers point at the wrong place.');
   }
 
+  return findings;
+}
+
+/**
+ * The grader/infer firewall (decision 0020), in the half a machine can hold.
+ *
+ * 0015 §0 ordered the steps so infer is written against a score and never
+ * against a metric's definition: a category whose definition shapes an
+ * inference strategy is fitting to the metric, and the number it then produces
+ * says nothing. The instruction is procedural — *do not read the grader's
+ * source while writing infer* — and no check can enforce reading.
+ *
+ * What a check can enforce is the mechanical half: `packages/infer` never
+ * imports `@siteforge/verify` and never declares it a dependency. That closes
+ * the path by which a category's definition reaches infer as *code* — a
+ * threshold read off the contract, a denominator recomputed, a matcher reused.
+ * It does not close the path through a person's memory, and 0020 says so
+ * plainly rather than letting a green here be read as the whole firewall.
+ */
+export type FirewallRule = 'firewall-import' | 'firewall-dependency';
+
+/** What the guarded package imports and declares. Facts, gathered by the caller. */
+export interface FirewallSubject {
+  readonly package: string;
+  /** Every module specifier its sources import. */
+  readonly imports: readonly string[];
+  /** Every name in its package.json dependency maps. */
+  readonly dependencies: readonly string[];
+}
+
+export function assessGraderFirewall(
+  subject: FirewallSubject,
+  forbidden = '@siteforge/verify',
+): HygieneFinding[] {
+  const findings: HygieneFinding[] = [];
+  // A prefix test, not equality: `@siteforge/verify/dist/grade/grade.js` is the
+  // same reach into the grader's source, spelled around a whole-name check.
+  const reaches = (name: string): boolean => name === forbidden || name.startsWith(`${forbidden}/`);
+  for (const specifier of subject.imports.filter(reaches)) {
+    findings.push({
+      rule: 'firewall-import',
+      subject: specifier,
+      message: `${subject.package} imports ${specifier}. The grader's definitions must not reach infer as code — a threshold read off the contract, or a denominator recomputed from it, is fitting to the metric, which is the failure 0015 §0 ordered the steps to prevent. The score is the only channel.`,
+    });
+  }
+  for (const dependency of subject.dependencies.filter(reaches)) {
+    findings.push({
+      rule: 'firewall-dependency',
+      subject: dependency,
+      message: `${subject.package} declares ${dependency} as a dependency. Nothing imports it today, which is what makes this the edge nobody would notice going live.`,
+    });
+  }
   return findings;
 }

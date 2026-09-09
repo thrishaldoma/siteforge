@@ -240,6 +240,15 @@ export const SABOTAGES = [
     expect: 'auth.unprobeable-count',
     change: 'drop the GET test from isProbeableRead',
   },
+  {
+    id: 'infer-reads-the-grader',
+    bug: "packages/infer imports the grader, so a category's definition can reach an inference strategy as code",
+    reachable:
+      'the ordinary shortcut, and the one 0015 §0 ordered the steps to prevent. infer needs a threshold, the number is already written down in the contract, and importing it is one line that typechecks and reads as reuse rather than as fitting to the metric. The score is meant to be the only channel',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'The score is the only channel',
+    change: 'import GRADE_CONTRACT into packages/infer/src/index.ts',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
