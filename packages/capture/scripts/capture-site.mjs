@@ -24,12 +24,16 @@
  * cannot be committed the way a snapshot can. What is committed is this script
  * and the digest it boots, which is what makes the capture reproducible.
  *
- * **What it does not do, said rather than omitted:** no behaviour probing. §6's
- * probe loop — click every candidate, diff the a11y tree, record the transition
- * — is what produces `flows/`, and this driver does not run it. Every route is
- * still captured in full (CSSOM state rules, a11y tree, event listeners, scroll
- * steps, computed styles), and the API surface is recorded from the network, so
- * everything the grader scores is here. `flows` is empty and the run says so.
+ * **It probes** (0024): §6's loop fires every non-hazardous candidate in a
+ * fresh page, classifies the rest by who absorbs the harm, and writes `flows/`
+ * plus `flows/skipped-controls.json`. Roughly half the clicks on this target
+ * time out for a reason nobody has established — three diagnoses were wrong in
+ * a row — so each failure records *which of the click's four preconditions was
+ * unmet* rather than a fourth hypothesis, and the run prints the distribution.
+ *
+ * **What it does not do, said rather than omitted:** no `--responsive` pass, so
+ * every probe is at 1280×800; and the probe vocabulary is `click` only, so a
+ * discovered `textbox` is never typed into.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
