@@ -55,9 +55,6 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
  * container and throws it away, so these are not credentials for anything (§3.3
  * governs a *target's* credentials, which are never written down).
  */
-/** One fixture account, so a password literal appears once. Never a real credential (§3.3). */
-const LOGIN = { username: 'sfadmin', password: 'sf-local-fixture-only' };
-
 const TARGETS = {
   gitea: {
     image: PIN.image,
@@ -142,100 +139,29 @@ const TARGETS = {
   },
 
   /**
-   * The candidate the Directus measurement asked for: a document whose API sits
-   * under a path prefix the UI does not share. Directus passes the overlap test
-   * and serves its API at `/`, which makes `inUniverse` admit the entire SPA —
-   * a universe that does not filter (0019).
+   * The M3 target (0019, 0021). Everything about the container, the fixture
+   * account, the seed and the sign-in comes from the pin in `snapshot.mjs` —
+   * this table adds only what a *surface measurement* needs that a truth
+   * snapshot does not: which pages to crawl.
    *
-   * Vikunja is a todo app, which is §12's named M3 shape, and its document is
-   * Swagger 2.0 with `basePath: /api/v1`, which the existing truth loader reads.
+   * One description of a target, not two. The digest, the tmpfs mounts and the
+   * typed-with-readback login are the kind of detail that drifts silently when
+   * copied, and the login in particular took four attempts to get right.
    */
   vikunja: {
-    image: 'vikunja/vikunja@sha256:ed1f3ed467fecec0b57e9de7bc6607f8bbcbb23ffced6a81f5dfefc794cdbe3b',
-    tagAtPull: '0.24',
-    containerPort: 3456,
+    image: PINS.vikunja.image,
+    tagAtPull: PINS.vikunja.tagAtPull,
+    containerPort: PINS.vikunja.containerPort,
     port: 3811,
-    // Its sqlite file and upload directory both need a writable path, and every
-    // candidate location in the image is owned by root while the process runs as
-    // uid 1000. tmpfs rather than a volume: the container is thrown away.
-    runArgs: ['--tmpfs', '/db', '--tmpfs', '/files'],
-    env: {
-      VIKUNJA_SERVICE_JWTSECRET: 'sf-local-fixture-only-secret',
-      VIKUNJA_DATABASE_TYPE: 'sqlite',
-      VIKUNJA_DATABASE_PATH: '/db/vikunja.db',
-      VIKUNJA_FILES_BASEPATH: '/files',
-      VIKUNJA_SERVICE_ENABLEREGISTRATION: 'true',
-    },
+    runArgs: PINS.vikunja.runArgs,
+    env: PINS.vikunja.env,
     rootUrlEnv: 'VIKUNJA_SERVICE_PUBLICURL',
-    spec: { path: '/api/v1/docs.json', auth: 'none' },
-    universe: '/api/v1',
+    spec: { path: PINS.vikunja.specPath, auth: 'none' },
+    universe: PINS.vikunja.basePath,
     readyPath: '/api/v1/info',
-    async seed({ api }) {
-      const json = async (path, body, token) => {
-        const response = await api(path, {
-          method: body.method ?? 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(body.data),
-        });
-        // Checked, not assumed. A seed that half-failed produces a crawl of an
-        // empty instance, and an empty instance makes no API calls — which
-        // reads as "this target's browser does not call its API", the exact
-        // verdict this script exists to pronounce.
-        const text = await response.text();
-        if (!response.ok) throw new Error(`seed ${path} → ${response.status}: ${text.slice(0, 200)}`);
-        return text;
-      };
-      await json('/api/v1/register', {
-        data: { username: LOGIN.username, email: 'sfadmin@localhost.test', password: LOGIN.password },
-      });
-      const token = JSON.parse(
-        await json('/api/v1/login', {
-          data: { username: LOGIN.username, password: LOGIN.password },
-        }),
-      ).token;
-      // PUT creates in Vikunja's API; POST updates. Worth stating, because a
-      // 405 here would look like a wrong path rather than a wrong verb.
-      await json('/api/v1/projects', { method: 'PUT', data: { title: 'Seeded project' } }, token);
-      for (const title of [
-        'Write the truth loader',
-        'Measure the surface',
-        'Transcribe a baseline',
-        'Ship the grader',
-      ]) await json('/api/v1/projects/2/tasks', { method: 'PUT', data: { title } }, token);
-      for (const title of ['bug', 'enhancement', 'question'])
-        await json('/api/v1/labels', { method: 'PUT', data: { title } }, token);
-    },
-    /** Where the SPA sits when nobody is signed in. Checked after login. */
-    loggedOutPath: '/login',
-    /** Signed in: like Directus, the SPA is the whole surface. */
-    login: async (page, origin) => {
-      await page.goto(`${origin}/login`, { waitUntil: 'networkidle', timeout: 30_000 });
-      // Typed, not filled, and clicked rather than submitted with Enter: Vue's
-      // v-model on this form does not see `fill`'s single input event, and
-      // Enter does not submit. Then a settle wait, because the SPA hydrates
-      // *over* the field it has already painted and eats whatever was typed
-      // before it finished — `sfadmin` arrived as `in`, and the login failed
-      // with a message about a wrong password that was entirely true.
-      //
-      // Read back and checked. Every part of this is a silent wrong answer
-      // otherwise: the run measures a login screen eight times and reports the
-      // target's browser does not call its API.
-      await wait(2500);
-      for (const [selector, value] of [
-        ['#username', LOGIN.username],
-        ['#password', LOGIN.password],
-      ]) {
-        await page.click(selector);
-        await page.type(selector, value, { delay: 30 });
-        const typed = await page.inputValue(selector);
-        if (typed !== value) throw new Error(`${selector} holds "${typed}" after typing "${value}"`);
-      }
-      await page.click('button:has-text("Login")');
-      await wait(5000);
-    },
+    seed: PINS.vikunja.seed,
+    login: (page, origin) => PINS.vikunja.signIn(page, origin, { wait }),
+    loggedOutPath: PINS.vikunja.loggedOutPath,
     pages: [
       '/', '/projects', '/projects/2', '/tasks/1', '/labels', '/teams',
       '/user/settings/general', '/projects/1',

@@ -104,6 +104,89 @@ export const PINS = {
   },
   /** Measured across two boots on different ports and PUBLICURLs. Empty. */
   volatileFields: [],
+
+  /**
+   * The fixture account. One literal, because three copies of a password is
+   * three places for a crawl and a measurement to disagree about who they
+   * signed in as. Never a real credential (§3.3) — a local container, thrown
+   * away, seeded from nothing.
+   */
+  login: { username: 'sfadmin', email: 'sfadmin@localhost.test', password: 'sf-local-fixture-only' },
+
+  /**
+   * Deterministic content, so a crawl and a surface measurement see the same
+   * instance. `PUT` creates in Vikunja's API and `POST` updates — worth stating,
+   * because a 405 here looks like a wrong path rather than a wrong verb.
+   *
+   * Every call is checked. A seed that half-failed produces an empty instance,
+   * and an empty instance makes no API calls — which reads as "this target's
+   * browser does not call its API", the verdict the surface script exists to
+   * pronounce.
+   */
+  async seed({ api }) {
+    const { username, email, password } = PINS.vikunja.login;
+    const call = async (path, method, data, token) => {
+      const response = await api(path, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(`seed ${path} → ${response.status}: ${text.slice(0, 200)}`);
+      return text;
+    };
+    await call('/api/v1/register', 'POST', { username, email, password });
+    const token = JSON.parse(await call('/api/v1/login', 'POST', { username, password })).token;
+    await call('/api/v1/projects', 'PUT', { title: 'Seeded project' }, token);
+    for (const title of [
+      'Write the truth loader',
+      'Measure the surface',
+      'Transcribe a baseline',
+      'Ship the grader',
+    ]) await call('/api/v1/projects/2/tasks', 'PUT', { title }, token);
+    for (const title of ['bug', 'enhancement', 'question'])
+      await call('/api/v1/labels', 'PUT', { title }, token);
+    return token;
+  },
+
+  /** Where the SPA sits when nobody is signed in. */
+  loggedOutPath: '/login',
+
+  /**
+   * Sign in, and prove it took.
+   *
+   * Typed, not filled, and clicked rather than submitted with Enter: Vue's
+   * `v-model` on this form does not see `fill`'s single input event, and Enter
+   * does not submit. Then a settle wait, because the SPA hydrates *over* the
+   * field it has already painted and eats whatever was typed first — `sfadmin`
+   * arrived as `in`, and the login failed with a message about a wrong password
+   * that was entirely true.
+   *
+   * One copy, imported by both the surface measurement and the capture driver.
+   * Rediscovering this in a second place is how a crawl silently measures a
+   * login screen.
+   */
+  async signIn(page, origin, { wait }) {
+    const { username, password } = PINS.vikunja.login;
+    await page.goto(`${origin}/login`, { waitUntil: 'networkidle', timeout: 30_000 });
+    await wait(2500);
+    for (const [selector, value] of [['#username', username], ['#password', password]]) {
+      await page.click(selector);
+      await page.type(selector, value, { delay: 30 });
+      const typed = await page.inputValue(selector);
+      if (typed !== value) throw new Error(`${selector} holds "${typed}" after typing "${value}"`);
+    }
+    await page.click('button:has-text("Login")');
+    await wait(5000);
+    if (page.url().includes(PINS.vikunja.loggedOutPath)) {
+      throw new Error(
+        `login did not take: still at ${page.url()}. Every page below would be the login screen, and any verdict drawn from the crawl would be about a login form.`,
+      );
+    }
+  },
  },
 };
 
