@@ -25,6 +25,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { isCandidateApiCall } from '../../scripts/browser-surface.mjs';
+import { inUniverse } from './match.js';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'fixtures');
 
@@ -41,11 +42,16 @@ interface Surface {
   staticAssetRequests: number;
 }
 
-/** Segment-wise, like `inUniverse` — a substring test would call `/api/v1` itself outside `/api/v1`. */
-const outsideUniverse = (entry: string, universe: string): boolean => {
-  const path = entry.slice(entry.indexOf(' ') + 1);
-  return path !== universe && !path.startsWith(`${universe}/`);
-};
+/**
+ * The grader's own filter, asked about an observed request.
+ *
+ * `inUniverse` rather than a prefix test on the string: the question is
+ * literally "would the grader's universe filter exclude this", so borrowing the
+ * predicate is the only way the answer stays true when it changes. A substring
+ * test would also have called `/api/v1` itself out of `/api/v1`.
+ */
+const outsideUniverse = (entry: string, universe: string): boolean =>
+  !inUniverse(entry.slice(entry.indexOf(' ') + 1), universe);
 
 /** A universe that filters is a prefix the UI's own traffic falls outside of. */
 const filtersAnything = (s: Surface): boolean =>
@@ -111,6 +117,7 @@ describe('the second criterion, which Gitea satisfied silently', () => {
     // No record holds a bare `GET /api/v1` today, so this edge is asserted
     // rather than observed: a substring test for `/api/v1/` would call the
     // universe's own root out-of-universe and report a filter that filters.
+    // `/api/v11` is the other half — a prefix by characters, not by segments.
     expect(outsideUniverse('GET /api/v1', '/api/v1')).toBe(false);
     expect(outsideUniverse('GET /api/v1/projects', '/api/v1')).toBe(false);
     expect(outsideUniverse('GET /api/v11/projects', '/api/v1')).toBe(true);
