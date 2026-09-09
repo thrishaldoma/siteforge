@@ -229,11 +229,11 @@ written for. Applying it:
 | `synthesized-endpoint` | **unimplemented stage** | `flows/skipped-controls.json` holds 79 controls and `packages/infer` still has no code path emitting `bound-from-control`. Input full, output empty |
 | `narrowing.precision` | **target limitation** | the document contains zero occurrences of `format` |
 | `entity-relation.*` | **target limitation**, plus a SiteModel gap | Swagger 2.0 declares no scalar foreign keys, and the one association it does declare is an array `RelationSchema` cannot express |
-| `entity-narrowing.precision` | **none of the three** — see below | recall is now `0/1`, so the truth side is present; the model side is empty because the ladder *ran and declined* |
+| `entity-narrowing.precision` | **declined on evidence** — the fourth cause, see below | recall is now `0/1`, so the truth side is present; the model side is empty because §7.5's ladder *ran and declined* |
 
 Only the two marked *target limitation* are permanent.
 
-### The taxonomy has a fourth case, and applying it is what found the gap
+### The fourth cause: declined on evidence
 
 All three causes §13 names are about **work not done** — by the target, by the
 driver, or by the product. `entity-narrowing.precision` is none of them: §7.5's
@@ -250,7 +250,10 @@ and this row must not quietly answer it by filing the category under a cause
 that implies missing code.
 
 **So: when a category is vacuous, first ask whether the producer never ran or
-ran and declined.** Only the first three causes apply to the former.
+ran and declined.** Only the first three apply to the former, and they all mean
+somebody has work to do; *declined on evidence* means nobody does, and filing a
+decline under one of the other three sends the next reader to a package with
+nothing wrong in it. §13 now carries the fourth cause by that name.
 
 ---
 
