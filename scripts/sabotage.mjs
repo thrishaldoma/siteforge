@@ -304,6 +304,15 @@ export const SABOTAGES = [
     expect: 'carries no pin',
     change: 'add packages/verify/src/grade/thresholds.ts, pinned by nothing',
   },
+  {
+    id: 'build-residue-ignores-javascript',
+    bug: 'the compiled-residue check skips .js files, which is every file it exists to compare',
+    reachable:
+      'the exclusion that looks like noise-reduction and removes the whole subject. `.tsbuildinfo` is genuinely expected to move and is genuinely skipped, so a second extension in the same condition reads as more of the same — and .js is the only thing under dist/ that carries the sabotaged code. This is the shape that let dist/ hold a sabotaged grader for a whole session: nothing about a silent exclusion says it removed the finding',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'differs after the run',
+    change: 'skip .js in assessBuildResidue, beside the legitimate .tsbuildinfo skip',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {

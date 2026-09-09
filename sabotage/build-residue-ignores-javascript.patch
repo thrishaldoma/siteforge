@@ -1,0 +1,13 @@
+diff --git a/scripts/sabotage.mjs b/scripts/sabotage.mjs
+index e808637..1fdda1a 100644
+--- a/scripts/sabotage.mjs
++++ b/scripts/sabotage.mjs
+@@ -456,7 +456,7 @@ export function assessBuildResidue(before, after) {
+     const now = after[file];
+     if (now === undefined) {
+       problems.push(`${file} was built before the run and is missing after it.`);
+-    } else if (now !== hash) {
++    } else if (now !== hash && !file.endsWith('.js')) {
+       problems.push(
+         `${file} differs after the run, and a rebuild did not restore it. A gate that builds compiles the patch into dist/, git status cannot see it because dist/ is ignored, and the next script to read dist/ scores against a sabotaged grader without a word.`,
+       );
