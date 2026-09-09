@@ -229,11 +229,15 @@ written for. Applying it:
 | `synthesized-endpoint` | **unimplemented stage** | `flows/skipped-controls.json` holds 79 controls and `packages/infer` still has no code path emitting `bound-from-control`. Input full, output empty |
 | `narrowing.precision` | **target limitation** | the document contains zero occurrences of `format` |
 | `entity-relation.*` | **target limitation**, plus a SiteModel gap | Swagger 2.0 declares no scalar foreign keys, and the one association it does declare is an array `RelationSchema` cannot express |
-| `entity-narrowing.precision` | **declined on evidence** — the fourth cause, see below | recall is now `0/1`, so the truth side is present; the model side is empty because §7.5's ladder *ran and declined* |
+| `entity-narrowing.precision` | **driver limitation** — see §6; the classification below was wrong | the ladder declined, but its *primary* evidence rung never reached it |
 
 Only the two marked *target limitation* are permanent.
 
 ### The fourth cause: declined on evidence
+
+*(The row above used to read `declined on evidence`. §6 measured why that was
+wrong, and the correction is left visible rather than edited away: the reasoning
+below is right, and its application to this category was not.)*
 
 All three causes §13 names are about **work not done** — by the target, by the
 driver, or by the product. `entity-narrowing.precision` is none of them: §7.5's
@@ -255,6 +259,67 @@ somebody has work to do; *declined on evidence* means nobody does, and filing a
 decline under one of the other three sends the next reader to a package with
 nothing wrong in it. §13 now carries the fourth cause by that name.
 
+
+---
+
+## 6. The enum ladder's primary rung never reached it, and that changes §5
+
+The open question from the turn before this one was whether Vikunja's crawl
+reached any `<select>` or fixed option set — because `narrowing.recall 0.0000
+(0/9)` and `entity-narrowing.recall 0.0000 (0/1)` are floors rather than
+results if the UI-constraint evidence is not in the capture. Cheap to check, and
+the answer is not the one either alternative anticipated.
+
+**The evidence is in the capture. It is destroyed on the way out.**
+
+The captured DOM holds **6 `<select>` elements with 632 `<option>` descendants
+and 14 checkboxes**, all on `/user/settings/general`. The number of
+`uiConstraint` records that reach any narrowing is **zero**.
+
+The extractor is `document.querySelectorAll('select[name], select[id]')`. Every
+one of Vikunja's six selects carries exactly one attribute:
+
+```
+{"data-v-321f61a6":""}
+```
+
+A Vue scoped-style marker. No `name`, no `id` — the framework binds through
+`v-model`, which is compiled away. The selector matches **none of six**.
+
+So this is a **model-side floor, not a target property**, which is the
+distinction the question was asked to draw. §7.5 calls the UI constraint "the
+primary evidence and the only kind that is actually ground truth", and on this
+target it is discarded before inference sees it. The ladder ran on rungs two and
+three alone.
+
+**What that does to §5's table:** `entity-narrowing.precision` was filed as
+*declined on evidence*, and it is not — a producer that declined because its
+best evidence was withheld has not made a principled decline, it has been given
+a worse input. The cause is a **driver limitation**, and the row is corrected
+above. This is the fourth cause's first application and it was wrong, which is
+worth keeping: the discriminator for *declined on evidence* is not "the rule
+returned nothing", it is **"the rule returned nothing and had everything it
+needed to say otherwise."**
+
+Whether rung one would have fired for those nine document-declared enums is
+genuinely unknown — it depends on whether the six selects constrain fields the
+API returns — and that is not a question to answer by assertion.
+
+### Extracting them and binding them are two problems, and only one is cheap
+
+Widening the selector to catch an unnamed `<select>` is a one-line change. It
+buys nothing on its own, because `uiConstraints` is a `Map` keyed by
+`name.toLowerCase()` and matched against the API field name — with no `name`
+attribute there is no key to match with, and the record would have nowhere to
+attach.
+
+Binding an unnamed control to a field is the real problem and it is a design
+question: the label text, the `aria-label`, the `v-model` target that
+minification destroyed, or the value overlap between the option set and the
+field's observed values. The last is the only one that is an observation rather
+than a naming guess, and it is the same argument §7.5 makes about foreign keys.
+Not decided here.
+
 ---
 
 ## Open
@@ -265,6 +330,8 @@ nothing wrong in it. §13 now carries the fourth cause by that name.
   the control that calls it, not finding the literal.
 - Asset bodies are stored but no `referencedBy` is populated, so the index still
   cannot say which route pulled which chunk.
+- Binding an unnamed `<select>` to an API field (§6). Extraction is a line;
+  the binding is a decision.
 - 659 budget-declined candidates, almost all of them one settings route's 668.
   A better candidate filter, not a bigger number.
 - **`locate/not-found` read 16 on one run and 19 on the next, against an
