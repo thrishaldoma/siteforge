@@ -129,6 +129,30 @@ export const ProbeDiagnosticSchema = z.strictObject({
   navigationPending: z.boolean().nullable(),
   /** What `elementFromPoint` returned at the element's centre, when something else did. */
   occludedBy: z.string().nullable(),
+
+  /**
+   * The discriminating measurement, taken after the failure.
+   *
+   * 49 of 51 timed-out clicks on the pinned target were on an element whose
+   * centre was **outside the viewport** (0026 §3). That is where the evidence
+   * stopped and where a fourth hypothesis would have started, so instead the
+   * probe asks the page directly: `scrollIntoViewIfNeeded`, then the same box
+   * and hit test again.
+   *
+   * It separates two explanations without committing to either — *Playwright
+   * cannot scroll this element into view* (`failed`, or `succeeded` with the
+   * centre still outside) from *it scrolls fine and something intercepts*
+   * (`succeeded`, centre inside, and `occludedByAfterScroll` naming what is on
+   * top). `null` is not-attempted: there was no box to scroll to.
+   *
+   * Taken **last, on a page about to be closed**. A scroll mutates page state,
+   * and the failure rate is suspected to depend on position in the probe loop,
+   * so an instrument that changed what the next probe sees would be measuring
+   * itself.
+   */
+  scrollIntoView: z.enum(['succeeded', 'failed']).nullable(),
+  inViewportAfterScroll: z.boolean().nullable(),
+  occludedByAfterScroll: z.string().nullable(),
 });
 
 export const SkippedControlSchema = z

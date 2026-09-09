@@ -749,6 +749,13 @@ write('flows/skipped-controls.json', S.SkippedControlIndexSchema, {
       inViewport: true,
       navigationPending: false,
       occludedBy: 'div.toast-stack',
+      // The discriminator, in the state that distinguishes the two
+      // explanations: the page scrolled it into view when asked, it arrived
+      // inside the viewport, and something is still on top of it. That rules
+      // out "cannot be scrolled" and leaves the interception.
+      scrollIntoView: 'succeeded',
+      inViewportAfterScroll: true,
+      occludedByAfterScroll: 'div.toast-stack',
     },
   }],
 });
@@ -1051,6 +1058,10 @@ const extracted = {
   // This fixture's only skipped control is target-destructive; it declares no
   // session-destructive one, so the invariant is honestly vacuous rather than
   // satisfied by a number nobody produced.
+  // One driven control produced a transition and one did not — the fixture
+  // carries both halves of the ceiling, so neither reads as a constant.
+  controlsFired: 1,
+  controlsUndriveable: 1,
   sessionDestructiveFired: 0,
   a11yNodes: capturedRoutes.reduce(
     (n, r) => n + findAll(r.root, (x) => x.a11y !== undefined).length, 0),

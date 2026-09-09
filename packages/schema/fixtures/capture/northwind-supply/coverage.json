@@ -44,6 +44,8 @@
     "interactionCandidates": 50,
     "assets": 8,
     "endpointsWithAuthEvidence": 7,
+    "controlsFired": 1,
+    "controlsUndriveable": 1,
     "sessionDestructiveFired": 0,
     "a11yNodes": 159
   },

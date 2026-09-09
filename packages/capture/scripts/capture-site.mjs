@@ -311,8 +311,52 @@ const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
   });
 };
 
+/**
+ * §6's determinism shim: `Date.now`, `performance.now`, `Math.random` and
+ * `crypto.randomUUID`, frozen against the run seed.
+ *
+ * *"You need this here as well as in the clone, or your 'identical' recrawls
+ * will never be identical."* Measured, and the sentence is exact: without it,
+ * **every `dom.json` of all seven routes differed between three crawls of one
+ * pinned digest**, on one node — Vikunja's avatar `<img>` carries a
+ * cache-busting `?size=50&=<Date.now()>`, so one live clock reading moved the
+ * DOM hash of every page it appears on.
+ *
+ * `rung3.mjs` and `spike-one-page.mjs` both installed one. This driver did not,
+ * and wrote `determinism.frozen: ['Date.now', …]` into its manifest anyway — a
+ * derived claim with no evidence behind it, which is the failure §13 is mostly
+ * about. `DETERMINISM_FROZEN` below is now the single source for both the shim
+ * and the manifest, so the artifact cannot claim a freeze that did not happen.
+ */
+const FROZEN_EPOCH_MS = Date.parse('2026-01-01T00:00:00.000Z');
+const DETERMINISM_FROZEN = ['Date.now', 'performance.now', 'Math.random', 'crypto.randomUUID'];
+
+const freezeClocks = ({ seed, epoch }) => {
+  let state = seed >>> 0;
+  Math.random = () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 0x100000000; };
+  const RealDate = Date;
+  Date = class extends RealDate {
+    constructor(...a) { super(...(a.length ? a : [epoch])); }
+    static now() { return epoch; }
+  };
+  performance.now = () => 0;
+  let n = 0;
+  if (globalThis.crypto) crypto.randomUUID = () => `00000000-0000-4000-8000-${(n += 1).toString(16).padStart(12, '0')}`;
+};
+
+/**
+ * The one place a context is made, so neither guard can be forgotten.
+ *
+ * §13 already says every page the crawler opens carries the escape guards and
+ * `pnpm lint` says so. The determinism shim is the same kind of obligation —
+ * per-context, invisible when missing, and easy to omit at the next
+ * `newContext()` — so it goes through the same chokepoint rather than becoming
+ * a second thing to remember. Six call sites here, and the one that mattered
+ * was whichever got added last.
+ */
 const guardContext = async (context) => {
   await installOriginGuard(context, { allowedOrigins: ALLOWED_ORIGINS, onBlocked, decide: decideNavigation });
+  await context.addInitScript(freezeClocks, { seed: SEED, epoch: FROZEN_EPOCH_MS });
   return context;
 };
 
@@ -569,6 +613,42 @@ async function diagnoseUndriveable({ page, locator, candidate, step, attemptInde
   const inViewport = hitTest === null ? null : hitTest.centreInViewport;
   const occludedBy = hitTest === null ? null : hitTest.occludedBy;
 
+  /**
+   * The discriminating measurement, and the last thing done to this page.
+   *
+   * 49 of 51 timeouts were on an element whose centre sits outside the
+   * viewport. Two explanations fit that equally well — Playwright cannot scroll
+   * it into view, or it scrolls fine and something intercepts once it is there
+   * — and a fourth hypothesis is what the ruling forbids. So the page is asked:
+   * scroll, then look again.
+   *
+   * `runProbe` closes the page immediately after this returns, which is what
+   * makes it safe to mutate: a scroll changes what a later probe would see, and
+   * the failure rate is suspected to depend on position in the loop, so an
+   * instrument that leaked into the next probe would be measuring itself.
+   */
+  const scrollIntoView = box === null
+    ? null
+    : (await ask(async () => {
+        await locator.scrollIntoViewIfNeeded({ timeout: 1500 });
+        return 'succeeded';
+      })) ?? 'failed';
+  const afterScroll = scrollIntoView === 'succeeded' ? await ask(() => locator.evaluate((el, vp) => {
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const hit = document.elementFromPoint(cx, cy);
+    return {
+      centreInViewport: cx >= 0 && cy >= 0 && cx <= vp.width && cy <= vp.height,
+      occludedBy: hit === null
+        ? null
+        : hit === el || el.contains(hit)
+          ? null
+          : `${hit.tagName.toLowerCase()}${hit.id ? `#${hit.id}` : ''}` +
+            `${typeof hit.className === 'string' && hit.className ? `.${hit.className.trim().split(/\s+/).slice(0, 2).join('.')}` : ''}`,
+    };
+  }, viewport, { timeout: 1000 })) : null;
+
   return {
     step,
     selector: candidate.interaction.selector,
@@ -582,6 +662,9 @@ async function diagnoseUndriveable({ page, locator, candidate, step, attemptInde
     inViewport,
     navigationPending,
     occludedBy,
+    scrollIntoView,
+    inViewportAfterScroll: afterScroll === null ? null : afterScroll.centreInViewport,
+    occludedByAfterScroll: afterScroll === null ? null : afterScroll.occludedBy,
   };
 }
 
@@ -642,7 +725,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
           step: 'locate/not-found', selector: candidate.interaction.selector, attemptIndex,
           visible: null, stable: null, receivesPointerEvents: null, enabled: null,
           inViewport: null, navigationPending: navigationsStarted > navigationsSettled,
-          occludedBy: null,
+          occludedBy: null, scrollIntoView: null, inViewportAfterScroll: null, occludedByAfterScroll: null,
         },
       });
       await page.close();
@@ -775,7 +858,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
           step: kind, selector: candidate.interaction.selector, attemptIndex,
           visible: null, stable: null, receivesPointerEvents: null, enabled: null,
           inViewport: null, navigationPending: navigationsStarted > navigationsSettled,
-          occludedBy: null,
+          occludedBy: null, scrollIntoView: null, inViewportAfterScroll: null, occludedByAfterScroll: null,
         }
       : await diagnoseUndriveable({
           page, locator, candidate, step: kind, attemptIndex,
@@ -907,6 +990,19 @@ async function probeRoute({ browser, storageState, routeId, record }) {
  * fourth hypothesis is not.
  */
 function reportUndriveableDistribution() {
+  /**
+   * The ceiling first, because it is the number that constrains every later
+   * stage: a control that never resolved has no transition for §9 to replay and
+   * no observation for §7.6 to build on. Printed beside the crawl's coverage
+   * rather than buried in the findings, per ruling 3.
+   */
+  const completed = [...flows.values()].filter((f) => f.outcome === 'completed').length;
+  const reachable = completed + undriveable.length;
+  const pct = reachable === 0 ? 0 : Math.round((completed / reachable) * 100);
+  console.log(
+    `\n  behaviour ceiling: ${completed} of ${reachable} driven control(s) produced a transition (${pct}%)` +
+    ` · ${undriveable.length} would not resolve · ${budgetDeclined} declined on budget`,
+  );
   if (undriveable.length === 0) {
     console.log('  undriveable: none');
     return;
@@ -932,6 +1028,11 @@ function reportUndriveableDistribution() {
   console.log(`    in viewport       ${tally((d) => d.inViewport)}`);
   console.log(`    navigation open   ${tally((d) => d.navigationPending)}`);
   console.log(`    occluded by       ${tally((d) => d.occludedBy ?? '(nothing)')}`);
+  // The discriminator: did the page scroll it into view when asked, and was
+  // anything on top of it once it got there.
+  console.log(`    scrollIntoView    ${tally((d) => d.scrollIntoView ?? '(not attempted)')}`);
+  console.log(`    in view after     ${tally((d) => d.inViewportAfterScroll)}`);
+  console.log(`    occluded after    ${tally((d) => d.occludedByAfterScroll ?? '(nothing)')}`);
   // The variable no single-shot reproduction can vary. Bucketed rather than
   // listed, because the question is whether the rate rises with position.
   console.log(`    attempt index     ${tally((d) => `${Math.floor(d.attemptIndex / 4) * 4}-${Math.floor(d.attemptIndex / 4) * 4 + 3}`)}`);
@@ -979,6 +1080,7 @@ async function main() {
     // Asserted, not assumed: crawling a container that is not there produces a
     // capture of connection errors, and this flag exists to make two runs
     // comparable — a run against nothing is comparable to nothing.
+    // operational: the absent container is the condition being detected here, not an error to propagate
     const probe = await fetch(`${ORIGIN}${TARGET.apiPrefix}/info`).catch(() => null);
     if (probe?.status !== 200) {
       throw new Error(`--reuse-container was passed but nothing is serving ${ORIGIN}${TARGET.apiPrefix}/info`);
@@ -1476,6 +1578,14 @@ const extracted = {
   assets: Object.keys(assetEntries).length,
   endpointsWithAuthEvidence: endpoints.filter((e) => e.authEvidence.length > 0).length,
   // Fired, from the flows actually written. The other side of the invariant.
+  /**
+   * The behaviour ceiling (0026 §3, ruling 3). Not a defect count: a control
+   * that cannot be driven is one §9's behavioural gate can never replay and
+   * §7.6 has to recover from source or not at all, so it caps what any
+   * downstream stage can learn about this target.
+   */
+  controlsFired: [...flows.values()].filter((f) => f.outcome === 'completed').length,
+  controlsUndriveable: undriveable.length,
   sessionDestructiveFired: [...flows.values()].filter(
     (f) => f.outcome === 'completed' && f.destructive === false &&
       SESSION_DESTRUCTIVE_TERMS.some((t) => f.name.toLowerCase().includes(t)),
@@ -1505,9 +1615,11 @@ write('manifest.json', S.CaptureManifestSchema, {
   contexts: CONTEXTS,
   userAgent: UA,
   determinism: {
-    seed: SEED, frozenEpochMs: Date.parse('2026-01-01T00:00:00.000Z'),
+    // Both halves from the constants the shim itself uses. A hand-written list
+    // beside an uninstalled shim is what this manifest said for three crawls.
+    seed: SEED, frozenEpochMs: FROZEN_EPOCH_MS,
     frozenTimezone: 'UTC', frozenLocale: 'en-US',
-    frozen: ['Date.now', 'performance.now', 'Math.random', 'crypto.randomUUID'],
+    frozen: DETERMINISM_FROZEN,
     prefersReducedMotion: 'reduce',
   },
   crawl: {

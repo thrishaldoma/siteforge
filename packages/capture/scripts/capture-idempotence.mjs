@@ -28,7 +28,7 @@
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { dirname, join, relative, sep } from 'node:path';
+import { dirname, extname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assessCaptureIdempotence } from '../../shared/dist/index.js';
 import { stableArtifactHash } from '../../schema/dist/index.js';
@@ -74,7 +74,9 @@ const EXEMPT = [
 /** Canonical content of one file: the schema's own "modulo timestamps", or raw bytes. */
 function digestOf(abs) {
   const bytes = readFileSync(abs);
-  if (!abs.endsWith('.json')) return createHash('sha256').update(bytes).digest('hex');
+  // Parsed, not a suffix test: `endsWith` is the substring-for-token family §13
+  // keeps finding, and a file literally named `.json` would satisfy it.
+  if (extname(abs) !== '.json') return createHash('sha256').update(bytes).digest('hex');
   try {
     return stableArtifactHash(JSON.parse(bytes.toString('utf8')));
   } catch {

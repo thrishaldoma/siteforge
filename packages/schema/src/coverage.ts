@@ -102,6 +102,24 @@ export const CoverageExtractedSchema = z.strictObject({
   endpointsWithAuthEvidence: z.int().nonnegative(),
   /** Session-destructive controls actually fired. */
   sessionDestructiveFired: z.int().nonnegative(),
+  /**
+   * Controls that were fired and produced a recorded transition.
+   *
+   * With `controlsUndriveable` this is a **coverage ceiling**, not only a
+   * defect count: a control that cannot be driven is one whose behaviour §6
+   * never observes, whose transition §9's behavioural gate can never replay,
+   * and whose handler §7.6 has to recover from source or not at all. On the
+   * pinned Vikunja 49 of 51 timeouts are on off-screen elements, and that
+   * caps what any downstream stage can know about this target — which belongs
+   * beside the crawl's other coverage numbers rather than in a findings list.
+   *
+   * No invariant is attached, deliberately. "Probing must succeed" would be an
+   * assertion about the *target's* driveability rather than about extraction
+   * dropping something it held, and every other invariant here is the latter.
+   */
+  controlsFired: z.int().nonnegative(),
+  /** Discovered, activated, and would not resolve. The other half of the ceiling. */
+  controlsUndriveable: z.int().nonnegative(),
 });
 
 export type CoverageObserved = z.infer<typeof CoverageObservedSchema>;

@@ -718,6 +718,7 @@ if (sessionDestructive.length) {
           attemptIndex: 0,
           visible: null, stable: null, receivesPointerEvents: null, enabled: null,
           inViewport: null, navigationPending: null, occludedBy: null,
+          scrollIntoView: null, inViewportAfterScroll: null, occludedByAfterScroll: null,
         },
       });
     }
@@ -1001,6 +1002,12 @@ const extracted = {
     .reduce((n, r) => n + r.captured.built.filter((x) => x.interaction).length, 0),
   assets: Object.keys(assetEntries).length,
   endpointsWithAuthEvidence: endpoints.filter((e) => e.authEvidence.length > 0).length,
+  // The behaviour ceiling. This fixture drives everything it discovers, which
+  // is what makes the number worth recording here too: a rung whose controls
+  // stop resolving is a fixture that has stopped being able to inflict the
+  // hazards it tests (§13), and that is invisible without a count.
+  controlsFired: [...flows.values()].filter((f) => f.outcome === 'completed').length,
+  controlsUndriveable: skippedControls.filter((c) => c.cause === 'precondition-unmet').length,
   sessionDestructiveFired: sessionDestructiveFired,
   a11yNodes: [...routes.values()]
     .reduce((n, r) => n + r.captured.built.filter((x) => x.a11y).length, 0),

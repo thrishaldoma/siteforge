@@ -487,6 +487,11 @@ describe('a control that was fired records what was true of it (0024 §2, ruling
     attemptIndex: 7,
     visible: true, stable: true, receivesPointerEvents: false, enabled: true,
     inViewport: true, navigationPending: false, occludedBy: 'div.toast-stack',
+    // Scrolled into view on request, arrived inside the viewport, still covered
+    // — the state that separates "cannot be scrolled" from "something is on top".
+    scrollIntoView: 'succeeded' as const,
+    inViewportAfterScroll: true,
+    occludedByAfterScroll: 'div.toast-stack',
   };
 
   it('accepts a driven control carrying its diagnostic', () => {

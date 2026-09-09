@@ -40,7 +40,10 @@
         "enabled": true,
         "inViewport": true,
         "navigationPending": false,
-        "occludedBy": "div.toast-stack"
+        "occludedBy": "div.toast-stack",
+        "scrollIntoView": "succeeded",
+        "inViewportAfterScroll": true,
+        "occludedByAfterScroll": "div.toast-stack"
       }
     }
   ]

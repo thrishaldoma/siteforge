@@ -164,8 +164,8 @@
     },
     {
       "path": "flows/skipped-controls.json",
-      "sha256": "afc9730e6be5aad7c035002d1e3765629b626ed7cb07c1c39821759a2b6a86b4",
-      "bytes": 1293
+      "sha256": "11430f6f66a10c64fd4be2fe214373135f82b3e5a8ec4d4f470ded6d0a7679cf",
+      "bytes": 1423
     },
     {
       "path": "network/endpoints.json",
@@ -189,13 +189,13 @@
     },
     {
       "path": "manifest.json",
-      "sha256": "6ee0fef04de8dc3f906655f6b1f3d0155f7d3cbe4b7f04291cd5d09e23bd3bc5",
+      "sha256": "922c2f2097b060a8905dc90d770268849c57868a21e4b78160102c1799d17912",
       "bytes": 4677
     },
     {
       "path": "coverage.json",
-      "sha256": "f42895300230a37a6a3eca6fe678a255f943947db59aa551e1f0d432a674d20f",
-      "bytes": 3539
+      "sha256": "21f6b69cddc40b3f967765d3b84774f5e4182d2264edf6f8d331ca55b295c0c9",
+      "bytes": 3593
     }
   ],
   "warnings": [
