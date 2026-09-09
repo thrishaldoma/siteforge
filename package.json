@@ -20,7 +20,10 @@
     "rung3": "node packages/capture/scripts/rung3-run.mjs",
     "verify:clean": "node scripts/verify-clean.mjs",
     "sabotage": "node scripts/sabotage.mjs",
-    "gitea:snapshot": "node packages/verify/scripts/gitea-snapshot.mjs"
+    "gitea:snapshot": "node packages/verify/scripts/gitea-snapshot.mjs",
+    "capture:site": "pnpm -s build && node packages/capture/scripts/capture-site.mjs",
+    "infer": "pnpm -s build && node packages/infer/scripts/infer-run.mjs",
+    "grade:capture": "pnpm -s build && node packages/verify/scripts/grade-capture.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
