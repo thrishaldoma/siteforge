@@ -91,16 +91,33 @@ So: key fields only, and the cap for them is stated in §4 rather than removed.
 
 ## 4. What is recorded
 
-On the endpoint's response schema, at the key field's node, beside the existing
-`examples`:
+On the **endpoint descriptor**, not inside the response schema:
 
 ```
-keyValues: {
-  values: [ … ],     // scrubbed, sorted, capped
+observedKeyValues: {
+  field: 'id',          // what `keyOf`'s rule selected
+  values: [ … ],        // scrubbed, sorted, capped
   distinctObserved: n,  // how many there were before the cap
   truncated: boolean,   // whether the cap bit
-}
+} | null
 ```
+
+The first draft of this section put it on the schema node beside `examples`, and
+that is wrong twice over.
+
+`JsonSchemaNode` is **shared between the capture model and SiteModel** — an
+operation's response schema is the same type — so a field added there grows
+SiteModel's claim surface, and `needs.ts` requires every leaf to have a consumer
+that asks for it. There is no codegen need and no scored category for a capture
+audit aid, so it would have to be claimed by something invented for the purpose.
+`EndpointDescriptor` is capture-only, and nothing downstream is obliged to
+notice.
+
+The better reason is that it is the truer home. Key values are a fact about
+**what this endpoint's rows contained**, not about the shape those rows had, and
+the schema node describes the shape. Putting an observation inside a shape
+description is the category error §5 avoids elsewhere by keeping `examples`
+explicitly labelled as review material.
 
 Three properties, and each is there because of a way this could mislead:
 
