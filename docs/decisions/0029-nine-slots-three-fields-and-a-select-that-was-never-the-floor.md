@@ -145,6 +145,44 @@ move by emitting a narrowing the observation contradicts.
 The denominators themselves must also not move. They are a property of the truth
 document and of which endpoints matched, and nothing here touches either.
 
+## 6.1 Measured
+
+Capture re-run against the pinned digest, infer re-run, graded. Every prediction
+held.
+
+| metric | predicted | measured |
+|---|---|---|
+| `narrowing.recall` | 0/9 | **0.0000 0/9** |
+| `entity-narrowing.recall` | 0/1 | **0.0000 0/1** |
+| `entity-narrowing.precision` | vacuous | **vacuous** |
+| `endpoint-identity.precision` | unchanged | 0.9545 21/22 |
+| `request-field-presence` | unchanged | 0.6494 50/77 · 0.5155 50/97 |
+| `response-field-presence` | unchanged | 0.4538 270/595 · 0.4954 270/545 |
+| `field-type.accuracy` | unchanged | 0.8969 287/320 |
+| `entity-identity.precision` | unchanged | 1.0000 4/4 |
+| `entity-field-presence` | unchanged | 1.0000 58/58 · 0.9355 58/62 |
+| `auth.*` | unchanged | evidence 1.0000 17/17 · truth 0.6190 13/21 · under-gate 0 |
+| `uiConstraintSelects` | 6 | **6**, equal to `domSelectElements` |
+| `uiConstraintsBindable` | 0 | **0** — the whole gap is 0030's |
+| `scalarKindsWithExamples` | equal to observed | **2 = 2** |
+
+**And the input demonstrably differed**, which is the half that makes a null
+result a result: numeric nodes carrying observed values went **0 of 68 → 68 of
+68** in the capture, 86 of 86 in the model. `assessVariantIsMeasurable`'s rule
+applied by hand — an artifact that did not change reports the same "nothing
+moved" a real null result reports.
+
+`scalarKindsWithExamples` reads 2 rather than 3 because Vikunja's JSON carries
+integers and booleans and no fractional numbers. Both sides say 2; the equality
+is comparing like with like.
+
+One thing was wrong first time and is worth recording. `bodyScalarKinds` came
+back **0 against an extracted 2**, so the invariant read *vacuous* rather than
+*failing*: `observation.body` is already parsed by the route handler, and
+re-parsing it threw on every exchange. §13's first vacuity mode, wearing a green
+tick — and found only by reading the number instead of the ✓, which is the
+argument for printing both sides of every invariant rather than a verdict.
+
 ## 7. Invariants added
 
 §6's standing rule: whenever a rung finds a silent drop, add the invariant that
