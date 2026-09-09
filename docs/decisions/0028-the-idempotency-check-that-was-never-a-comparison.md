@@ -135,7 +135,68 @@ the shim and the manifest, so the two cannot drift apart again.
 
 ## 5. Measured after the fix
 
-*(filled in after the second sweep)*
+Three sweeps, and the third is the one that answers the attribution question.
+
+| sweep | crawl | paths not reproducing |
+|---|---|---|
+| fresh container ×3, **before** the shim | 491s | **87 of 166** |
+| fresh container ×3, after the shim | 477s | **34 of 165** |
+| one container held still ×2 | 474s | **43 of 167** |
+| fresh container ×3, **read-only** (no probing) | **50s** | **4 of 81** |
+
+The shim removed 53 paths, and every `dom.json` but one now reproduces.
+
+### The held-container discriminator does not discriminate, and that is a finding
+
+It was built on the ruling's reasoning — hold the target still, and a difference
+that survives is ours. It made things **worse**: 43 varying paths against 34,
+and the endpoint count fell from 22 to 20.
+
+**Because the crawl is not read-only.** §6's probe pass clicks controls, some of
+which create and edit rows, so the second crawl of a held instance is reading
+the first crawl's writes. Holding the container holds the *image* still and lets
+the *data* drift, and the drift is caused by the instrument.
+
+That is 0026's one-shot-reproduction rule in a new place: there, the
+reproduction could not exhibit the failure; here, the control condition
+perturbs the thing it is controlling for. Both read as valid experiments. The
+tell was the direction — a discriminator that is supposed to *remove* a source
+of variance and adds nine paths is not measuring what it was pointed at.
+
+### The read-only crawl is the one that separates them
+
+No probing, fresh container each time: **4 of 81 paths**, and they are one
+mechanism.
+
+```
+routes/tasks-id--auth-desktop--i0/dom.json     <time datetime="2026-09-09T20:43:27Z">
+routes/tasks-id--auth-desktop--i0/meta.json    its content hash, downstream
+manifest.json                                  the aggregate, downstream
+network/endpoints.json                         `samples` only — 8 of 16 endpoints
+```
+
+The `<time>` node is the seeded task's `created`, written by the container's own
+clock when the fixture is seeded. `network/endpoints.json` differs in
+**`samples` and nothing else** — every inferred schema, parameter, auth verdict
+and evidence list is byte-identical across the three runs, because the same
+timestamps ride in the recorded response bodies.
+
+**So the attribution is:**
+
+- **Ours:** everything above four paths. The probe pass — flow traces, probed
+  state deltas, `skipped-controls.json`, `coverage.json`, `stage-report.json`
+  and the route `states.json` that probing contributes to. It is timing, it is
+  the same timing that produces the click timeouts (0026 §3), and §8 makes it a
+  hard failure that this project has not yet paid.
+- **The target's:** the four. A fresh container seeds its fixture rows at
+  whatever time it boots, and nothing short of faking the container's clock
+  changes that. A property to record, per the ruling, not a bug to fix — and it
+  is *not* exempted here, because an exemption on `routes/*/dom.json` would hide
+  every future real difference in the file to silence one node.
+
+And the deterministic core is deterministic: **77 of 81 paths reproduce byte for
+byte**, including every screenshot, every asset, every style table, and every
+inferred endpoint schema.
 
 ## 6. Which earlier results fall inside the variance band
 
@@ -153,17 +214,24 @@ The comparisons that **do** cross two captures are:
 |---|---|
 | `locate/not-found` 16 → 19 (0026) | **this finding**, not a result needing revision |
 | 0024 → 0026 endpoint count 16 → 22 | survives: caused by probing being added, and 22 reproduced in all three runs |
-| 0026's timeout distribution (51 of 51 visible, 49 of 51 off-screen) | **inside the band** — run 3 saw 65 undriveable where runs 1 and 2 saw 72. The 49/51 shape is a proportion from one run and is re-measured in §5 |
+| 0026's timeout distribution (51 of 51 visible, 49 of 51 off-screen) | **inside the band.** Undriveable ran 65–72 across six probing crawls. The *shape* — visible, stable, enabled, centre off-screen — is what the finding rests on, and the population it is drawn from moves by about ±5% between runs |
+| endpoint count 22 | stable across three probing crawls; **20** on a held container and **16** read-only, both explained: probing discovers endpoints, and probing on a mutated instance discovers different ones |
 | "3 emails redacted in the main bundle" | survives: `assets/` reproduced perfectly, all 47 paths |
 
 ---
 
 ## Open
 
-- N=3, not N=10. The variance was structural — 87 of 166 paths, all traceable to
-  one clock — so more runs would have refined a magnitude rather than the
-  finding. Worth revisiting once the tree is stable, where the question changes
-  from "what varies" to "how often".
+- N=3, not N=10, on the probing sweeps. The variance was structural — 87 of 166
+  paths, traceable to one clock — so more runs would have refined a magnitude
+  rather than the finding. The read-only crawl costs 50 seconds rather than
+  eight minutes, so N there is cheap and the number to raise first.
+- **The probe pass is non-deterministic and §8 calls that a hard failure.** It
+  is not fixed here. What has changed is that it is now measured, bounded to one
+  stage, and separated from the target's contribution — the next question is
+  whether a deterministic probe order and a settled page can close it, or
+  whether behaviour probing is inherently a sampled measurement that should
+  record its own variance.
 - This gate is not in `verify:clean` and cannot be: it needs Docker and eight
   minutes a run. M1's gate therefore remains a thing someone must run, which is
   the condition that let it go unrun for its whole life. The honest mitigation
