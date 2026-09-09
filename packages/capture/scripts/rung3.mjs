@@ -996,18 +996,12 @@ const observed = {
     ),
   // Walked from the raw bodies, sharing no code with `inferSchema` — the pass
   // whose `string`-only `examples` branch this invariant exists to catch.
-  bodyScalarKinds: scalarKindsInBodies(
-    observations.map((o) => {
-      try {
-        return JSON.parse(o.body ?? 'null');
-      } catch {
-        // operational: a non-JSON body has no scalar leaves to count. Counting
-        // it as zero is the safe direction — it can only make the invariant
-        // vacuous, never make it pass over a real drop.
-        return null;
-      }
-    }),
-  ).size,
+  // `observation.body` is already parsed — the route handler does the
+  // `JSON.parse`, and a non-JSON body leaves it `undefined`. Re-parsing it here
+  // threw on every exchange and the invariant read **vacuous instead of
+  // failing**, which is §13's first vacuity mode wearing a green tick. Caught by
+  // reading the number rather than the ✓: 0 kinds observed against 2 extracted.
+  bodyScalarKinds: scalarKindsInBodies(observations.map((o) => o.body ?? null)).size,
 };
 const extracted = {
   styleTableEntries: [...routeArtifacts.values()].reduce((n, r) => n + r.styles.table.length, 0),
