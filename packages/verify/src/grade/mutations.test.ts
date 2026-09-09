@@ -34,22 +34,41 @@ describe('the baseline is a legal model, not a transcription of the answer key',
 
   it('scores 1.000 on every claim it makes, which is evidence of nothing', () => {
     // 0015 §7, stated as a test so nobody reads the baseline table as a result.
-    // It was transcribed from the ground truth, so twelve perfect scores are
+    // It was transcribed from the ground truth, so every perfect score is
     // circular by construction. The deltas below are the finding.
+    //
+    // 18 after 0023: the five gradeable `inference` metrics joined the thirteen
+    // `capture-fidelity` ones. The count is asserted rather than a floor so a
+    // metric quietly dropping out of the scored set fails here.
     const scored = harness.baseline.metrics.filter((m) => !m.vacuous);
-    expect(scored.filter((m) => m.value === 1)).toHaveLength(13);
+    expect(scored.filter((m) => m.value === 1)).toHaveLength(18);
     expect(scored.find((m) => m.id === 'auth.under-gate-count')?.value).toBe(0);
   });
 
-  it('and still fails one category, for a reason that is not about the model', () => {
-    // The only shortfall left is a truth side nobody has built. Auth cleared
-    // once evidence coverage stopped averaging probeable reads against
-    // mutations §6 forbids probing — the split, not a relaxed threshold.
+  it('and still fails only where a truth side does not exist', () => {
+    // Every remaining shortfall is a truth side nobody built or nobody can
+    // build, never a claim the model got wrong. Asserted as the complete set of
+    // failing metric ids, so a real regression cannot hide among them.
+    //
+    // 0023 added two: `entity-identity.recall`, because Swagger 2.0 does not
+    // declare which definitions are tables, and `entity-relation`, whose only
+    // declarable associations are shapes `RelationSchema` cannot express. Both
+    // are ungated and both still fail, because §6 scores vacuity as a failure —
+    // the same treatment `identifier` has had since 0018, and a red that says
+    // "unbuilt" rather than "wrong".
     expect(harness.baseline.metrics.filter((m) => !m.passed).map((m) => m.id)).toEqual([
       'identifier.precision',
       'identifier.recall',
+      'entity-identity.recall',
+      'entity-relation.precision',
+      'entity-relation.recall',
     ]);
-    expect(harness.baseline.failedCategories).toEqual(['identifier']);
+    // In the contract's own category order, which is the metric table's.
+    expect(harness.baseline.failedCategories).toEqual([
+      'identifier',
+      'entity-identity',
+      'entity-relation',
+    ]);
   });
 
   it('covers a slice of the spec, and the report says how much', () => {
@@ -95,12 +114,17 @@ describe('every mutation moves the metric it names', () => {
     }
   });
 
-  it('the blocked row is blocked by a fact in the truth, not by a note', () => {
-    // It turns itself back on the day the identifier truth side lands.
+  it('every blocked row is blocked by a fact in the truth, not by a note', () => {
+    // Each turns itself back on the day its truth side lands: `staleBlocks`
+    // names any row whose category is no longer ungrounded, and the harness
+    // fails until the block is lifted. §13 — a known gap is a failing gate or
+    // it is not tracked.
     expect(harness.staleBlocks).toEqual([]);
     const blocked = harness.results.filter((r) => r.blocked).map((r) => r.mutation.id);
-    expect(blocked).toEqual(['identifier-mispointed']);
-    expect(harness.baseline.notDerived.map((n) => n.category)).toContain('identifier');
+    expect(blocked).toEqual(['identifier-mispointed', 'entity-relation-mispointed']);
+    for (const category of ['identifier', 'entity-relation']) {
+      expect(harness.baseline.notDerived.map((n) => n.category)).toContain(category);
+    }
   });
 });
 

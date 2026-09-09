@@ -50,6 +50,7 @@ export const FROZEN_FILES: readonly string[] = [
   'packages/verify/src/grade/grade.ts',
   'packages/verify/src/grade/match.ts',
   'packages/verify/src/grade/fields.ts',
+  'packages/verify/src/grade/entities.ts',
   'packages/verify/src/grade/vocabulary.ts',
   'packages/schema/src/grade-contract.ts',
 ];
@@ -95,7 +96,15 @@ export const NOT_FROZEN: Readonly<Record<string, string>> = {
  * Updating one of these is a decision, not a chore. The commit that changes it
  * carries the entry in `docs/decisions/` that says why.
  *
- * **Moved once, by decision 0022 (`METRICS_VERSION` 2 → 3).** Two files, and
+ * **Moved twice.** Once by 0022 (`METRICS_VERSION` 2 → 3) and once by 0023
+ * (3 → 4), both in the same session, and 0023 §7 said in advance which files it
+ * expected to move — `grade-contract.ts` for the `inference` suite,
+ * `grade.ts` for the entity categories and per-metric `notDerived`, plus a new
+ * `entities.ts` needing a pin of its own. It also said `match.ts`, `fields.ts`
+ * and `vocabulary.ts` should not move and that one of them moving would be a
+ * signal to stop on. Neither did.
+ *
+ * **0022 (`METRICS_VERSION` 2 → 3).** Two files, and
  * the reason is that the contract was mislabelled rather than miscalibrated:
  * 0021 measured that every category here scores a *capture* artifact, so each
  * metric now names a `suite` saying so, and `endpoint-identity.recall` became
@@ -111,18 +120,24 @@ export const NOT_FROZEN: Readonly<Record<string, string>> = {
  * those would show up here as a third hash.
  */
 export const GRADER_FREEZE: Readonly<Record<string, string>> = {
-  // Moved by 0022: the metric id rename reaches `byMetric` and the report.
+  // 0022: the metric id rename reaches `byMetric` and the report.
+  // 0023: the entity categories, and `notDerived` resolved per metric.
   'packages/verify/src/grade/grade.ts':
-    '85f956c98c5366455e92baf7b7632e0a2f2710fe5adc12110dc9b4f6b6969895',
+    '2235fc145d68434803af621524c9cd15d352e6819996e6669a59065a365c0f3c',
   'packages/verify/src/grade/match.ts':
     'd5d355d57b074adb2e4b3aaceead61cf9f15012bb1fcee17ccccbc4f4a0b1a7d',
   'packages/verify/src/grade/fields.ts':
     '77728390c7d19166e1c08d625a56a327c1f41c7677f14520433a058876b0372a',
+  // 0023: new. The model-side entity walk and the pairing, pinned on arrival —
+  // this is the file the enumeration branch exists to catch, and it was caught.
+  'packages/verify/src/grade/entities.ts':
+    '091225a65b2248679a0fc6e1f60aa4513347653f237e2b1315c092e1f53dd80f',
   'packages/verify/src/grade/vocabulary.ts':
     '8f4a65a5e0d04beb8e665385c750cbbd29031b4855b580c1758cd0b4e7685400',
-  // Moved by 0022: the suite field, the conservation label, and the digest.
+  // 0022: the suite field, the conservation label, and the digest.
+  // 0023: the `inference` suite and its seven metrics.
   'packages/schema/src/grade-contract.ts':
-    'e4fd55b1c961140e9fa85445205b27bd3deafa737c711cf16059f976a711996c',
+    '31cc9b0beb151b77d573b716bd51d6574e7566e35045932ebb0a41ac1b9b6ddc',
 };
 
 /**

@@ -156,6 +156,44 @@ const FABRICATED_ENUM_EVIDENCE = {
 // The table
 // ---------------------------------------------------------------------------
 
+
+/** One entity of the baseline. */
+function entityOf(model: SiteModel, name: string): SiteModel['entities'][number] {
+  const found = model.entities.find((e) => e.name === name);
+  if (found === undefined) throw new Error(`the baseline has no entity ${name}`);
+  return found;
+}
+
+/**
+ * Point every reference to one entity name at another.
+ *
+ * The entity name is reachable from operations (`effect.entity`,
+ * `effect.identityEntity`) and from other entities' relations. A rename that
+ * misses one is a model that does not parse, so `entity-renamed` would fail for
+ * the wrong reason — which is the same trap `renameOperation` above exists for.
+ */
+function renameEntity(model: SiteModel, from: string, to: string): void {
+  model.entities = model.entities.map((e) => ({
+    ...e,
+    name: e.name === from ? to : e.name,
+    relations: e.relations.map((r) =>
+      r.references.entity === from ? { ...r, references: { ...r.references, entity: to } } : r,
+    ),
+  }));
+  model.operations = model.operations.map((o) => {
+    if ('entity' in o.effect && o.effect.entity === from) {
+      return { ...o, effect: { ...o.effect, entity: to } };
+    }
+    if ('identityEntity' in o.effect && o.effect.identityEntity === from) {
+      return { ...o, effect: { ...o.effect, identityEntity: to } };
+    }
+    return o;
+  });
+}
+
+const MILESTONE = 'Milestone';
+const LABEL_ENTITY = 'Label';
+
 const LABELS = 'get-api-v1-repos-owner-repo-labels';
 const MILESTONES = 'get-api-v1-repos-owner-repo-milestones';
 const CREATE_LABEL = 'post-api-v1-repos-owner-repo-labels';
@@ -457,6 +495,43 @@ export const MUTATIONS: readonly Mutation[] = [
     },
   },
 
+  {
+    id: 'entity-relation-mispointed',
+    change: 'point Milestone.state at a relation referencing Label, which the document does not declare',
+    reachable:
+      "value overlap between two low-cardinality columns, the collision §7.5 says the name heuristic cannot see either. `RelationSchema` demands value-overlap evidence and this supplies it — an over-eager overlap check is how a join the clone fails on gets written",
+    /**
+     * Blocked by a **fact**, checked against the truth rather than asserted
+     * here: Swagger 2.0 declares no scalar foreign keys, so there is nothing to
+     * score this against. The day a target's document supplies one — a vendor
+     * extension, or an OAS 3.1 `$ref` on a scalar — `FORMAT_NOT_DERIVED` loses
+     * the entry, this row unblocks itself, and the harness demands it assert.
+     * §13: a known gap is a failing gate or it is not tracked.
+     */
+    blockedBy: 'entity-relation',
+    mustMove: [{ metric: 'entity-relation.precision', direction: 'down', minimum: 0.05 }],
+    mustHold: ['entity-identity.precision'],
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      model.entities = model.entities.map((e) =>
+        e.name !== MILESTONE
+          ? e
+          : {
+              ...e,
+              relations: [
+                {
+                  field: 'state',
+                  references: { entity: LABEL_ENTITY, field: 'name' },
+                  evidence: 'value-overlap' as const,
+                  observedOverlap: { distinctValues: 2, matched: 2 },
+                },
+              ],
+            },
+      );
+      return { ...input, model: legal(model) };
+    },
+  },
+
   // --- the controls -------------------------------------------------------
   {
     id: 'path-param-renamed',
@@ -582,6 +657,130 @@ export const MUTATIONS: readonly Mutation[] = [
           },
         },
       }));
+      return { ...input, model: legal(model) };
+    },
+  },
+  // ---- suite: inference (0023 §6) -----------------------------------------
+  {
+    id: 'entity-split-in-two',
+    change: 'split Label into two entities, each reached through its own operation',
+    reachable:
+      "what infer does with dedup off, measured: the same Vikunja capture yields seven entities where four suffice, because a list view returning four of an item view's fourteen fields gets its own shape identity. An over-strict structural hash is the realistic failure, not a hypothetical one",
+    mustMove: [{ metric: 'entity-identity.precision', direction: 'down', minimum: 0.1 }],
+    // Field presence is scored over pairs and an ambiguity yields no pair, so
+    // those denominators legitimately shrink here and are not held.
+    mustHold: ['endpoint-identity.precision', 'endpoint-identity.conservation'],
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      const label = entityOf(model, LABEL_ENTITY);
+      model.entities = [...model.entities, { ...structuredClone(label), name: 'LabelRow' }];
+      // The item view now claims the copy: two model entities for one declared
+      // definition, which is exactly the under-merge this row exists to catch.
+      model.operations = model.operations.map((o) =>
+        o.operationId === 'get-api-v1-repos-owner-repo-labels-id' && 'entity' in o.effect
+          ? { ...o, effect: { ...o.effect, entity: 'LabelRow' } }
+          : o,
+      );
+      return { ...input, model: legal(model) };
+    },
+  },
+  {
+    id: 'entity-field-dropped',
+    change: 'drop Milestone.dueOn from the entity',
+    reachable:
+      'a response that never carried the field, which is the ordinary case — `required` is the intersection across observations, so a field absent from one response is simply not modelled',
+    mustMove: [{ metric: 'entity-field-presence.recall', direction: 'down', minimum: 0.01 }],
+    mustHold: ['entity-identity.precision'],
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      model.entities = model.entities.map((e) =>
+        e.name === MILESTONE ? { ...e, fields: e.fields.filter((f) => f.name !== 'dueOn') } : e,
+      );
+      return { ...input, model: legal(model) };
+    },
+  },
+  {
+    id: 'entity-field-fabricated',
+    change: 'add Milestone.assigneeCount, which the document does not declare',
+    reachable:
+      "a key read off an envelope rather than off the row — `rowOf` takes the response root as the row, so a wrapper's own field becomes a column of the entity inside it",
+    mustMove: [{ metric: 'entity-field-presence.precision', direction: 'down', minimum: 0.01 }],
+    mustHold: ['entity-identity.precision', 'entity-field-presence.recall'],
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      model.entities = model.entities.map((e) =>
+        e.name === MILESTONE
+          ? {
+              ...e,
+              fields: [
+                ...e.fields,
+                {
+                  name: 'assigneeCount',
+                  type: 'integer' as const,
+                  optional: true,
+                  generatedBy: 'none' as const,
+                  narrowing: null,
+                  pathParamOf: [],
+                },
+              ],
+            }
+          : e,
+      );
+      return { ...input, model: legal(model) };
+    },
+  },
+  {
+    id: 'entity-narrowing-fabricated',
+    change: 'narrow Label.color to an enum on an entity field the document leaves open',
+    reachable:
+      "§7.5's failure on the artifact §8 actually builds the store from. Three distinct colours across thirty-one labels reads as a closed domain to any cardinality heuristic, and the evidence record parses",
+    mustMove: [{ metric: 'entity-narrowing.precision', direction: 'down', minimum: 0.02 }],
+    mustHold: ['entity-identity.precision', 'entity-field-presence.precision'],
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      model.entities = model.entities.map((e) =>
+        e.name === LABEL_ENTITY
+          ? {
+              ...e,
+              fields: e.fields.map((f) =>
+                f.name === 'color' ? { ...f, narrowing: FABRICATED_ENUM_EVIDENCE } : f,
+              ),
+            }
+          : e,
+      );
+      return { ...input, model: legal(model) };
+    },
+  },
+  {
+    id: 'entity-narrowing-widened',
+    change: 'drop the enum evidence from Milestone.state, the one entity field carrying any',
+    reachable:
+      'the same thin-crawl widening as `narrowing-widened`, one artifact along: §7.5 refuses an enum below 20 distinct records without a UI constraint, so the ladder declines and the column stays a string',
+    mustMove: [{ metric: 'entity-narrowing.recall', direction: 'down', minimum: 0.5 }],
+    mustHold: ['entity-identity.precision', 'entity-field-presence.recall'],
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      model.entities = model.entities.map((e) =>
+        e.name === MILESTONE
+          ? { ...e, fields: e.fields.map((f) => (f.name === 'state' ? { ...f, narrowing: null } : f)) }
+          : e,
+      );
+      return { ...input, model: legal(model) };
+    },
+  },
+  {
+    id: 'entity-renamed',
+    change: 'rename Milestone to Checkpoint, everywhere it is referenced',
+    reachable:
+      "the normal case rather than an error, and not hypothetical: `entityNameFor` takes the last literal path segment, so `/api/v1/tasks/all` produced an entity called `All` on the real Vikunja run where the document says `models.Task`. Capture has no way to know",
+    // The control this table would be incomplete without (§13). Pairing goes
+    // through the matched operation and never the name, so a grader that keyed
+    // on `entities[].name` would move here — and it must not move at all.
+    mustMove: [],
+    mustHold: 'all',
+    apply: (input) => {
+      const model = cloneModel(input.model);
+      renameEntity(model, MILESTONE, 'Checkpoint');
       return { ...input, model: legal(model) };
     },
   },

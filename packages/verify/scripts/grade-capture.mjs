@@ -73,7 +73,28 @@ console.log(
  */
 for (const suite of GRADE_SUITES) {
   const metrics = report.metrics.filter((m) => m.suite === suite);
-  console.log('');
+  /**
+ * The `inference` suite's alignment, and the capture half of it.
+ *
+ * `unpairedReachable` is why `entity-identity.recall` is not a metric — and it
+ * is deliberately unattributed, because the grader never sees a response body
+ * and so cannot tell an empty collection from a token mint infer was right to
+ * decline. 0023 §3.1 attributes them by hand.
+ */
+const e = report.entities;
+console.log(
+  `  entities: ${e.paired} paired, ${e.inScope} model entities in scope, ` +
+  `${e.truthReachable} reachable in the document, ${e.ambiguous.length} ambiguous`,
+);
+if (e.unpairedReachable.length > 0) {
+  console.log(
+    `  ${e.unpairedReachable.length} reachable definition(s) paired with no entity — cause NOT attributable from here ` +
+    `(an empty collection and a correctly-declined envelope look identical to the grader): ` +
+    e.unpairedReachable.join(', '),
+  );
+}
+for (const a of e.ambiguous) console.log(`  ambiguous: ${a}`);
+console.log('');
   console.log(`  ── ${suite} ${'─'.repeat(Math.max(0, 62 - suite.length))}`);
   console.log('  metric                                value       n/d  gate');
   for (const metric of metrics) {

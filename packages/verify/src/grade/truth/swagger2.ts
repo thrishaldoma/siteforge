@@ -54,6 +54,26 @@ export interface TruthResponseField extends TruthField {
   readonly status: string;
 }
 
+/**
+ * A definition the document declares, read as a table (0023 §2).
+ *
+ * `properties` is depth-1 only and includes **every** declared property —
+ * scalar, object and array alike — because `FieldTypeSchema`'s `json` member
+ * carries an object or an array, so every one is a claim `SiteModel` can make.
+ * 0018's vocabulary rule permits excluding a claim the model cannot express and
+ * never one it can, and an earlier draft that counted scalars only turned a
+ * legitimate `createdBy: json` into a precision miss.
+ */
+export interface TruthEntity {
+  /** As the document names it: `models.Task`. Never matched on (0023 §2). */
+  readonly name: string;
+  readonly properties: readonly TruthField[];
+  /** `METHOD shape` keys of the operations whose 2xx response root it is. */
+  readonly operations: readonly string[];
+  /** True where every observing operation returned it as an array element. */
+  readonly fromList: boolean;
+}
+
 export interface TruthEndpoint {
   readonly method: string;
   /** As written in the document, relative to `basePath`. */
@@ -70,6 +90,14 @@ export interface TruthEndpoint {
   readonly auth: TruthAuth;
   /** The status the pinned server returned to an uncredentialed request. */
   readonly authEvidence: { readonly anonymousStatus: number | null } | null;
+  /**
+   * The definition this operation's 2xx response carries as its row, if any.
+   *
+   * The pairing key for `entity-identity` (0023 §2): the model says which entity
+   * an operation's rows are, the document says which definition it returns, and
+   * the two are paired **through the operation** rather than by name.
+   */
+  readonly rowDefinition: { readonly name: string; readonly fromList: boolean } | null;
 }
 
 export interface TruthModel {
@@ -77,6 +105,8 @@ export interface TruthModel {
   readonly specSha256: string;
   readonly basePath: string;
   readonly endpoints: readonly TruthEndpoint[];
+  /** Definitions reachable as a 2xx response row of an endpoint above. */
+  readonly entities: readonly TruthEntity[];
   readonly counts: {
     readonly paths: number;
     readonly operations: number;
@@ -367,8 +397,52 @@ export function classifyAnonymousStatus(status: number | null): TruthAuth {
  */
 export interface NotDerived {
   readonly category: GradeCategoryId;
+  /**
+   * One metric, where only part of a category is ungrounded.
+   *
+   * Added by 0023 because two categories need it and one of them is already
+   * wrong without it. `entity-identity` precision is grounded while its recall
+   * is not (§3.1), and `narrowing`'s stated reason — "declares no formats at
+   * all" — grounds only its *precision*: post-`allOf`-fix the document declares
+   * 7 enum claims on matched response fields, so `narrowing.recall` is
+   * derivable and was reading `vacuous` when it should read a number.
+   *
+   * Omitted means the whole category, which is what `identifier` still is.
+   */
+  readonly metric?: string;
   readonly reason: string;
 }
+
+/**
+ * Categories no Swagger 2.0 document can ground, whatever it describes.
+ *
+ * These are properties of the **format**, not of a target, so they live here
+ * rather than being copied into every `TruthSource` — where the third copy would
+ * be the one that drifts. A source may still add its own entries, and may
+ * override one of these by naming the same category or metric.
+ *
+ *   - **which definitions are tables.** Swagger 2.0 has no way to say it. 0023
+ *     §3.1 measured three candidate criteria against Vikunja and every one
+ *     misclassified in at least one direction, so a recall metric would report
+ *     the crawl's seeding as inference quality.
+ *   - **scalar foreign keys.** The format declares `project_id` an integer.
+ *     Nothing links it to `models.Project`, and the associations it *can*
+ *     express are embedded objects and arrays, which `RelationSchema` cannot
+ *     represent. 0018's vocabulary rule: exclude a claim the model cannot make.
+ */
+export const FORMAT_NOT_DERIVED: readonly NotDerived[] = [
+  {
+    category: 'entity-identity',
+    metric: 'entity-identity.recall',
+    reason:
+      'Swagger 2.0 does not declare which of its definitions are tables, so there is no denominator for "entities a faithful mock needs" that is not a proxy for something else (0023 §3.1).',
+  },
+  {
+    category: 'entity-relation',
+    reason:
+      'Swagger 2.0 declares no scalar foreign keys — an `_id` property is an integer with a prose description — and the associations it does declare are embedded objects or arrays, which `RelationSchema` cannot express (0023 §3.2).',
+  },
+];
 
 export interface TruthSource {
   readonly id: string;
@@ -379,6 +453,7 @@ export interface TruthSource {
   readonly floors: (
     counts: TruthModel['counts'],
     endpoints: readonly TruthEndpoint[],
+    entities: readonly TruthEntity[],
   ) => Array<[boolean, string]>;
 }
 
@@ -479,6 +554,7 @@ export function buildSwagger2Truth(snapshot: Snapshot, source: TruthSource): Tru
         responseFields: responseFields(spec, operation),
         auth: observed === undefined ? 'unobserved' : classifyAnonymousStatus(observed),
         authEvidence: observed === undefined ? null : { anonymousStatus: observed },
+        rowDefinition: rowDefinitionOf(spec, operation),
       });
     }
   }
@@ -495,7 +571,8 @@ export function buildSwagger2Truth(snapshot: Snapshot, source: TruthSource): Tru
     authUnobserved: by('unobserved'),
   };
 
-  const floors = source.floors(counts, endpoints);
+  const entities = deriveEntities(spec, endpoints);
+  const floors = source.floors(counts, endpoints, entities);
   const broken = floors.filter(([held]) => !held).map(([, message]) => message);
   if (broken.length > 0) {
     throw new TruthLoadError(`the ground truth did not load:\n  - ${broken.join('\n  - ')}`);
@@ -506,9 +583,126 @@ export function buildSwagger2Truth(snapshot: Snapshot, source: TruthSource): Tru
     specSha256,
     basePath,
     endpoints,
+    entities,
     counts,
-    notDerived: [...source.notDerived],
+    // Format-level first, then the source's, which wins where both name the
+    // same category or metric — a target that finds a way to ground one of
+    // these overrides it rather than editing the shared list.
+    notDerived: mergeNotDerived(FORMAT_NOT_DERIVED, source.notDerived),
   };
+}
+
+/**
+ * The definition name a schema node resolves to, with the array step taken.
+ *
+ * `deref` already tracks the refs it followed for cycle detection; the *last*
+ * one is the name the node resolves to. Returning it is what makes pairing
+ * possible at all: without a name there is nothing to pair an entity *to*, and
+ * with only the resolved node there is no way to tell two structurally
+ * identical definitions apart.
+ */
+function rowDefinitionOf(spec: Json, operation: Json): TruthEndpoint['rowDefinition'] {
+  const responses = asObject(operation['responses']);
+  if (responses === null) return null;
+  for (const [status, raw] of Object.entries(responses)) {
+    if (!status.startsWith('2')) continue;
+    const response = asObject(raw);
+    if (response === null) continue;
+    const { node: unwrapped } = deref(spec, response, new Set());
+    const schema = asObject(unwrapped['schema']);
+    if (schema === null) continue;
+    const { node: root } = deref(spec, schema, new Set());
+    // Two shapes and no guessing beyond them, which is `rowOf`'s rule on the
+    // other side: an array of objects is a list of rows, a bare object is one
+    // row. Anything else yields nothing.
+    const isArray = root['type'] === 'array';
+    const target = isArray ? asObject(root['items']) : schema;
+    if (target === null) continue;
+    const { node, seen } = deref(spec, target, new Set());
+    const ref = [...seen].pop();
+    if (ref === undefined) continue;
+    if (node['type'] !== 'object' || asObject(node['properties']) === null) continue;
+    return { name: ref.split('/').pop() ?? ref, fromList: isArray };
+  }
+  return null;
+}
+
+/** Depth-1 properties of one definition, in the truth's own field vocabulary. */
+function definitionProperties(spec: Json, name: string): TruthField[] {
+  const definitions = asObject(spec['definitions']);
+  const definition = definitions === null ? null : asObject(definitions[name]);
+  if (definition === null) return [];
+  const { node } = deref(spec, definition, new Set());
+  const properties = asObject(node['properties']);
+  if (properties === null) return [];
+  const required = new Set(Array.isArray(node['required']) ? (node['required'] as string[]) : []);
+  const out: TruthField[] = [];
+  for (const [property, raw] of Object.entries(properties)) {
+    const child = asObject(raw);
+    if (child === null) continue;
+    const { node: resolved } = deref(spec, child, new Set());
+    out.push({
+      pointer: property,
+      type: typeof resolved['type'] === 'string' ? (resolved['type'] as string) : 'object',
+      format: typeof resolved['format'] === 'string' ? (resolved['format'] as string) : null,
+      enumValues: Array.isArray(resolved['enum'])
+        ? (resolved['enum'] as unknown[]).map(String)
+        : null,
+      required: required.has(property),
+    });
+  }
+  return out;
+}
+
+/**
+ * The entity truth side: definitions reachable as a 2xx response row.
+ *
+ * Reachability is over the endpoints handed in, so a caller scoring a crawl gets
+ * the definitions that crawl could have seen. What this deliberately does **not**
+ * do is decide which definitions are *tables* — 0023 §3.1 measured three
+ * candidate criteria and every one misclassified, so `entity-identity.recall`
+ * is `notDerived` rather than computed against a denominator that would report
+ * the crawl's seeding as inference quality.
+ */
+function deriveEntities(spec: Json, endpoints: readonly TruthEndpoint[]): TruthEntity[] {
+  const byName = new Map<string, { operations: string[]; fromList: boolean[] }>();
+  for (const endpoint of endpoints) {
+    if (endpoint.rowDefinition === null) continue;
+    const { name, fromList } = endpoint.rowDefinition;
+    const seen = byName.get(name) ?? { operations: [], fromList: [] };
+    seen.operations.push(`${endpoint.method} ${endpoint.shape}`);
+    seen.fromList.push(fromList);
+    byName.set(name, seen);
+  }
+  return [...byName.entries()]
+    .map(([name, { operations, fromList }]) => ({
+      name,
+      properties: definitionProperties(spec, name),
+      operations,
+      // empty: unreachable — a name is in this map only because an endpoint
+      // pushed a `fromList` beside it. And `true` is harmless either way:
+      // `fromList` is reported, never scored.
+      fromList: fromList.every((f) => f),
+    }))
+    .filter((entity) => entity.properties.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Format-level entries, overridden by any source entry naming the same key.
+ *
+ * Keyed on `metric ?? category`, so a source that grounds
+ * `entity-identity.recall` replaces exactly that and a source that grounds the
+ * whole of `entity-relation` replaces exactly that.
+ */
+export function mergeNotDerived(
+  format: readonly NotDerived[],
+  source: readonly NotDerived[],
+): NotDerived[] {
+  const keyOf = (n: NotDerived): string => n.metric ?? n.category;
+  const merged = new Map(format.map((n) => [keyOf(n), n]));
+  for (const entry of source) merged.set(keyOf(entry), entry);
+  return [...merged.values()];
 }
 
 /** The truth, read from the committed snapshot. The wiring, and nothing else. */

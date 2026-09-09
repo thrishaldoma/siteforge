@@ -37,6 +37,7 @@ import {
   type SiteModel,
 } from '@siteforge/schema';
 import { matchEndpoints, type Matching, type MatchedPair, type ObservedEndpoint } from './match.js';
+import { matchEntities, scoreEntities, type EntityMatching } from './entities.js';
 import { modelFieldPointers, typeAgrees } from './fields.js';
 import { isExpressibleFormat } from './vocabulary.js';
 import type { NotDerived, TruthField, TruthModel } from './truth/swagger2.js';
@@ -116,6 +117,23 @@ export interface GradeReport {
     readonly unprobeable: number;
   };
   readonly divergence: DivergenceBudget;
+  /**
+   * The `inference` suite's alignment, reported the way `matching` is.
+   *
+   * `unpairedReachable` is the miss set **unattributed**, and the name is the
+   * point: the grader sees a model, a truth and a `(method, pathPattern)` list,
+   * never a response body, so it cannot tell an empty collection from a token
+   * mint infer correctly declined. 0023 §3.1 attributes them by hand and that is
+   * why `entity-identity.recall` is `notDerived` — a metric over the reachable
+   * set would report the crawl's seeding as inference quality.
+   */
+  readonly entities: {
+    readonly paired: number;
+    readonly inScope: number;
+    readonly truthReachable: number;
+    readonly ambiguous: readonly string[];
+    readonly unpairedReachable: readonly string[];
+  };
   /** Categories whose truth side the loader does not derive. Vacuous, and named. */
   readonly notDerived: readonly NotDerived[];
   /** Every gated metric passed and none was vacuous. */
@@ -466,7 +484,23 @@ function exclusions(entries: readonly KnownDivergence[]): Map<GradeCategoryId, S
 export function gradeSiteModel(input: GradeInput): GradeReport {
   const { model, truth, observed, divergence } = input;
   const excluded = exclusions(divergence);
-  const notDerived = new Map(truth.notDerived.map((n) => [n.category, n.reason]));
+  /**
+   * Ungrounded by category, and by metric where only half a category is.
+   *
+   * 0023 §3.4: `entity-identity` precision is grounded while its recall is not,
+   * and `narrowing`'s "declares no formats at all" grounds only its precision —
+   * post-`allOf`-fix the document declares 7 enum claims on matched response
+   * fields, so `narrowing.recall` is derivable and had been reading vacuous.
+   * A per-category-only list cannot say either thing.
+   */
+  const notDerivedByCategory = new Map(
+    truth.notDerived.filter((n) => n.metric === undefined).map((n) => [n.category, n.reason]),
+  );
+  const notDerivedByMetric = new Map(
+    truth.notDerived
+      .filter((n): n is NotDerived & { metric: string } => n.metric !== undefined)
+      .map((n) => [n.metric, n.reason]),
+  );
 
   const all = matchEndpoints(model.operations, truth, observed);
   /** The pairs a category scores over, after its own exclusions. */
@@ -486,6 +520,12 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
   const responseFields = fieldCategories(pairsFor('response-field-presence'));
   const narrowings = fieldCategories(pairsFor('narrowing'));
   const authTallies = auth(pairsFor('auth'));
+
+  // The inference suite. Pairing is over the *endpoint* matching, so an entity
+  // reached only through an unmatched operation is out of scope here for the
+  // same reason its operation is.
+  const entityMatching: EntityMatching = matchEntities(model, all, truth);
+  const entityTallies = scoreEntities(entityMatching);
 
   const byMetric: Record<string, Tally> = {
     'endpoint-identity.precision': identity.precision,
@@ -509,6 +549,15 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
     'auth.truth-coverage': authTallies.truthCoverage,
     'auth.evidence-coverage': authTallies.evidenceCoverage,
     'auth.unprobeable-count': authTallies.unprobeable,
+    'entity-identity.precision': entityTallies.identityPrecision,
+    // Ungrounded because the truth says so, like any other category.
+    'entity-identity.recall': ZERO,
+    'entity-field-presence.precision': entityTallies.fieldPrecision,
+    'entity-field-presence.recall': entityTallies.fieldRecall,
+    'entity-relation.precision': ZERO,
+    'entity-relation.recall': ZERO,
+    'entity-narrowing.precision': entityTallies.narrowingPrecision,
+    'entity-narrowing.recall': entityTallies.narrowingRecall,
   };
 
   /**
@@ -536,7 +585,10 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
   const metrics: MetricResult[] = GRADE_METRICS.map((metric) => {
     const tally = byMetric[metric.id] ?? ZERO;
     const ungrounded =
-      emptyTruth ?? notDerived.get(metric.category) ?? tally.ungrounded;
+      emptyTruth ??
+      notDerivedByMetric.get(metric.id) ??
+      notDerivedByCategory.get(metric.category) ??
+      tally.ungrounded;
     const kind: MetricKind = COUNT_METRICS.has(metric.id) ? 'count' : 'rate';
     const vacuous = ungrounded !== undefined || tally.denominator === 0;
     const value = vacuous
@@ -583,6 +635,13 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
       arityMismatches: all.arityMismatches.length,
     },
     crawlCoverage: { observed: all.observedInUniverse, specTotal: all.truthInUniverse },
+    entities: {
+      paired: entityMatching.pairs.length,
+      inScope: entityMatching.inScope.length,
+      truthReachable: entityMatching.truthReachable.length,
+      ambiguous: entityMatching.ambiguous,
+      unpairedReachable: entityMatching.unpairedReachable,
+    },
     auth: {
       observedRequired: authTallies.observedRequired,
       observedNotRequired: authTallies.observedNotRequired,

@@ -37,8 +37,13 @@ import { z } from 'zod';
  * they are grouped into a named `suite` that says so, and
  * `endpoint-identity.recall` is renamed to `.conservation` because it is not a
  * recall metric. Both are shape changes; neither is a number being tuned.
+ *
+ * v4 (decision 0023): the `inference` suite — four categories over
+ * `model.entities`, which no metric read at all. 0021 measured that every
+ * `capture-fidelity` category is blind to every piece of infer; this is the
+ * half that moves.
  */
-export const METRICS_VERSION = 3;
+export const METRICS_VERSION = 4;
 
 /**
  * Which set a metric belongs to — and therefore what it is evidence *about*.
@@ -60,7 +65,7 @@ export const METRICS_VERSION = 3;
  * between suites changes what a number is a claim about, which is exactly the
  * kind of quiet change the digest exists to catch.
  */
-export const GradeSuiteIdSchema = z.enum(['capture-fidelity']);
+export const GradeSuiteIdSchema = z.enum(['capture-fidelity', 'inference']);
 export type GradeSuiteId = z.infer<typeof GradeSuiteIdSchema>;
 
 /**
@@ -71,6 +76,7 @@ export type GradeSuiteId = z.infer<typeof GradeSuiteIdSchema>;
  * the gate is a conjunction.
  */
 export const GradeCategoryIdSchema = z.enum([
+  // capture-fidelity, in table order (0022)
   'endpoint-identity',
   'path-param-arity',
   'path-param-naming',
@@ -81,6 +87,11 @@ export const GradeCategoryIdSchema = z.enum([
   'identifier',
   'synthesized-endpoint',
   'auth',
+  // inference, in table order (0023)
+  'entity-identity',
+  'entity-field-presence',
+  'entity-relation',
+  'entity-narrowing',
 ]);
 export type GradeCategoryId = z.infer<typeof GradeCategoryIdSchema>;
 
@@ -326,6 +337,82 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     gate: null,
     why: 'the other half of the split, kept visible rather than dropped. It is a property of the API surface, not of infer: an API that is mostly mutations simply has more verdicts resting on the fail-closed default, and a reader comparing two evidence-coverage numbers needs to see that before comparing them',
   },
+  // ---- suite: inference (0023) ---------------------------------------------
+  //
+  // Paired to a definition **through the matched operation**, never by name:
+  // `entityNameFor` derives a name from a path segment and cannot know the
+  // document says `models.Project`.
+  {
+    id: 'entity-identity.precision',
+    suite: 'inference',
+    category: 'entity-identity',
+    numerator: 'model entities pairing one-to-one with a definition the document declares',
+    denominator: 'MODEL ENTITY OBJECTS reachable from a matched operation — objects, never distinct names',
+    gate: atLeast(0.9, 'calibration'),
+    why: 'an under-merging dedup emits two entities for one declared definition and both count as ambiguous, which is what makes this the first metric any piece of infer can move. The denominator counts objects because keying it by entity name let seven entities with four names between them collapse into four keys and report the same score as the deduplicated model',
+  },
+  {
+    id: 'entity-identity.recall',
+    suite: 'inference',
+    category: 'entity-identity',
+    numerator: 'declared definitions the model modelled as an entity',
+    denominator: 'NOT DERIVED — the document does not declare which of its definitions are tables',
+    gate: null,
+    why: '0023 §3.1 measured three candidate criteria and every one misclassified: the reachable-response-root set makes recall 0.400 of which no miss is an inference defect (three collections came back empty, three are a token mint, a delete envelope and a capability blob that §7 says to decline); an identity-key test borrows IDENTITY_KEYS from infer so a bug moves both sides; and addressable-by-id admits a `Message` returned by DELETE while rejecting the user row. A metric here would report the crawl’s seeding as inference quality — 0015 §3’s argument one level down',
+  },
+  {
+    id: 'entity-field-presence.precision',
+    suite: 'inference',
+    category: 'entity-field-presence',
+    numerator: 'emitted entity fields the paired definition declares',
+    denominator: 'entity fields the model emitted, on paired entities',
+    gate: atLeast(0.95, 'calibration'),
+    why: 'reads high for a reason that is not inference quality — both sides describe the same server, so it measures document/server agreement plus the field-name transform. It can fall and it is not a conservation check, but it must not be read as "the extraction is perfect"',
+  },
+  {
+    id: 'entity-field-presence.recall',
+    suite: 'inference',
+    category: 'entity-field-presence',
+    numerator: 'declared properties the model carries as an entity field',
+    denominator: 'EVERY property the document declares on paired entities — scalar, object and array alike',
+    gate: atLeast(0.9, 'calibration'),
+    why: '`FieldTypeSchema`’s `json` member carries an object or an array, so every declared property is a claim SiteModel CAN make and 0018’s vocabulary rule permits excluding only claims it cannot. So infer dropping array properties is a visible miss rather than an exemption, which is right: §8 seeds the store from these, and a Task with no `labels` is a real hole in the clone',
+  },
+  {
+    id: 'entity-relation.precision',
+    suite: 'inference',
+    category: 'entity-relation',
+    numerator: 'emitted foreign keys the document corroborates',
+    denominator: 'NOT DERIVED — the one reachable declared relation is a shape RelationSchema cannot express',
+    gate: null,
+    why: '0023 §3.2, measured: the document declares exactly one relation reachable from a matched operation, `models.Task.labels → models.Label`, an array of embedded objects. `RelationSchema` carries a scalar field plus `references`, and `FieldTypeSchema` has no array member — so the claim is unexpressible. Meanwhile `Task.project_id` IS expressible and the document declares it a bare integer with a prose description, linking it to nothing. Truth side empty after the vocabulary restriction, which is 0018’s UNEXPRESSIBLE_FORMATS argument and not a shortfall — and a genuine gap in SiteModel',
+  },
+  {
+    id: 'entity-relation.recall',
+    suite: 'inference',
+    category: 'entity-relation',
+    numerator: 'document-declared relations the model emitted',
+    denominator: 'NOT DERIVED — see entity-relation.precision',
+    gate: null,
+  },
+  {
+    id: 'entity-narrowing.precision',
+    suite: 'inference',
+    category: 'entity-narrowing',
+    numerator: 'emitted entity-field narrowings the declared domain agrees with',
+    denominator: 'enum narrowings the model emitted on paired entity fields',
+    gate: atLeast(0.98, 'structural'),
+    why: 'the same argument as `narrowing.precision`, on the artifact §8 actually builds the store from: a wrong enum on an entity field makes valid states of the real system unrepresentable in the clone. Enum-only on both sides, because this document declares zero formats and silence about a field is not a claim that the field is unconstrained',
+  },
+  {
+    id: 'entity-narrowing.recall',
+    suite: 'inference',
+    category: 'entity-narrowing',
+    numerator: 'declared closed domains the model narrowed',
+    denominator: 'ENUM claims the document declares on paired entity fields — measured: 1',
+    gate: null,
+    why: 'where the enum ladder is finally scored, and the denominator is 1 — `models.Task.repeat_mode`. Reported as coarse rather than relaxed, the treatment 0021 gave `auth.over-gate-rate`’s denominator of one: it is a property of this API and this crawl. Agreement is presence plus cardinality, not membership, because `NarrowingRecord` carries the evidence for an enum and not its value set',
+  },
 ];
 
 /** Every category, in table order. */
@@ -378,7 +465,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  '9513b77918bb1378369ad4c6ad7454c48fc5fb61778ee883e82314fba1933312';
+  '1b418deb953530f5435de305150837b1c019f223274462ba96030ab1e60804aa';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)

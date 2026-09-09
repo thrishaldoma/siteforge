@@ -471,6 +471,36 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
  * category had no path here, the model would have to grow one.
  */
 export const SCORED_FIELD_PATHS: Readonly<Record<GradeCategoryId, readonly ModelPath[]>> = {
+  // ---- suite: inference (0023) ---------------------------------------------
+  //
+  // `operations[].effect.entity` is the pairing key and appears under every
+  // entity category that needs one: pairing is through the matched operation and
+  // never by name, so `entities[].name` is read to *report* a pair and never to
+  // form one.
+  'entity-identity': [
+    'entities[].name',
+    'entities[].key.field',
+    'entities[].key.kind',
+    'operations[].effect.entity',
+  ],
+  'entity-field-presence': [
+    'entities[].fields[].name',
+    'entities[].fields[].optional',
+    'operations[].effect.entity',
+  ],
+  'entity-relation': [
+    'entities[].relations[].field',
+    'entities[].relations[].references.entity',
+    'entities[].relations[].references.field',
+    'entities[].relations[].evidence',
+  ],
+  'entity-narrowing': [
+    'entities[].fields[].narrowing.kind',
+    'entities[].fields[].narrowing.distinctValues',
+    'entities[].fields[].narrowing.uiConstraint.optionValues[]',
+    'operations[].effect.entity',
+  ],
+  // ---- suite: capture-fidelity ---------------------------------------------
   'endpoint-identity': [
     'operations[].method',
     'operations[].pathPattern',
@@ -685,18 +715,81 @@ export const SHARED_CLAIMS: readonly SharedClaim[] = [
   {
     by: [
       'need:store-tables',
+      'scored:entity-relation',
       'scored:identifier',
     ],
     paths: [
       'entities[].relations[].evidence',
       'entities[].relations[].field',
-      'entities[].relations[].observedOverlap.distinctValues',
-      'entities[].relations[].observedOverlap.matched',
       'entities[].relations[].references.entity',
       'entities[].relations[].references.field',
     ],
     why:
-      'a foreign key is both the join the store needs and the identifier claim being scored — §7.4 reads it off observed value overlap, and both readers depend on that.',
+      'a foreign key is the join the store needs, the identifier claim `identifier` scores off observed value overlap, and the relation claim `entity-relation` scores against the document. Three readers of one fact, and 0023 §3.2 is why the third exists separately: `identifier` asks whether the overlap was really observed, `entity-relation` asks whether the document agrees a relation is there at all.',
+  },
+  {
+    by: [
+      'need:store-tables',
+      'scored:identifier',
+    ],
+    paths: [
+      'entities[].relations[].observedOverlap.distinctValues',
+      'entities[].relations[].observedOverlap.matched',
+    ],
+    why:
+      'the overlap counts are evidence for the claim rather than the claim itself, so `entity-relation` does not read them — it scores the relation against a declaration, which has no counts in it. Split out from the entry above for exactly that reason.',
+  },
+  // ---- the inference suite's shares (0023) ---------------------------------
+  {
+    by: [
+      'need:store-tables',
+      'scored:entity-identity',
+    ],
+    paths: [
+      'entities[].key.field',
+      'entities[].key.kind',
+      'entities[].name',
+    ],
+    why:
+      "the store names its tables and keys its rows from these; `entity-identity` scores whether the set of tables is right. The name is read to *report* a pair and never to form one — 0023 §2 pairs through the matched operation, and the `entity-renamed` mutation holds every score still to prove it.",
+  },
+  {
+    by: [
+      'need:store-tables',
+      'scored:entity-field-presence',
+    ],
+    paths: [
+      'entities[].fields[].name',
+      'entities[].fields[].optional',
+    ],
+    why:
+      'codegen declares the store column from these; the grader scores whether the column should exist at all. One field, two questions — the same shape as the `field-type` share above it.',
+  },
+  {
+    by: [
+      'need:handlers',
+      'scored:entity-field-presence',
+      'scored:entity-identity',
+      'scored:entity-narrowing',
+    ],
+    paths: [
+      'operations[].effect.entity',
+    ],
+    why:
+      "the handler needs to know which table it writes; all three entity categories need it as the *pairing key*, because 0023 §2 pairs a model entity to a declared definition through the operation rather than by name. Four readers of one field, and the three graders read it for the same reason.",
+  },
+  {
+    by: [
+      'scored:entity-narrowing',
+      'scored:narrowing',
+    ],
+    paths: [
+      'entities[].fields[].narrowing.distinctValues',
+      'entities[].fields[].narrowing.kind',
+      'entities[].fields[].narrowing.uiConstraint.optionValues[]',
+    ],
+    why:
+      "one narrowing record, scored twice against different truth sides: `narrowing` compares it with what the document declares about a *response field*, `entity-narrowing` with what it declares about the *entity column* §8 builds the store from. 0023 §3.3 is why both read `distinctValues` and `uiConstraint.optionValues` — `NarrowingRecord` carries the evidence for an enum and not its value set, so agreement is presence plus cardinality except where a UI constraint supplies real values.",
   },
   {
     by: [

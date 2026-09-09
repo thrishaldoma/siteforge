@@ -46,8 +46,8 @@
   "detail": {
     "stage": "infer",
     "metrics": {
-      "metricsVersion": 3,
-      "contractDigest": "9513b77918bb1378369ad4c6ad7454c48fc5fb61778ee883e82314fba1933312",
+      "metricsVersion": 4,
+      "contractDigest": "1b418deb953530f5435de305150837b1c019f223274462ba96030ab1e60804aa",
       "categories": [
         "endpoint-identity",
         "path-param-arity",
@@ -58,7 +58,11 @@
         "narrowing",
         "identifier",
         "synthesized-endpoint",
-        "auth"
+        "auth",
+        "entity-identity",
+        "entity-field-presence",
+        "entity-relation",
+        "entity-narrowing"
       ],
       "metricIds": [
         "endpoint-identity.precision",
@@ -79,7 +83,15 @@
         "auth.over-gate-rate",
         "auth.truth-coverage",
         "auth.evidence-coverage",
-        "auth.unprobeable-count"
+        "auth.unprobeable-count",
+        "entity-identity.precision",
+        "entity-identity.recall",
+        "entity-field-presence.precision",
+        "entity-field-presence.recall",
+        "entity-relation.precision",
+        "entity-relation.recall",
+        "entity-narrowing.precision",
+        "entity-narrowing.recall"
       ],
       "graded": false
     },

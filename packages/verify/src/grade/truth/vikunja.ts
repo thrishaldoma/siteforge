@@ -39,12 +39,28 @@ export const VIKUNJA_TRUTH: TruthSource = {
     },
     {
       category: 'narrowing',
+      /**
+       * Precision only. 0023 §3.4: this reason grounds one side of the
+       * category and not the other, and saying so needs per-metric
+       * granularity, which is why that landed.
+       */
+      metric: 'narrowing.precision',
       reason:
-        "this document declares no formats at all — zero occurrences of the string `format` in 368KB — and 7 enums, so silence about a field is not a claim that the field is unconstrained. Scoring a model's narrowings against it would mark a correct `date-time` on `created` as a false positive for the document's reticence. Not derived, for the same modality reason as `identifier`.",
+        "this document declares no formats at all — zero occurrences of the string `format` in 368KB — so scoring the model's 43 `date-time` narrowings against it would mark every correct one a false positive for the document's reticence. Silence about a field is not a claim that the field is unconstrained. PRECISION only: the document does declare 7 enum claims on matched response fields, so recall IS derivable and reads a number below.",
     },
+    {
+      category: 'entity-identity',
+      metric: 'entity-identity.recall',
+      reason:
+        "the document does not declare which of its 80 definitions are tables, and 0023 §3.1 measured three candidate criteria that all misclassify. Over reachable response roots, recall reads 0.400 and NONE of the six misses is an inference defect — `models.Team`, `models.TaskComment` and `notifications.DatabaseNotification` came back empty from the seeded instance so no row was ever observed, and `auth.Token`, `models.Message` and `v1.vikunjaInfos` are a token mint, a delete envelope and a capability blob that §7 says to decline. A metric here would report the crawl's seeding as inference quality. `report.entities.withoutObservedRow` carries the capture half as its own number.",
+    },
+    // `entity-relation` and `entity-identity.recall` come from
+    // `FORMAT_NOT_DERIVED`: they are properties of Swagger 2.0 rather than of
+    // this target. This entry keeps only the target-specific measurement —
+    // which definitions were missed here, and why none of it is infer's fault.
   ],
   /** Measured surface: 103 paths, 143 operations, 80 definitions, 1 public / 24 gated. */
-  floors: (counts, endpoints) => [
+  floors: (counts, endpoints, entities) => [
     [counts.operations >= 100, `only ${counts.operations} operations loaded; the pinned image serves 143`],
     [counts.withPathParams >= 40, `only ${counts.withPathParams} operations carry a path parameter`],
     [counts.definitions >= 40, `only ${counts.definitions} definitions loaded`],
@@ -81,6 +97,18 @@ export const VIKUNJA_TRUTH: TruthSource = {
     [
       endpoints.flatMap((e) => e.responseFields).filter((f) => f.enumValues !== null).length >= 20,
       'no enum-bearing response fields were enumerated. This document reaches all seven of its enums through `allOf: [{ $ref }]` wrappers, so a walk that follows only a bare `$ref` reports zero here and quietly raises `narrowing.recall` — 50 were measured against the pinned digest.',
+    ],
+    /**
+     * The entity truth side loaded (0023).
+     *
+     * Measured: 39 definitions are reachable as the 2xx row of some operation on
+     * this surface. Zero means `rowDefinition` stopped resolving — which would
+     * make every `inference` metric vacuous rather than wrong, so it fails here
+     * instead of reporting nothing four times.
+     */
+    [
+      entities.length >= 20,
+      `only ${entities.length} definitions were derived as response rows; the pinned document yields 39. Every \`inference\` metric is computed from these, so a shortfall here reads as four vacuous categories rather than as a truth that did not load.`,
     ],
   ],
 };

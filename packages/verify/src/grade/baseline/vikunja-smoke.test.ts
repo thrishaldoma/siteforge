@@ -52,12 +52,22 @@ describe('the Vikunja truth grades a model at all', () => {
 });
 
 describe('and reports the rest as ungrounded rather than as a score', () => {
-  it('says narrowing is not derived, and why', () => {
-    for (const id of ['narrowing.precision', 'narrowing.recall']) {
-      expect(metric(id)?.vacuous, id).toBe(true);
-      expect(metric(id)?.value, id).toBeNull();
-      expect(metric(id)?.emptyDenominator, id).toContain('declares no formats at all');
-    }
+  it('says narrowing PRECISION is not derived, and why — recall is', () => {
+    // 0023 §3.4 scoped this to one metric. The zero-formats argument grounds
+    // precision and not recall: the document declares no formats, so the
+    // model's `date-time` claims cannot be scored — but it does declare enums,
+    // so a *missed* closed domain is scoreable. Both halves asserted, because
+    // asserting only the vacuous one would pass if recall silently re-joined it.
+    const precision = metric('narrowing.precision');
+    expect(precision?.vacuous).toBe(true);
+    expect(precision?.value).toBeNull();
+    expect(precision?.emptyDenominator).toContain('declares no formats at all');
+
+    // This slice is two zero-parameter GETs, so it happens to declare no enum
+    // on a matched field either — vacuous, but for an empty denominator rather
+    // than for being ungrounded, which is a different sentence.
+    const recall = metric('narrowing.recall');
+    expect(recall?.emptyDenominator).not.toContain('declares no formats at all');
   });
 
   it('leaves the parameterless slice vacuous where it has nothing to say', () => {

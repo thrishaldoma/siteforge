@@ -73,7 +73,7 @@ describe('what this document cannot ground, and why', () => {
     expect(declared).toEqual([]);
     expect(assessFormatVocabulary(declared)).toEqual([]);
 
-    const narrowing = truth.notDerived.find((n) => n.category === 'narrowing');
+    const narrowing = truth.notDerived.find((n) => n.metric === 'narrowing.precision');
     expect(narrowing?.reason).toContain('declares no formats at all');
   });
 
@@ -86,8 +86,21 @@ describe('what this document cannot ground, and why', () => {
     ).toEqual([]);
   });
 
-  it('names identifier for the same modality reason as every other target', () => {
-    expect(truth.notDerived.map((n) => n.category).sort()).toEqual(['identifier', 'narrowing']);
+  it('names what it cannot ground, per metric where only half a category is', () => {
+    // Keyed as the grader resolves it. `narrowing.precision` is scoped to one
+    // metric on purpose: the zero-formats argument grounds precision and NOT
+    // recall, because the document does declare 7 enum claims on matched
+    // response fields — so recall reads a number where it used to read vacuous.
+    expect(truth.notDerived.map((n) => n.metric ?? n.category).sort()).toEqual([
+      'entity-identity.recall',
+      'entity-relation',
+      'identifier',
+      'narrowing.precision',
+    ]);
+    // And the target-specific reason wins over the format-level default, which
+    // is what `mergeNotDerived` is for.
+    const recall = truth.notDerived.find((n) => n.metric === 'entity-identity.recall');
+    expect(recall?.reason).toContain('80 definitions');
   });
 });
 
@@ -100,7 +113,7 @@ describe('an API that gates almost everything', () => {
     // Gitea's floor is >= 5 and this one is >= 1. The difference is the
     // measurement — 24 of 25 zero-parameter GETs answer 401, because Vikunja is
     // a personal task manager — and not a threshold moved to make a target fit.
-    const floors = VIKUNJA_TRUTH.floors(truth.counts, truth.endpoints);
+    const floors = VIKUNJA_TRUTH.floors(truth.counts, truth.endpoints, truth.entities);
     const publicFloor = floors.find(([, message]) => message.includes('no public endpoints'));
     expect(publicFloor?.[0]).toBe(true);
   });

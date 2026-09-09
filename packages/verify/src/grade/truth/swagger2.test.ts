@@ -89,10 +89,18 @@ describe('the pinned Gitea snapshot is the ground truth', () => {
     expect(truth.endpoints.flatMap((e) => e.responseFields).some((f) => f.enumValues !== null)).toBe(true);
   });
 
-  it('names the category whose truth side it does not derive', () => {
+  it('names the categories whose truth side it does not derive', () => {
     // Rather than letting it score. §6 makes an empty truth side vacuous and
     // failing; this says the failure is "unbuilt", not "infer missed it".
-    expect(truth.notDerived.map((n) => n.category)).toEqual(['identifier']);
+    //
+    // Asserted as the complete set, keyed the way the grader resolves it —
+    // `metric ?? category` — so a format-level entry silently losing its
+    // per-metric scope, and therefore ungrounding a whole category, fails here.
+    expect(truth.notDerived.map((n) => n.metric ?? n.category).sort()).toEqual([
+      'entity-identity.recall',
+      'entity-relation',
+      'identifier',
+    ]);
   });
 });
 
