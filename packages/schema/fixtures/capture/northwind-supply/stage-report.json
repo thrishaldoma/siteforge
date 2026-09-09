@@ -164,8 +164,8 @@
     },
     {
       "path": "flows/skipped-controls.json",
-      "sha256": "7fa8468c7529e74e318fc9ac72846b4cf5656cb74db355eab56eb4d5310d3242",
-      "bytes": 604
+      "sha256": "afc9730e6be5aad7c035002d1e3765629b626ed7cb07c1c39821759a2b6a86b4",
+      "bytes": 1293
     },
     {
       "path": "network/endpoints.json",
@@ -189,7 +189,7 @@
     },
     {
       "path": "manifest.json",
-      "sha256": "c6e73b8d8050c193801ed174cff3392564aabf61238c713cb851405acf63c4fc",
+      "sha256": "6ee0fef04de8dc3f906655f6b1f3d0155f7d3cbe4b7f04291cd5d09e23bd3bc5",
       "bytes": 4677
     },
     {
@@ -256,6 +256,22 @@
       "stub": {
         "kind": "omitted",
         "detail": "Recorded as a skipped control; infer binds it and codegen implements it against the mock store."
+      }
+    },
+    {
+      "gapId": "gap_d903eb8ddee2",
+      "stage": "capture",
+      "category": "interaction-not-reproducible",
+      "severity": "degraded",
+      "subject": {
+        "routeId": "account-orders--auth-desktop--i0",
+        "nodeId": "n_da219963007efd4a"
+      },
+      "summary": "Quick filter was fired and did not resolve (click/timeout).",
+      "detail": "Discovered via the a11y tree and activated, but the click never became actionable. The diagnostic on the control records which of Playwright's four preconditions was unmet: visible, stable and enabled were all true, and `elementFromPoint` returned a toast stack painted over the centre of the button. Recorded as precondition-unmet rather than as a decision to skip — nothing here was declined — and the cause is left as the observation rather than written up as an explanation.",
+      "stub": {
+        "kind": "omitted",
+        "detail": "Control renders and is focusable; its transition is not reproduced."
       }
     },
     {

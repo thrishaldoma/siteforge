@@ -183,7 +183,7 @@
     "toggle-product-details",
     "delete-account"
   ],
-  "contentHash": "ee0e5124acb426eaa23622368efaa5e8fdfd024d9bed3cf1b79df6918233126c",
+  "contentHash": "65c53a8e488fcfc5309cf98d1dd5d3e9d7f99cc4528bffcddd1dee5e8523b381",
   "counts": {
     "contexts": 3,
     "routes": 8,
@@ -192,6 +192,6 @@
     "assets": 8,
     "endpoints": 7,
     "flows": 3,
-    "gaps": 6
+    "gaps": 7
   }
 }

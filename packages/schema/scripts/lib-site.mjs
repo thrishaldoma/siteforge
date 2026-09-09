@@ -37,6 +37,8 @@ export const GAP = {
   boundDelete: gap('bound-delete-account-endpoint'),
   /** A narrowed field type, review-required (§7). */
   narrowedOrderStatus: gap('narrowed-order-status-enum'),
+  /** A control that was fired and would not resolve — 0024 §3, and its diagnostic. */
+  undriveableControl: gap('undriveable-quick-filter'),
   thirdPartyOrigin: gap('third-party-origin-widgets'),
   closedShadowRoot: gap('closed-shadow-root-nw-rating'),
 };

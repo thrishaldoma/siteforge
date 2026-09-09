@@ -716,6 +716,40 @@ write('flows/skipped-controls.json', S.SkippedControlIndexSchema, {
     matchedTerm: 'delete',
     gapId: GAP.destructiveSkip,
     flowId: 'delete-account',
+    // Declined, never driven: there is no element state to have observed, and
+    // the schema rejects a diagnostic here.
+    diagnostic: null,
+  }, {
+    /**
+     * The other cause, with the record that goes with it.
+     *
+     * A fixture carrying only declined controls never exercises
+     * `precondition-unmet`, so `diagnostic` would read as permanently `null` and
+     * the field it was added for would go untested by every consumer.
+     */
+    controlId: `ctl_${sha256('northwind-control:quick-filter').slice(0, 12)}`,
+    routeId: ROUTE.orders,
+    nodeId: DELETE_ACCOUNT_BUTTON,
+    role: 'button',
+    name: 'Quick filter',
+    cause: 'precondition-unmet',
+    gapId: GAP.undriveableControl,
+    flowId: null,
+    diagnostic: {
+      step: 'click/timeout',
+      selector: 'main .orders-toolbar button.quick-filter',
+      attemptIndex: 7,
+      // Visible, stable and enabled the whole time — and something painted on
+      // top of it, which is the case none of the other three can express and
+      // the reason all four are recorded rather than a verdict.
+      visible: true,
+      stable: true,
+      receivesPointerEvents: false,
+      enabled: true,
+      inViewport: true,
+      navigationPending: false,
+      occludedBy: 'div.toast-stack',
+    },
   }],
 });
 
@@ -887,6 +921,13 @@ const GAPS = [
     summary: 'Delete account was not probed (destructive heuristic matched "delete").',
     detail: '§6 skips destructive actions unless --allow-destructive. The control was discovered via the a11y tree and CDP listeners, but never clicked against the target, so its transition is unknown. It is recorded in flows/skipped-controls.json with the role, name and node infer needs to bind it to a URL. The danger is to the target, not to a local mock: in the clone the endpoint is implemented fully against the store, because a dead button teaches an agent the control does nothing.',
     stub: { kind: 'omitted', detail: 'Recorded as a skipped control; infer binds it and codegen implements it against the mock store.' },
+  },
+  {
+    gapId: GAP.undriveableControl, stage: 'capture', category: 'interaction-not-reproducible', severity: 'degraded',
+    subject: { routeId: ROUTE.orders, nodeId: DELETE_ACCOUNT_BUTTON },
+    summary: 'Quick filter was fired and did not resolve (click/timeout).',
+    detail: 'Discovered via the a11y tree and activated, but the click never became actionable. The diagnostic on the control records which of Playwright\'s four preconditions was unmet: visible, stable and enabled were all true, and `elementFromPoint` returned a toast stack painted over the centre of the button. Recorded as precondition-unmet rather than as a decision to skip — nothing here was declined — and the cause is left as the observation rather than written up as an explanation.',
+    stub: { kind: 'omitted', detail: 'Control renders and is focusable; its transition is not reproduced.' },
   },
   {
     gapId: GAP.narrowedOrderStatus, stage: 'capture', category: 'inferred-type-narrowed', severity: 'info',

@@ -230,6 +230,16 @@ const settle = async (ms = 8000) => {
  */
 const PAGE_CLOSED = /Target (?:page, context or browser has been closed|closed)/i;
 let lostObservations = 0;
+/**
+ * Every undriveable control's diagnostic, flat, for the distribution printed at
+ * the end of the run.
+ *
+ * The ruling that produced it: instrument, do not diagnose — and then look at
+ * the *distribution* rather than at the first case. Half of sixty is a big
+ * enough population for the shape of the failure to be visible, and three wrong
+ * hypotheses were argued from one example each.
+ */
+const undriveable = [];
 
 const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
   page.on('response', (response) => {
@@ -450,7 +460,7 @@ async function acquireStorageState(browser) {
  * one undriveable control, and seven identical console lines per sidebar link
  * is what this replaced.
  */
-function recordUndriveable({ routeId, candidate, label, kind }) {
+function recordUndriveable({ routeId, candidate, label, kind, diagnostic }) {
   const controlId = `ctl_${sha256(`${routeId}:${candidate.nodeId}`).slice(0, 12)}`;
   if (skippedControls.some((c) => c.controlId === controlId)) return;
   const id = gapId(`precondition-unmet:${routeId}:${label}`);
@@ -465,7 +475,78 @@ function recordUndriveable({ routeId, candidate, label, kind }) {
     controlId, routeId, nodeId: candidate.nodeId,
     role: candidate.a11y.role, name: candidate.a11y.name,
     cause: 'precondition-unmet', gapId: id, flowId: null,
+    diagnostic,
   });
+  undriveable.push({ routeId, label, ...diagnostic });
+}
+
+/**
+ * What was true of the control when the action gave up.
+ *
+ * Not a hypothesis: these are the four conditions Playwright's `click` is
+ * waiting on, so recording them says *which* precondition was never met rather
+ * than repeating that a clock ran out. Everything here is best-effort and
+ * `null` on failure — the element may have detached and the page may have gone,
+ * and a check that could not be made must not read as `false`.
+ *
+ * Every probe here is bounded well under the click's own 5s: the diagnostic
+ * runs after a failure, and a diagnostic that hangs turns one slow probe into a
+ * stalled run.
+ */
+async function diagnoseUndriveable({ page, locator, candidate, step, attemptIndex, navigationPending }) {
+  // operational: the element detached or the page closed while we were asking about it
+  const ask = async (fn) => { try { return await fn(); } catch (err) { rethrowIfDefect(err); return null; } };
+
+  const box = await ask(() => locator.boundingBox({ timeout: 1000 }));
+  // Stability is a claim about two frames, so it takes two observations — the
+  // same thing Playwright measures, and the condition an animating sidebar
+  // fails.
+  const box2 = box === null ? null : await ask(async () => {
+    await page.waitForTimeout(150);
+    return locator.boundingBox({ timeout: 1000 });
+  });
+  const stable = box === null || box2 === null
+    ? null
+    : box.x === box2.x && box.y === box2.y && box.width === box2.width && box.height === box2.height;
+
+  const viewport = page.viewportSize() ?? VIEWPORT;
+  const inViewport = box === null
+    ? null
+    : box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height;
+
+  // The fourth actionability condition, and the one no other field can stand in
+  // for: something painted on top of the element absorbs the pointer, and the
+  // element stays perfectly visible, stable and enabled the whole time.
+  const occlusion = box === null ? null : await ask(() => page.evaluate(({ x, y, w, h }) => {
+    const target = document.elementFromPoint(x + w / 2, y + h / 2);
+    if (target === null) return { hit: null, description: 'nothing at the centre point' };
+    const describe = (el) =>
+      `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}` +
+      `${typeof el.className === 'string' && el.className ? `.${el.className.trim().split(/\s+/).slice(0, 2).join('.')}` : ''}`;
+    return { hit: describe(target), description: describe(target) };
+  }, { x: box.x, y: box.y, w: box.width, h: box.height }));
+
+  const selfDescription = await ask(() => locator.evaluate((el) =>
+    `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}`, undefined, { timeout: 1000 }));
+  const occludedBy =
+    occlusion === null || selfDescription === null || occlusion.hit === null
+      ? (occlusion?.description ?? null)
+      : occlusion.hit.startsWith(selfDescription) ? null : occlusion.description;
+
+  return {
+    step,
+    selector: candidate.interaction.selector,
+    attemptIndex,
+    visible: await ask(() => locator.isVisible({ timeout: 1000 })),
+    stable,
+    // `null` when the box could not be read at all — there is nothing to be on
+    // top of, and reporting `false` would invent an occlusion.
+    receivesPointerEvents: occlusion === null ? null : occludedBy === null,
+    enabled: await ask(() => locator.isEnabled({ timeout: 1000 })),
+    inViewport,
+    navigationPending,
+    occludedBy,
+  };
 }
 
 /**
@@ -475,12 +556,28 @@ function recordUndriveable({ routeId, candidate, label, kind }) {
  * — *is* the functional specification §9's behavioural gate replays. Each probe
  * runs in a fresh page so probes cannot contaminate each other's preconditions.
  */
-async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, destructive = false }) {
+async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex = 0, destructive = false }) {
   let ran = false;
   // unguarded: guarded on the next line
   const page = await ctx.newPage();
   installEscapeGuards(page, { onBlocked });
   attachRecorders(page, { current: routeId });
+  /**
+   * Whether a main-frame navigation was in flight when the click gave up.
+   *
+   * A page navigating under the probe is the one hypothesis of the three in
+   * 0024 §2 that the artifact could never confirm or refute, because nothing
+   * recorded it. Counted rather than flagged: the `goto` at the top of every
+   * probe is one, so "a navigation happened" is not the question — "one was
+   * still open" is.
+   */
+  let navigationsStarted = 0;
+  let navigationsSettled = 0;
+  page.on('framenavigated', (frame) => { if (frame === page.mainFrame()) navigationsSettled += 1; });
+  page.on('request', (request) => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) navigationsStarted += 1;
+  });
+  let locator = null;
   try {
     /**
      * `domcontentloaded`, not `networkidle`.
@@ -497,8 +594,24 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     await step('goto', () =>
       page.goto(`${ORIGIN}${record.plan.path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 }));
     await page.waitForTimeout(900);
-    const locator = page.getByRole(candidate.a11y.role, { name: candidate.a11y.name, exact: true }).first();
-    if ((await locator.count()) === 0) { await page.close(); return false; }
+    locator = page.getByRole(candidate.a11y.role, { name: candidate.a11y.name, exact: true }).first();
+    if ((await locator.count()) === 0) {
+      // A control discovered on the captured page and absent from the freshly
+      // loaded one. It was never a console line and never a record either — a
+      // silent drop that survived because the session-destructive branch was
+      // the only caller that noticed a `false` return.
+      recordUndriveable({
+        routeId, candidate, label, kind: 'locate/not-found',
+        diagnostic: {
+          step: 'locate/not-found', selector: candidate.interaction.selector, attemptIndex,
+          visible: null, stable: null, receivesPointerEvents: null, enabled: null,
+          inViewport: null, navigationPending: navigationsStarted > navigationsSettled,
+          occludedBy: null,
+        },
+      });
+      await page.close();
+      return false;
+    }
 
     const snap = async () => page.evaluate(() => ({
       url: location.href,
@@ -617,10 +730,22 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     // rather than as a bare finding, because §13's rule about a gap in prose
     // applies: infer can still look for this control's handler in the source,
     // and it cannot read a console line.
-    recordUndriveable({
-      routeId, candidate, label,
-      kind: `${err instanceof ProbeStepError ? err.stepName : 'unknown-step'}/${operationalKind(err) ?? 'unknown'}`,
-    });
+    const kind = `${err instanceof ProbeStepError ? err.stepName : 'unknown-step'}/${operationalKind(err) ?? 'unknown'}`;
+    // And the next question down: which of the click's four preconditions was
+    // never met. Instrument, do not diagnose — the distribution is the answer,
+    // and it is written into the artifact rather than argued about here.
+    const diagnostic = locator === null
+      ? {
+          step: kind, selector: candidate.interaction.selector, attemptIndex,
+          visible: null, stable: null, receivesPointerEvents: null, enabled: null,
+          inViewport: null, navigationPending: navigationsStarted > navigationsSettled,
+          occludedBy: null,
+        }
+      : await diagnoseUndriveable({
+          page, locator, candidate, step: kind, attemptIndex,
+          navigationPending: navigationsStarted > navigationsSettled,
+        });
+    recordUndriveable({ routeId, candidate, label, kind, diagnostic });
   }
   await settle(2000);
   await page.close();
@@ -710,10 +835,11 @@ async function probeRoute({ browser, storageState, routeId, record }) {
         viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
         reducedMotion: 'reduce', storageState: ownState,
       }));
-      const ran = await runProbe({ ctx: ownCtx, routeId, record, candidate, flowId, label, cssomClasses });
+      const ran = await runProbe({
+        ctx: ownCtx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex: attempted,
+      });
       await ownCtx.close();
       if (ran) sessionFired += 1;
-      else recordUndriveable({ routeId, candidate, label, kind: 'session-probe-did-not-resolve' });
       continue;
     }
 
@@ -721,11 +847,58 @@ async function probeRoute({ browser, storageState, routeId, record }) {
       budgetDeclined += 1;
       continue;
     }
+    // Position in this route's loop, passed down because it is the variable the
+    // failure rate appears to depend on and the one a single-shot reproduction
+    // structurally cannot vary (§13).
+    const attemptIndex = attempted;
     attempted += 1;
-    if (await runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses })) fired += 1;
+    if (await runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex })) fired += 1;
   }
   await ctx.close();
   return { fired, attempted, sessionFired, candidates: distinct.length };
+}
+
+/**
+ * The distribution, not the first case.
+ *
+ * Three diagnoses of these timeouts were wrong in a row, each argued from one
+ * example, and the ruling that followed was to instrument and then look at the
+ * *shape*. So this prints margins rather than a verdict: which precondition was
+ * unmet, and how the failures fall across position in the route's loop.
+ *
+ * There is deliberately no conclusion drawn here and none written into the
+ * artifact. A distribution with no explanation is an honest deliverable; a
+ * fourth hypothesis is not.
+ */
+function reportUndriveableDistribution() {
+  if (undriveable.length === 0) {
+    console.log('  undriveable: none');
+    return;
+  }
+  const tally = (of) => {
+    const counts = {};
+    for (const d of undriveable) {
+      const key = String(of(d));
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, n]) => `${k} ${n}`)
+      .join(' · ');
+  };
+
+  console.log(`\n  undriveable: ${undriveable.length}, by what was true when the action gave up`);
+  console.log(`    step              ${tally((d) => d.step)}`);
+  console.log(`    visible           ${tally((d) => d.visible)}`);
+  console.log(`    stable            ${tally((d) => d.stable)}`);
+  console.log(`    receives pointer  ${tally((d) => d.receivesPointerEvents)}`);
+  console.log(`    enabled           ${tally((d) => d.enabled)}`);
+  console.log(`    in viewport       ${tally((d) => d.inViewport)}`);
+  console.log(`    navigation open   ${tally((d) => d.navigationPending)}`);
+  console.log(`    occluded by       ${tally((d) => d.occludedBy ?? '(nothing)')}`);
+  // The variable no single-shot reproduction can vary. Bucketed rather than
+  // listed, because the question is whether the rate rises with position.
+  console.log(`    attempt index     ${tally((d) => `${Math.floor(d.attemptIndex / 4) * 4}-${Math.floor(d.attemptIndex / 4) * 4 + 3}`)}`);
 }
 
 /**
@@ -875,6 +1048,7 @@ async function main() {
       );
     }
     await settle();
+    reportUndriveableDistribution();
     console.log(
       `  flows: ${flows.size} (${[...flows.values()].filter((f) => f.outcome === 'skipped').length} skipped) · ` +
       `skipped controls: ${skippedControls.length} · budget-declined: ${budgetDeclined}` +

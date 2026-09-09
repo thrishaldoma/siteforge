@@ -18,7 +18,30 @@
       "cause": "target-destructive",
       "matchedTerm": "delete",
       "gapId": "gap_5e8cb74e1ae7",
-      "flowId": "delete-account"
+      "flowId": "delete-account",
+      "diagnostic": null
+    },
+    {
+      "controlId": "ctl_3f5cb7a83107",
+      "routeId": "account-orders--auth-desktop--i0",
+      "nodeId": "n_da219963007efd4a",
+      "role": "button",
+      "name": "Quick filter",
+      "cause": "precondition-unmet",
+      "gapId": "gap_d903eb8ddee2",
+      "flowId": null,
+      "diagnostic": {
+        "step": "click/timeout",
+        "selector": "main .orders-toolbar button.quick-filter",
+        "attemptIndex": 7,
+        "visible": true,
+        "stable": true,
+        "receivesPointerEvents": false,
+        "enabled": true,
+        "inViewport": true,
+        "navigationPending": false,
+        "occludedBy": "div.toast-stack"
+      }
     }
   ]
 }

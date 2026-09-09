@@ -74,6 +74,55 @@ export const SkipCauseSchema = z.enum([
   'bot-protection',
 ]);
 
+/**
+ * What was true of the control at the moment the action timed out.
+ *
+ * Three diagnoses of the Vikunja probe timeouts were wrong in a row (0024 §2),
+ * and each was argued from the single word `timeout`. `step()` then established
+ * *which* operation ran out of clock — the click, never the navigation — and
+ * this is the next question down: **which of the click's preconditions was
+ * never met.**
+ *
+ * The four fields are not a guess at the answer, they are Playwright's own
+ * actionability checks, which is what `click` is waiting on when it times out:
+ * the element must be *visible*, *stable* (the same box across two animation
+ * frames), *receiving pointer events* (nothing painted on top of it), and
+ * *enabled*. Recording all four at the moment of failure means the next run
+ * answers the question rather than supporting whichever hypothesis is fashionable.
+ *
+ * `attemptIndex` is the fifth, and it is the one no reproduction outside the
+ * loop can vary: the run's own per-route counts (10 fired of 18 attempted, 4 of
+ * 14, 5 of 13) say the failure rate depends on position, and a single-shot
+ * harness always exercises position zero. §13's rule about a reproduction that
+ * cannot exhibit the failure exists because of this exact measurement.
+ *
+ * **It is a record, not an explanation.** Nothing downstream reads a cause out
+ * of it; the distribution is for a human to look at.
+ */
+export const ProbeDiagnosticSchema = z.strictObject({
+  /** The operation that ran out of clock, as `step()` labelled it: `click/timeout`. */
+  step: z.string().min(1),
+  /** The stable selector the probe drove, so the case can be re-run by hand. */
+  selector: z.string().min(1),
+  /** Position in this route's probe loop, counting attempts. Zero-based. */
+  attemptIndex: z.int().nonnegative(),
+  /**
+   * Playwright's four actionability conditions, as observed after the failure.
+   * `null` where the check could not be made — the element had detached, or the
+   * page had gone — which is itself an answer and must not read as `false`.
+   */
+  visible: z.boolean().nullable(),
+  stable: z.boolean().nullable(),
+  receivesPointerEvents: z.boolean().nullable(),
+  enabled: z.boolean().nullable(),
+  /** Whether the element's box was inside the viewport at the time. */
+  inViewport: z.boolean().nullable(),
+  /** Whether the page had a main-frame navigation in flight when the click gave up. */
+  navigationPending: z.boolean(),
+  /** What `elementFromPoint` returned at the element's centre, when something else did. */
+  occludedBy: z.string().nullable(),
+});
+
 export const SkippedControlSchema = z
   .strictObject({
     controlId: ControlIdSchema,
@@ -97,6 +146,12 @@ export const SkippedControlSchema = z
     gapId: GapIdSchema,
     /** The placeholder flow recording the un-run probe, when one was written. */
     flowId: FlowIdSchema.nullable(),
+    /**
+     * Present exactly when the control was **fired** and would not resolve.
+     * A control that was declined was never driven, so there is no element
+     * state to record and an empty diagnostic would be an invented observation.
+     */
+    diagnostic: ProbeDiagnosticSchema.nullable(),
   })
   .superRefine((control, ctx) => {
     // Fixture legality (decision 0011): a derived field carries the evidence it
@@ -114,6 +169,26 @@ export const SkippedControlSchema = z
         code: 'custom',
         path: ['outOfScopeTarget'],
         message: 'a control skipped as out-of-scope must say what put it out of scope',
+      });
+    }
+    // The same rule as the two above, in the direction that matters more: a
+    // declined control carrying element state would be claiming an observation
+    // nobody made, and a fired one without it is the measurement not taken.
+    if (control.cause === 'precondition-unmet' && control.diagnostic === null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['diagnostic'],
+        message:
+          'a control that was fired and would not resolve must record what was true of it at the ' +
+          'time. Three wrong diagnoses were argued from a bare `timeout` (0024 §2); this is the field ' +
+          'that stops the fourth.',
+      });
+    }
+    if (control.cause !== 'precondition-unmet' && control.diagnostic !== null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['diagnostic'],
+        message: `a ${control.cause} control was never driven, so there is no element state to have observed`,
       });
     }
     if (control.cause !== 'target-destructive' && control.matchedTerm !== undefined) {
@@ -138,5 +213,6 @@ export const SkippedControlIndexSchema = z.strictObject({
 export type ControlId = z.infer<typeof ControlIdSchema>;
 export type ControlHazard = z.infer<typeof ControlHazardSchema>;
 export type SkipCause = z.infer<typeof SkipCauseSchema>;
+export type ProbeDiagnostic = z.infer<typeof ProbeDiagnosticSchema>;
 export type SkippedControl = z.infer<typeof SkippedControlSchema>;
 export type SkippedControlIndex = z.infer<typeof SkippedControlIndexSchema>;

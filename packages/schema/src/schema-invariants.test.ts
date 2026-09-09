@@ -31,6 +31,7 @@ import {
   RouteIdSchema,
   RouteMetaSchema,
   SITE_MODEL_VERSION,
+  SkippedControlSchema,
   SiteModelSchema,
   StateDeltasDocumentSchema,
   StyleSheetDocumentSchema,
@@ -466,6 +467,65 @@ describe('merging two rows into one entity requires evidence (decision 0025)', (
     });
     expect(result.success).toBe(false);
     expect(JSON.stringify(result)).toContain('carries 1');
+  });
+});
+
+
+describe('a control that was fired records what was true of it (0024 §2, ruling 3)', () => {
+  const base = {
+    controlId: `ctl_${'a'.repeat(12)}`,
+    routeId: 'account-orders--anon-desktop--i0',
+    nodeId: `n_${'b'.repeat(16)}`,
+    role: 'button',
+    name: 'Quick filter',
+    gapId: `gap_${'c'.repeat(12)}`,
+    flowId: null,
+  };
+  const diagnostic = {
+    step: 'click/timeout',
+    selector: 'main button.quick-filter',
+    attemptIndex: 7,
+    visible: true, stable: true, receivesPointerEvents: false, enabled: true,
+    inViewport: true, navigationPending: false, occludedBy: 'div.toast-stack',
+  };
+
+  it('accepts a driven control carrying its diagnostic', () => {
+    expect(SkippedControlSchema.safeParse({
+      ...base, cause: 'precondition-unmet', diagnostic,
+    }).success).toBe(true);
+  });
+
+  it('rejects a driven control with no diagnostic — the measurement not taken', () => {
+    const result = SkippedControlSchema.safeParse({
+      ...base, cause: 'precondition-unmet', diagnostic: null,
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result)).toContain('must record what was true of it');
+  });
+
+  it('rejects a DECLINED control carrying one — an observation nobody made', () => {
+    // The direction that matters more. A control that was never driven has no
+    // element state, and a diagnostic on it would be invented data of exactly
+    // the kind §7 exists to prevent.
+    const result = SkippedControlSchema.safeParse({
+      ...base, cause: 'target-destructive', matchedTerm: 'delete', diagnostic,
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result)).toContain('never driven');
+  });
+
+  it('keeps `null` distinct from `false` on every actionability check', () => {
+    // A check that could not be made — the element detached, the page went — is
+    // not a check that came back negative, and collapsing the two would make
+    // "we could not look" read as "it was not visible" in the distribution.
+    expect(SkippedControlSchema.safeParse({
+      ...base, cause: 'precondition-unmet',
+      diagnostic: { ...diagnostic, visible: null, stable: null, receivesPointerEvents: null, enabled: null, inViewport: null },
+    }).success).toBe(true);
+    expect(SkippedControlSchema.safeParse({
+      ...base, cause: 'precondition-unmet',
+      diagnostic: { ...diagnostic, navigationPending: null },
+    }).success).toBe(false);
   });
 });
 
