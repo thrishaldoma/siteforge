@@ -380,7 +380,11 @@ export const SABOTAGES = [
     bug: 'the option-set extractor queries `select[name], select[id]`, so a framework-rendered select is invisible',
     reachable: "HEAD until this turn, and the state every Vikunja capture was taken in — six `<select>` elements and 632 `<option>`s produced zero UI constraints because a Vue SPA binds through `v-model` and emits neither attribute. Nobody writes an attribute filter to exclude anything; it gets written because `[name]` is how a *form* posts a control, and that reflex survives into a codebase where the control is read rather than posted",
     gate: ['pnpm', '-s', 'test', '--project', 'capture'],
-    expect: 'the select query is `select` alone',
+    // The string the *broken* version prints and the correct one cannot: the
+    // restored attribute filter, in the assertion's own diff. §13 — the
+    // assertion must exclude what the broken version outputs, and "the test
+    // failed" does not.
+    expect: "expected [ 'select[name], select[id]' ] to deeply equal [ 'select' ]",
     change: 'the attribute filter is restored to the extractor',
   },
 

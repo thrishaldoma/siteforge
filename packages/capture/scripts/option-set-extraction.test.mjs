@@ -51,8 +51,11 @@ describe('option-set extraction is not gated on an attribute', () => {
     // The count this feeds is compared against `dom.json` for equality, so a
     // silent decline here is indistinguishable from never having looked —
     // which is the state the whole change came out of. The consumer drops it.
-    const block = source.slice(source.indexOf("querySelectorAll('select')"));
-    const body = block.slice(0, block.indexOf('const radioGroups'));
+    // Anchored on the loop, not on the query text, so this test fails for its
+    // own reason rather than collapsing whenever the selector changes.
+    const start = source.indexOf('for (const select of');
+    expect(start, 'capture-lib.mjs has no select loop').toBeGreaterThan(-1);
+    const body = source.slice(start, source.indexOf('const radioGroups', start));
     expect(body).not.toMatch(/if \(values\.length === 0\) continue;/);
     expect(body).toContain('constraints.push');
   });
