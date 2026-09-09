@@ -222,6 +222,24 @@ export const SABOTAGES = [
     expect: 'nul-byte',
     change: 'stop looking for a NUL byte in assessToolingHostileSource',
   },
+  {
+    id: 'narrowing-exclusion-tuned',
+    bug: 'a format the model CAN express is excluded from the narrowing denominator, on a reason about the misses rather than about the vocabulary',
+    reachable:
+      'the good-faith version of tuning, and the exact thing the int64 exclusion sets a precedent for. Somebody sees 396 declared `email` formats that the model matched none of, writes a plausible sentence, and the denominator shrinks. It reads identical to the honest exclusion beside it',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'shrinking a denominator to remove misses',
+    change: "add 'email' to UNEXPRESSIBLE_FORMATS with a reason about the score",
+  },
+  {
+    id: 'probeable-includes-mutations',
+    bug: 'evidence coverage counts mutations as probeable again, re-merging the two populations the split exists to separate',
+    reachable:
+      'the natural simplification: `discovery.kind === \'observed\'` looks like the whole condition, and dropping the method test reads as removing a redundant clause. §6 forbids re-issuing a mutation anonymously, which is the fact the method test encodes',
+    gate: ['pnpm', '-s', 'grade:baseline'],
+    expect: 'auth.unprobeable-count',
+    change: 'drop the GET test from isProbeableRead',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
