@@ -29,6 +29,7 @@ import {
   allowedOrigins as deriveAllowedOrigins, decideNavigation, formatFindings, operationalKind,
   assetKind, isUnder, originOf, pathSegments, rethrowIfDefect, sameOrigin,
   scanCaptureTree,
+  NEVER_FIRE_NAMES, SESSION_DESTRUCTIVE_TERMS, TARGET_DESTRUCTIVE_TERMS, classifyControlHazard,
 } from '../../shared/dist/index.js';
 import { checkRung } from './rungs.mjs';
 
@@ -447,34 +448,23 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
  * uncaptured while §10's auth tasks depend on it, and it would have filed a core
  * auth flow in GAPS.md as unreliable.
  */
-const TARGET_DESTRUCTIVE_TERMS = ['delete', 'remove', 'cancel subscription', 'deactivate', 'close account'];
-const SESSION_DESTRUCTIVE_TERMS = ['sign out', 'log out', 'logout', 'switch account', 'revoke'];
-
 /** Controls the operator declines to fire even with --allow-destructive. */
-const NEVER_FIRE = ['delete account'];
+const NEVER_FIRE = NEVER_FIRE_NAMES;
 
 /**
- * Classify a candidate. Order matters: "sign out" would match no target term,
- * but "delete account" must not be read as a session action just because
- * signing out is a side effect of it.
+ * Classify a candidate.
+ *
+ * The lists and the ordering moved to `@siteforge/shared` when `capture-site`
+ * needed them: two crawlers disagreeing about whether the same button is safe
+ * to press is §13's schema drift with a hazard attached. The origin comparison
+ * stays the caller's parsed `sameOrigin`, so nothing here reinvents it.
  */
-function classifyControl(candidate) {
-  const name = candidate.a11y.name.toLowerCase();
-  const href = candidate.interaction?.href ?? candidate.attributes?.href ?? '';
-  if (href && /^(mailto:|tel:)/i.test(href)) {
-    return { hazard: 'out-of-scope', outOfScopeTarget: href.split(':')[0] + ':' };
-  }
-  // Parsed, never a prefix test: `${ORIGIN}@evil.example/x` and (on a portless
-  // origin) `${ORIGIN}.evil.net/x` both pass `startsWith` and are foreign.
-  if (href && /^https?:\/\//i.test(href) && !sameOrigin(href, ORIGIN)) {
-    return { hazard: 'out-of-scope', outOfScopeTarget: new URL(href).origin };
-  }
-  const target = TARGET_DESTRUCTIVE_TERMS.find((t) => name.includes(t));
-  if (target) return { hazard: 'target-destructive', matchedTerm: target };
-  const session = SESSION_DESTRUCTIVE_TERMS.find((t) => name.includes(t));
-  if (session) return { hazard: 'session-destructive', matchedTerm: session };
-  return { hazard: null };
-}
+const classifyControl = (candidate) =>
+  classifyControlHazard({
+    name: candidate.a11y.name,
+    href: candidate.interaction?.href ?? candidate.attributes?.href ?? '',
+    isSameOrigin: (href) => sameOrigin(href, ORIGIN),
+  });
 
 /**
  * Controls §6 discovered and refused to fire (decision 0010).

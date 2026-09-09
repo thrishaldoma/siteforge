@@ -43,9 +43,16 @@ import {
   decideNavigation,
   formatFindings,
   isUnder,
+  operationalKind,
   pathSegments,
+  rethrowIfDefect,
   sameOrigin,
   scanCaptureTree,
+  NEVER_FIRE_NAMES,
+  TARGET_DESTRUCTIVE_TERMS,
+  SESSION_DESTRUCTIVE_TERMS,
+  classifyControlHazard,
+  planProbeSchedule,
 } from '../../shared/dist/index.js';
 import {
   assertPermitted,
@@ -53,6 +60,7 @@ import {
   installOriginGuard,
   scrubDeep,
   scrubHarFile,
+  selectorClassNames,
   sha256,
 } from './capture-lib.mjs';
 import { captureRoute } from './capture-route.mjs';
@@ -104,6 +112,11 @@ const gapId = (label) => `gap_${S.shortHash(label).slice(0, 12)}`;
 
 const findings = [];
 const finding = (severity, what) => findings.push({ severity, what });
+
+/** §6's flag. We own the pinned container, so a delete flow could yield real observations. */
+const ALLOW_DESTRUCTIVE = process.argv.includes('--allow-destructive');
+
+const gaps = [];
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const envelope = (artifact) => ({
@@ -199,7 +212,22 @@ const settle = async (ms = 8000) => {
  * Header **names** only, read from `allHeaders()` — `request.headers()` omits
  * cookies, so auth evidence read from it can never fire. Values never leave
  * this function (§3.3).
+ *
+ * **Every rejection is terminated here, and counted.** A probe ends by closing
+ * its page, and a body still arriving at that moment makes `allHeaders()`
+ * reject — into a promise nothing is awaiting any more, because `settle()` has
+ * already spliced it away. That is an *uncatchable* crash: it killed a 25-minute
+ * run at `request.allHeaders: Target page, context or browser has been closed`.
+ *
+ * A rejected observation is a **dropped observation**, which §13 calls the
+ * failure mode of this whole project, so it is counted rather than swallowed —
+ * and a rejection that is not the page closing becomes a finding, which fails
+ * the run at the end. Throwing is not available: this is an event handler, and
+ * there is nowhere for the throw to go except back into an unhandled rejection.
  */
+const PAGE_CLOSED = /Target (?:page, context or browser has been closed|closed)/i;
+let lostObservations = 0;
+
 const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
   page.on('response', (response) => {
     pendingResponses.push((async () => {
@@ -237,7 +265,16 @@ const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
         contextId: (routeIdRef.current ?? '').split('--')[1] ?? null,
         anonymousProbe,
       });
-    })());
+    })().catch((err) => {
+      // operational: the page closed while its body was still arriving, which
+      // is what the end of every probe looks like. The exchange is lost, and
+      // the count is what stops that being silent.
+      if (PAGE_CLOSED.test(String(err))) { lostObservations += 1; return; }
+      // Anything else is a defect. It cannot be rethrown from here without
+      // becoming the unhandled rejection this handler exists to prevent, so it
+      // is surfaced as a finding and the run fails on it at the end.
+      finding('recorder-failed', `${response.url()}: ${String(err).split('\n')[0]}`);
+    }));
   });
 };
 
@@ -245,6 +282,471 @@ const guardContext = async (context) => {
   await installOriginGuard(context, { allowedOrigins: ALLOWED_ORIGINS, onBlocked, decide: decideNavigation });
   return context;
 };
+
+
+// ---------------------------------------------------------------------------
+// §6's behaviour probing
+// ---------------------------------------------------------------------------
+
+/**
+ * The probe budget, per route.
+ *
+ * A Vikunja route offers 133–807 interaction candidates, most of them
+ * decorative spans that `cursor: pointer` swept in. §6's "for each candidate"
+ * is not affordable against a real SPA, so the budget is stated as a number
+ * here rather than implied by whatever the loop got through — and the count of
+ * candidates *declined for budget* is written into the coverage report, so a
+ * shallow probe pass is visible rather than indistinguishable from a thorough
+ * one that found nothing.
+ */
+const MAX_PROBES_PER_ROUTE = 12;
+
+/**
+ * And a cap on **attempts**, which is the one that actually bounds the clock.
+ *
+ * The first version budgeted successes only. A control that cannot be driven
+ * still costs a page load plus the click timeout and does not consume the
+ * budget, so on `/user/settings/general` — 668 distinct candidates — the loop
+ * would have kept trying for over an hour to land its twelfth success. Bounding
+ * successes bounds the *output*; bounding attempts bounds the *cost*, and a
+ * probe pass whose runtime is a function of how undriveable the page is will
+ * always be the one that has to be killed.
+ */
+const MAX_ATTEMPTS_PER_ROUTE = 24;
+
+const flows = new Map();
+const skippedControls = [];
+const probedStates = new Map();
+let budgetDeclined = 0;
+
+/** Flat a11y tree: a probe needs a valid root plus the addressable elements. */
+const buildA11yTree = (captured) => ({
+  ref: S.deriveDocumentA11yRef(captured.extracted.url),
+  role: 'RootWebArea',
+  name: captured.extracted.title,
+  children: captured.built
+    .filter((n) => n.nodeType === 'element' && n.a11y)
+    .map((n) => ({ ref: n.a11y.ref, role: n.a11y.role, name: n.a11y.name, nodeId: n.nodeId, children: [] })),
+});
+
+/**
+ * A control this pass discovered and refused to activate (decision 0010).
+ *
+ * Capture stops at the control: it never learns the URL, because learning it
+ * would mean clicking, which is the thing §6 declines to do. §7.6 binds these
+ * to a URL by reading `<form action>` and `fetch()` out of the captured source,
+ * which is why no endpoint is created here — inventing one is the §7 failure
+ * this whole machinery exists to prevent.
+ */
+function recordSkip({ routeId, record, candidate, flowId, label, cause, matchedTerm, outOfScopeTarget }) {
+  const id = gapId(`${cause}:${label}`);
+  gaps.push({
+    gapId: id,
+    stage: 'capture',
+    category: cause === 'out-of-scope' ? 'out-of-scope-control' : 'destructive-action-skipped',
+    severity: cause === 'out-of-scope' ? 'info' : 'degraded',
+    subject: { routeId, nodeId: candidate.nodeId, flowId },
+    summary: cause === 'out-of-scope'
+      ? `${label} leaves the site (${outOfScopeTarget}); not exercised.`
+      : `${label} was not fired (target-destructive, matched "${matchedTerm}").`,
+    detail: cause === 'out-of-scope'
+      ? `The control targets ${outOfScopeTarget}, which is not ours to exercise. §6 crawls same-origin only; the clone renders the control and it goes nowhere. No endpoint is created either way.`
+      : `Irreversible against the target, so §6 never activates it. Discovered via ${candidate.interaction.discoveredBy.join(' + ')}; its transition is unknown. Recorded as a skipped control so §7.6 can bind it to a URL from the captured source.`,
+    stub: cause === 'out-of-scope'
+      ? { kind: 'none' }
+      : { kind: 'omitted', detail: 'Control renders and is focusable; infer binds it and codegen implements it against the mock store.' },
+  });
+  flows.set(flowId, {
+    ...envelope('flow-trace'),
+    flowId, siteId: TARGET.siteId, kind: 'probe',
+    name: `${candidate.a11y.name} (not run)`,
+    description: cause === 'out-of-scope'
+      ? 'Discovered as an interaction candidate; targets another origin.'
+      : 'Discovered as an interaction candidate and declined as target-destructive.',
+    startRouteId: routeId,
+    discoveredBy: candidate.interaction.discoveredBy[0],
+    initialA11yTree: buildA11yTree(record.captured),
+    steps: [], outcome: 'skipped', destructive: cause === 'target-destructive',
+    skipReason: {
+      cause: cause === 'out-of-scope' ? 'precondition-unmet' : 'destructive-heuristic',
+      ...(cause === 'target-destructive' ? { matchedTerm } : {}),
+      gapId: id,
+    },
+    gapIds: [id],
+  });
+  // The structured half. A skipped `FlowTrace` is forced to `steps: []` and
+  // role/name/nodeId live on `FlowStep.target`, so without this the control
+  // survives only as prose and infer cannot look for its handler.
+  skippedControls.push({
+    controlId: `ctl_${sha256(`${routeId}:${candidate.nodeId}`).slice(0, 12)}`,
+    routeId, nodeId: candidate.nodeId,
+    role: candidate.a11y.role, name: candidate.a11y.name,
+    cause,
+    ...(cause === 'target-destructive' ? { matchedTerm } : { outOfScopeTarget }),
+    gapId: id, flowId,
+  });
+}
+
+/**
+ * Label which operation failed, so a timeout names its own cause.
+ *
+ * Three diagnoses of the probe timeouts were wrong in a row, and each was
+ * plausible because the recorded kind was `timeout` for all of them — a value
+ * that says a clock ran out and not which clock. `operationalKind` is a
+ * taxonomy of *error shapes*; this is the missing half, the operation. Cheaper
+ * than a fourth hypothesis, and it makes the next run answer the question
+ * instead of supporting a guess.
+ */
+class ProbeStepError extends Error {
+  constructor(stepName, cause) {
+    super(`${stepName}: ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = cause instanceof Error ? cause.name : 'Error';
+    this.stepName = stepName;
+    this.cause = cause;
+  }
+}
+
+const step = async (stepName, run) => {
+  try {
+    return await run();
+  } catch (err) {
+    rethrowIfDefect(err);
+    throw new ProbeStepError(stepName, err);
+  }
+};
+
+/**
+ * A session acquired for one probe and thrown away after (§6, decision 0011).
+ *
+ * Its own context and its own sign-in, because the thing being protected is the
+ * *server-side* session and a cloned `storageState` shares it.
+ */
+async function acquireStorageState(browser) {
+  const ctx = await guardContext(await browser.newContext({
+    viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
+  }));
+  // unguarded: guarded on the next line
+  const page = await ctx.newPage();
+  installEscapeGuards(page, { onBlocked });
+  await PIN.signIn(page, ORIGIN, { wait });
+  const state = await ctx.storageState();
+  await ctx.close();
+  return state;
+}
+
+/**
+ * A control that was fired and would not move.
+ *
+ * Deduplicated by (route, node): the same control reached from two probes is
+ * one undriveable control, and seven identical console lines per sidebar link
+ * is what this replaced.
+ */
+function recordUndriveable({ routeId, candidate, label, kind }) {
+  const controlId = `ctl_${sha256(`${routeId}:${candidate.nodeId}`).slice(0, 12)}`;
+  if (skippedControls.some((c) => c.controlId === controlId)) return;
+  const id = gapId(`precondition-unmet:${routeId}:${label}`);
+  gaps.push({
+    gapId: id, stage: 'capture', category: 'interaction-not-reproducible', severity: 'degraded',
+    subject: { routeId, nodeId: candidate.nodeId },
+    summary: `${label} was fired and did not resolve (${kind}).`,
+    detail: `Discovered via ${candidate.interaction.discoveredBy.join(' + ')} and activated, but the action did not complete: ${kind}. Recorded as precondition-unmet rather than as a decision to skip — nothing here was declined, which is why the schema has no \`session-destructive\` or \`undriveable\` cause to reach for. §7.6 can still bind it from the captured source.`,
+    stub: { kind: 'omitted', detail: 'Control renders and is focusable; its transition is not reproduced.' },
+  });
+  skippedControls.push({
+    controlId, routeId, nodeId: candidate.nodeId,
+    role: candidate.a11y.role, name: candidate.a11y.name,
+    cause: 'precondition-unmet', gapId: id, flowId: null,
+  });
+}
+
+/**
+ * Fire one control and record the transition (§6's behaviour probing).
+ *
+ * The tuple this writes — `{preHash, action, postHash, networkCalls, urlChanged}`
+ * — *is* the functional specification §9's behavioural gate replays. Each probe
+ * runs in a fresh page so probes cannot contaminate each other's preconditions.
+ */
+async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, destructive = false }) {
+  let ran = false;
+  // unguarded: guarded on the next line
+  const page = await ctx.newPage();
+  installEscapeGuards(page, { onBlocked });
+  attachRecorders(page, { current: routeId });
+  try {
+    /**
+     * `domcontentloaded`, not `networkidle`.
+     *
+     * This target registers a service worker and polls in the background, so
+     * network idle is not a state it reliably reaches, and a 15s ceiling per
+     * probe on a state that may never arrive is the wrong shape whatever else
+     * is true. **It is not why the probes time out** — that was the third of
+     * three wrong diagnoses, and `step()` below settled the question by
+     * labelling the operation: all 51 failures are `click/timeout`, not
+     * `goto/timeout`. Kept because it is right on its own terms and faster;
+     * claimed as nothing more.
+     */
+    await step('goto', () =>
+      page.goto(`${ORIGIN}${record.plan.path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 }));
+    await page.waitForTimeout(900);
+    const locator = page.getByRole(candidate.a11y.role, { name: candidate.a11y.name, exact: true }).first();
+    if ((await locator.count()) === 0) { await page.close(); return false; }
+
+    const snap = async () => page.evaluate(() => ({
+      url: location.href,
+      html: document.documentElement.outerHTML,
+      classes: [...document.querySelectorAll('*')].map((e) => e.className).join('|'),
+      attrs: [...document.querySelectorAll('*')]
+        .map((e) => [...e.attributes].map((a) => `${a.name}=${a.value}`).join(',')).join('|'),
+      // Per-element, as an array so it diffs positionally. A JS-driven state
+      // need not touch a class at all, and a detector reading only class diffs
+      // finds nothing there while reporting success.
+      inlineStyles: [...document.querySelectorAll('*')].map((e) => e.getAttribute('style') ?? ''),
+    }));
+
+    await settle(2000);
+    const before = await step('snap-before', snap);
+    const netBefore = observations.length;
+    await step('click', () => locator.click({ timeout: 5000 }));
+    // §6 says network idle or 2s. `networkidle` alone is not enough: on an
+    // already-idle page it resolves before the click's fetch is even issued.
+    await page.waitForTimeout(400);
+    // operational: a settle timeout is expected on a page holding a connection open; the snapshot is taken either way
+    await page.waitForLoadState('networkidle', { timeout: 2000 }).catch(() => {});
+    await settle(2000);
+    const after = await step('snap-after', snap);
+
+    // Second layer behind the router chokepoint. If this fires, the interceptor
+    // has a hole — a defect, not a classification.
+    // operational: a page on about:blank has no origin to compare
+    const afterOrigin = (() => { try { return new URL(after.url).origin; } catch { return null; } })();
+    if (afterOrigin && !ALLOWED_ORIGINS.has(afterOrigin)) {
+      finding('origin-guard-hole', `${label} reached ${afterOrigin} — the interceptor did not stop it`);
+    }
+
+    const networkCalls = observations.slice(netBefore);
+    const snapshot = (state, hash) => ({
+      url: state.url, routeId, domHash: hash, a11yHash: S.shortHash(state.attrs), focusedRef: null,
+    });
+
+    ran = true;
+    flows.set(flowId, {
+      ...envelope('flow-trace'),
+      flowId, siteId: TARGET.siteId, kind: 'probe',
+      name: `Click ${label}`,
+      startRouteId: routeId,
+      discoveredBy: candidate.interaction.discoveredBy[0],
+      initialA11yTree: buildA11yTree(record.captured),
+      steps: [{
+        index: 0,
+        action: { type: 'click' },
+        target: {
+          role: candidate.a11y.role, name: candidate.a11y.name, entityRef: null,
+          diagnostic: {
+            nodeId: candidate.nodeId,
+            selector: candidate.interaction.selector,
+            boundingBox: candidate.boundingBox,
+          },
+        },
+        pre: snapshot(before, S.shortHash(before.html)),
+        post: snapshot(after, S.shortHash(after.html)),
+        domDelta: { addedNodeIds: [], removedNodeIds: [], attributeChanges: [], textChanges: [], styleChanges: [] },
+        a11yDelta: { added: [], removed: [], changed: [] },
+        networkCalls: networkCalls.map((o) => ({
+          endpointId: null, method: o.method, url: scrubDeep(o.url),
+          pathPattern: new URL(o.url).pathname, status: o.status,
+          isMutation: !['GET', 'HEAD', 'OPTIONS'].includes(o.method),
+        })),
+        urlChanged: before.url !== after.url,
+        waitStrategy: 'network-idle',
+      }],
+      outcome: 'completed', destructive, gapIds: [],
+    });
+
+    // A change no extracted CSSOM rule mentions is JS-driven, which is the only
+    // case §6 reserves probing for. Two shapes, and the second was invisible
+    // until rung 3: a class the stylesheet does not describe, or an inline style
+    // with no class involved at all.
+    if (before.html !== after.html) {
+      const beforeClasses = new Set(before.classes.split('|').join(' ').split(/\s+/).filter(Boolean));
+      const newClasses = before.classes === after.classes ? [] :
+        [...new Set(after.classes.split('|').join(' ').split(/\s+/).filter(Boolean))]
+          .filter((c) => !beforeClasses.has(c));
+      const unexplainedClasses = newClasses.filter((c) => !cssomClasses.has(c));
+
+      const attributeChanges = [];
+      const width = Math.min(before.inlineStyles.length, after.inlineStyles.length);
+      for (let i = 0; i < width; i += 1) {
+        if (before.inlineStyles[i] === after.inlineStyles[i]) continue;
+        attributeChanges.push({
+          attribute: 'style',
+          from: before.inlineStyles[i] || null,
+          to: after.inlineStyles[i] || null,
+        });
+      }
+      if (unexplainedClasses.length > 0 || attributeChanges.length > 0) {
+        const list = probedStates.get(routeId) ?? [];
+        list.push({
+          source: 'probed', nodeId: candidate.nodeId, trigger: 'click',
+          reason: 'absent-from-cssom',
+          styleChanges: [], attributeChanges: attributeChanges.slice(0, 10),
+          classChanges: { added: [...new Set(unexplainedClasses)], removed: [] },
+          subtreeChanged: true,
+        });
+        probedStates.set(routeId, list);
+      }
+    }
+  } catch (err) {
+    // Two error classes and only one may be caught (§13). A candidate that
+    // cannot be driven is operational — a timeout, a detached element, a page
+    // that navigated away. Anything else is a defect and must propagate: this
+    // catch in rung 3 once swallowed a ReferenceError thrown *after* the flow
+    // was recorded, so every probe reported success while the state detection
+    // behind it silently never ran.
+    rethrowIfDefect(err);
+    // `precondition-unmet`, which is a different and honest claim from "we
+    // declined to fire it" — nothing here was declined. Recorded structurally
+    // rather than as a bare finding, because §13's rule about a gap in prose
+    // applies: infer can still look for this control's handler in the source,
+    // and it cannot read a console line.
+    recordUndriveable({
+      routeId, candidate, label,
+      kind: `${err instanceof ProbeStepError ? err.stepName : 'unknown-step'}/${operationalKind(err) ?? 'unknown'}`,
+    });
+  }
+  await settle(2000);
+  await page.close();
+  return ran;
+}
+
+/**
+ * Probe one route's controls, in the order the scheduler says.
+ *
+ * Phase ordering is `planProbeSchedule`'s and not this loop's: ordinary, then
+ * session-destructive, then target-destructive. A fresh *page* does not undo a
+ * mutation, so a destructive probe firing early would empty the store for every
+ * probe after it — §6's "probes cannot contaminate each other's preconditions"
+ * is about the browser, not the server.
+ */
+async function probeRoute({ browser, storageState, routeId, record }) {
+  const candidates = record.captured.built.filter(
+    (n) => n.nodeType === 'element' && n.interaction && n.a11y && n.a11y.name.trim().length > 0,
+  );
+  // Distinct by (role, name): an SPA renders the same control in a list many
+  // times, and firing forty identical "Done" buttons measures one transition
+  // forty times while spending the whole budget.
+  const distinct = [...new Map(candidates.map((c) => [`${c.a11y.role}:${c.a11y.name}`, c])).values()];
+  const cssomClasses = selectorClassNames(record.captured.stateRules.map((r) => r.selector));
+
+  const schedule = planProbeSchedule({
+    controls: distinct,
+    hazardOf: (candidate) =>
+      classifyControlHazard({
+        name: candidate.a11y.name,
+        href: candidate.attributes?.href,
+        isSameOrigin: (href) => sameOrigin(href, ORIGIN),
+      }).hazard,
+    allowDestructive: ALLOW_DESTRUCTIVE,
+    neverFire: (candidate) => NEVER_FIRE_NAMES.includes(candidate.a11y.name.toLowerCase()),
+    policy: 'credentialed',
+  });
+
+  const ctx = await guardContext(await browser.newContext({
+    viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
+    reducedMotion: 'reduce', storageState,
+  }));
+  let fired = 0;
+  let attempted = 0;
+  let sessionFired = 0;
+  for (const { control: candidate, phase, fire, declineReason } of schedule) {
+    const label = `${candidate.a11y.role} "${candidate.a11y.name}"`;
+    const flowId = `probe-${S.shortHash(`${routeId}:${label}`).slice(0, 10)}`;
+    const { matchedTerm, outOfScopeTarget } = classifyControlHazard({
+      name: candidate.a11y.name,
+      href: candidate.attributes?.href,
+      isSameOrigin: (href) => sameOrigin(href, ORIGIN),
+    });
+
+    if (!fire) {
+      if (declineReason === 'target-destructive' || declineReason === 'out-of-scope') {
+        recordSkip({ routeId, record, candidate, flowId, label, cause: declineReason, matchedTerm, outOfScopeTarget });
+      }
+      continue;
+    }
+
+    /**
+     * Session-destructive: fire it, and **never from the shared context**.
+     *
+     * §6 and decision 0011: the harm is to us, not to the target, so it must be
+     * captured — `POST /api/v1/user/token` and logout are ordinary endpoints §8
+     * has to implement and §10's auth tasks depend on them. But a disposable
+     * *context* is not enough: `storageState` carries the cookie while the
+     * session lives on the server, so cloning the crawl's state and clicking
+     * "Sign out" ends the crawl's session too.
+     *
+     * Each one therefore gets its own login, and only that session dies. This
+     * target has a scripted sign-in, so the policy is `credentialed` and the
+     * crawl survives; under §6's `interactive` policy there is one session to
+     * spend and the scheduler caps this at one, after everything else.
+     *
+     * Not exercised on Vikunja today — its sign-out sits behind a menu and no
+     * candidate's accessible name matches the terms, so
+     * `coverage.observed.sessionDestructiveControls` is 0 and the invariant is
+     * vacuous. Written because the scheduler will hand one over the moment a
+     * target has one, and firing it in the shared context would silently end
+     * every probe after it.
+     */
+    if (phase === 'session-destructive') {
+      const ownState = await acquireStorageState(browser);
+      const ownCtx = await guardContext(await browser.newContext({
+        viewport: VIEWPORT, userAgent: UA, locale: 'en-US', timezoneId: 'UTC',
+        reducedMotion: 'reduce', storageState: ownState,
+      }));
+      const ran = await runProbe({ ctx: ownCtx, routeId, record, candidate, flowId, label, cssomClasses });
+      await ownCtx.close();
+      if (ran) sessionFired += 1;
+      else recordUndriveable({ routeId, candidate, label, kind: 'session-probe-did-not-resolve' });
+      continue;
+    }
+
+    if (fired >= MAX_PROBES_PER_ROUTE || attempted >= MAX_ATTEMPTS_PER_ROUTE) {
+      budgetDeclined += 1;
+      continue;
+    }
+    attempted += 1;
+    if (await runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses })) fired += 1;
+  }
+  await ctx.close();
+  return { fired, attempted, sessionFired, candidates: distinct.length };
+}
+
+/**
+ * Land the anonymous probe page on the login route.
+ *
+ * The SPA redirects itself the moment it finds no token, so a `goto` here races
+ * the bundle's own navigation and Playwright rejects with "interrupted by
+ * another navigation". That is the page doing exactly what it is supposed to,
+ * not a failure to land — and the `waitForURL` below is what actually
+ * establishes that we got there, so the rejection is operational and the
+ * outcome is still checked.
+ *
+ * Narrow on purpose: only the interruption is tolerated. A refused connection
+ * or a real timeout still propagates, because a probe page that never loaded
+ * would make every anonymous verdict `unknown`, and §8 resolves `unknown` for a
+ * read to *required* only because this sweep is trusted to have run.
+ */
+async function landOnLogin(page) {
+  try {
+    await page.goto(`${ORIGIN}${TARGET.loginPath}`, { waitUntil: 'networkidle', timeout: 20_000 });
+  } catch (err) {
+    // operational: the SPA navigated itself while we were navigating to the same place
+    if (!/interrupted by another navigation/i.test(String(err))) throw err;
+  }
+  // Whatever the goto did, this is the assertion that we are somewhere the
+  // in-page `fetch` can run from — same origin, document loaded.
+  await page.waitForLoadState('domcontentloaded');
+  const landed = new URL(page.url()).origin === ORIGIN;
+  if (!landed) throw new Error(`the anonymous probe page ended up at ${page.url()}, not on ${ORIGIN}`);
+}
 
 async function main() {
   requireDocker();
@@ -346,6 +848,31 @@ async function main() {
     await settle();
 
     /**
+     * §6's behaviour probing, before the anonymous re-issue.
+     *
+     * The probes generate real observations, so they run while the credentialed
+     * session is live and *before* the anonymous sweep — a probe's traffic is
+     * ordinary crawl traffic and belongs in the endpoint index, while the
+     * sweep's is deliberately uncredentialed and is tagged as such.
+     */
+    for (const [routeId, record] of routes) {
+      const { fired, attempted, sessionFired, candidates } = await probeRoute({
+        browser, storageState: state, routeId, record,
+      });
+      console.log(
+        `  probe ${routeId.padEnd(34)} ${String(fired).padStart(2)} fired of ${String(attempted).padStart(2)} attempted, ` +
+        `${String(candidates).padStart(3)} distinct candidate(s)` +
+        (sessionFired > 0 ? ` · ${sessionFired} session-destructive on their own login` : ''),
+      );
+    }
+    await settle();
+    console.log(
+      `  flows: ${flows.size} (${[...flows.values()].filter((f) => f.outcome === 'skipped').length} skipped) · ` +
+      `skipped controls: ${skippedControls.length} · budget-declined: ${budgetDeclined}` +
+      (lostObservations > 0 ? ` · observations lost to a closing page: ${lostObservations}` : ''),
+    );
+
+    /**
      * §6: re-issue each distinct GET anonymously, and never a mutation.
      *
      * The signed-in crawl learns nothing about whether an endpoint is gated —
@@ -377,7 +904,7 @@ async function main() {
      * §8 resolves a missing verdict for a read to *required* only because the
      * sweep is trusted to have run.
      */
-    await anonPage.goto(`${ORIGIN}${TARGET.loginPath}`, { waitUntil: 'networkidle' });
+    await landOnLogin(anonPage);
     await wait(3000);
     const probeFailures = [];
     const inPage = async (u) => anonPage.evaluate(async (target) => {
@@ -398,7 +925,7 @@ async function main() {
         // operational: the SPA navigated under us and took the execution
         // context with it. Re-land and try once; a second failure is recorded.
         if (!/Execution context was destroyed/.test(String(err))) throw err;
-        await anonPage.goto(`${ORIGIN}${TARGET.loginPath}`, { waitUntil: 'networkidle' });
+        await landOnLogin(anonPage);
         await wait(1500);
         // operational: a second destroyed context is a probe that did not run
         outcome = await inPage(url).catch((again) => ({ ok: false, error: String(again) }));
@@ -449,7 +976,6 @@ for (const [routeId, record] of routes) {
 /** Routes whose anonymous verdict a client-side redirect left unsettled. */
 const clientRedirectRoutes = [];
 
-const gaps = [];
 const mintGap = ({ field, basis, values }) => {
   const id = gapId(`narrowing:${field}:${basis}`);
   if (!gaps.some((g) => g.gapId === id)) {
@@ -479,12 +1005,27 @@ console.log(`  endpoints: ${endpoints.length} inferred from ${observations.lengt
  * empty beside it, so the absence is stated in two artifacts rather than
  * inferred from one.
  */
+/**
+ * §6's probe loop now runs, so the warning that said it did not is gone.
+ *
+ * What remains is a *budget*, which is a different and smaller claim: a Vikunja
+ * route offers 133–807 interaction candidates and firing all of them is not
+ * affordable, so `MAX_PROBES_PER_ROUTE` caps it and the count declined for
+ * budget is reported. A shallow pass and a thorough one that found nothing must
+ * not render identically.
+ */
 const warnings = [
-  {
-    code: 'no-behaviour-probing',
+  ...(lostObservations === 0 ? [] : [{
+    code: 'observations-lost-to-page-close',
     message:
-      "this driver crawls and records; it does not fire controls. §6's probe loop — click every candidate, diff the a11y tree, record the transition — produces flows/, and it did not run. Interaction candidates were discovered and counted; none was fired, so flows is empty by construction rather than by a silent drop.",
-  },
+      `${lostObservations} response(s) arrived after the page that requested them had closed, so the exchange was not recorded. A probe ends by closing its page, so a few are expected; a large number means the settle window is too short and the endpoint index is missing traffic — which is a silent drop, and the reason this is counted rather than swallowed.`,
+  }]),
+  ...(budgetDeclined === 0 ? [] : [
+  {
+    code: 'probe-budget-reached',
+    message:
+      `${budgetDeclined} fireable control(s) were not probed because a per-route budget was spent (${MAX_PROBES_PER_ROUTE} successes or ${MAX_ATTEMPTS_PER_ROUTE} attempts, whichever came first). Their transitions are unknown and no flow was written for them — this is a limit of the driver, not a property of the target, and the number is here so a shallow probe pass is visible rather than indistinguishable from a thorough one that found nothing.`,
+  }]),
 ];
 
 const written = [];
@@ -511,7 +1052,8 @@ function write(relPath, schema, value) {
 const routeArtifacts = new Map();
 for (const [routeId, record] of routes) {
   const { captured, context, plan } = record;
-  const entries = captured.stateEntries;
+  // CSSOM-derived states plus anything probing found that no rule explains.
+  const entries = [...captured.stateEntries, ...(probedStates.get(routeId) ?? [])];
   const states = {
     ...envelope('state-deltas'),
     routeId, entries,
@@ -633,9 +1175,25 @@ const observed = {
   axInteractiveRoles: [...routes.values()].reduce((n, r) => n + r.captured.interactiveAx, 0),
   subresourceRequests: Object.keys(assetEntries).length,
   sessionProbePolicy: 'credentialed',
-  // No control was fired, so none was classified. Declared, not inferred from
-  // the firing pass — the observed side must not come from what it checks.
-  sessionDestructiveControls: 0,
+  /**
+   * Session-destructive controls **discovered**, counted from the classifier
+   * over every candidate — deliberately not from the firing pass, because §13
+   * requires an invariant's observed side to be derived independently of the
+   * extraction it checks. Counting what was fired would move both sides
+   * together and the invariant would go vacuous instead of failing.
+   */
+  sessionDestructiveControls: [...routes.values()].reduce(
+    (n, r) =>
+      n +
+      [...new Map(
+        r.captured.built
+          .filter((x) => x.nodeType === 'element' && x.interaction && x.a11y && x.a11y.name.trim().length > 0)
+          .map((x) => [`${x.a11y.role}:${x.a11y.name}`, x]),
+      ).values()].filter((x) =>
+        SESSION_DESTRUCTIVE_TERMS.some((t) => x.a11y.name.toLowerCase().includes(t)),
+      ).length,
+    0,
+  ),
   harCredentialedRequests: observations.filter((o) =>
     (o.requestHeaderNames ?? []).some((h) => ['cookie', 'authorization'].includes(h.toLowerCase()))).length,
 };
@@ -653,7 +1211,11 @@ const extracted = {
     .reduce((n, r) => n + r.captured.built.filter((x) => x.interaction).length, 0),
   assets: Object.keys(assetEntries).length,
   endpointsWithAuthEvidence: endpoints.filter((e) => e.authEvidence.length > 0).length,
-  sessionDestructiveFired: 0,
+  // Fired, from the flows actually written. The other side of the invariant.
+  sessionDestructiveFired: [...flows.values()].filter(
+    (f) => f.outcome === 'completed' && f.destructive === false &&
+      SESSION_DESTRUCTIVE_TERMS.some((t) => f.name.toLowerCase().includes(t)),
+  ).length,
   a11yNodes: [...routes.values()].reduce((n, r) => n + r.captured.built.filter((x) => x.a11y).length, 0),
 };
 const invariants = S.evaluateCoverage(observed, extracted);
@@ -663,8 +1225,12 @@ write('coverage.json', S.CoverageReportSchema, {
   siteId: TARGET.siteId, routeIds: [...routes.keys()], observed, extracted, invariants,
 });
 
+for (const [flowId, flow] of flows) {
+  write(`flows/${flowId}.trace.json`, S.FlowTraceSchema, flow);
+}
+
 write('flows/skipped-controls.json', S.SkippedControlIndexSchema, {
-  ...envelope('skipped-control-index'), siteId: TARGET.siteId, controls: [],
+  ...envelope('skipped-control-index'), siteId: TARGET.siteId, controls: skippedControls,
 });
 
 write('manifest.json', S.CaptureManifestSchema, {
@@ -694,13 +1260,13 @@ write('manifest.json', S.CaptureManifestSchema, {
     routeIds: [...routes.entries()].filter(([, r]) => r.plan.urlPattern === urlPattern).map(([id]) => id),
   })),
   routeIds: [...routes.keys()],
-  flowIds: [],
+  flowIds: [...flows.keys()],
   contentHash: sha256([...routeArtifacts.values()].map((r) => r.meta.content.contentHash).sort().join('\n')),
   counts: {
     contexts: CONTEXTS.length, routes: routes.size, capturedRoutes: routes.size,
     patterns: new Set([...routes.values()].map((r) => r.plan.urlPattern)).size,
     assets: Object.keys(assetEntries).length, endpoints: endpoints.length,
-    flows: 0, gaps: gaps.length,
+    flows: flows.size, gaps: gaps.length,
   },
 });
 
