@@ -249,6 +249,24 @@ export const SABOTAGES = [
     expect: 'The score is the only channel',
     change: 'import GRADE_CONTRACT into packages/infer/src/index.ts',
   },
+  {
+    id: 'surface-exclusion-widened',
+    bug: "the static-asset exclusion grows a clause about which endpoints 'count', and drops paths the document describes",
+    reachable:
+      "the second edit anyone makes to an exclusion list. `/info` really is a health check and an avatar really is an image, so the sentence writes itself — and the exclusion stops being a property of the request and becomes a judgement about which parts of the surface are interesting. That judgement is a denominator",
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'the exclusion removes a path that was scored',
+    change: 'add a NOT_APP_SURFACE clause to isCandidateApiCall',
+  },
+  {
+    id: 'surface-measured-logged-out',
+    bug: 'a signed-in measurement that only reached /info and /login — eight crawled login screens, reported as a verdict',
+    reachable:
+      'not hypothetical: the script produced exactly this record, and it was committed. Vikunja ignores Playwright fill, hydrates over the field it painted and ate the first five characters, so the login failed and every page below was the login screen. The verdict printed was confident and wrong',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'measured a login screen',
+    change: 'truncate the vikunja record to the surface a logged-out crawl reaches',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {

@@ -1,0 +1,17 @@
+diff --git a/packages/verify/scripts/browser-surface.mjs b/packages/verify/scripts/browser-surface.mjs
+index 25e507b..359da3d 100644
+--- a/packages/verify/scripts/browser-surface.mjs
++++ b/packages/verify/scripts/browser-surface.mjs
+@@ -277,8 +277,11 @@ const shapeOf = (path) =>
+ const STATIC_ASSET =
+   /\.(js|mjs|cjs|css|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|wasm|webmanifest|html|txt|xml)$/i;
+ 
++/** A health check is infrastructure, not part of the app's browser surface. */
++const NOT_APP_SURFACE = /\/info$|\/avatar\//;
++
+ /** Reads the path. Not the document, not the score. */
+-export const isCandidateApiCall = (path) => !STATIC_ASSET.test(path);
++export const isCandidateApiCall = (path) => !STATIC_ASSET.test(path) && !NOT_APP_SURFACE.test(path);
+ 
+ const METHODS = ['get', 'post', 'patch', 'put', 'delete'];
+ 

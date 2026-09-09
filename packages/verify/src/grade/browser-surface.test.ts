@@ -142,6 +142,22 @@ describe('the static-asset exclusion, and what keeps it from being tuning', () =
     }
   });
 
+  it('a signed-in measurement shows more than the login screen', () => {
+    // The state the script actually produced before the login check landed:
+    // `/info` and `/login` and nothing else, from eight crawled login screens,
+    // reported as a confident verdict. Reachable by definition — it was real —
+    // so the fixture is checked for it rather than trusted.
+    for (const id of ['directus', 'vikunja']) {
+      const record = read(id);
+      if (!record.signedIn) continue;
+      const authenticated = record.xhr.filter((e) => !/\/(info|login|auth|health)$/.test(e));
+      expect(
+        authenticated.length,
+        `${id}: a signed-in crawl that only reached the unauthenticated endpoints measured a login screen`,
+      ).toBeGreaterThan(3);
+    }
+  });
+
   it('records what it cut, so the cut is visible in the fixture', () => {
     // 236 for Vikunja, 0 for the two that are not PWAs. A number nobody can
     // read is a denominator shrunk out of sight.
