@@ -313,6 +313,15 @@ export const SABOTAGES = [
     expect: 'differs after the run',
     change: 'skip .js in assessBuildResidue, beside the legitimate .tsbuildinfo skip',
   },
+  {
+    id: 'variant-noop-exempted',
+    bug: 'the piece whose variant measured nothing is exempted from the check that says so',
+    reachable:
+      'what happens the second time the harness goes red on a row somebody has already explained to themselves. The narrowings variant really does produce an identical model and the capture really does hold no enums, so "exempt it, the reason is understood" is the reasonable-sounding edit — and it puts the row back in the table reporting `0 metrics moved`, which is what a real null result reports. The exemption is the shape §13 already caught in the secret gate',
+    gate: ['pnpm', '-s', 'test', '--project', 'infer'],
+    expect: 'measured nothing',
+    change: 'exempt the narrowings piece from assessVariantIsMeasurable',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
@@ -562,6 +571,23 @@ function main() {
       console.log('✗  revert left residue; every later result would be noise');
       process.exit(1);
     }
+    // And the same for compiled output, **inside** the loop rather than once at
+    // the end. A gate that builds leaves sabotaged JavaScript in `dist/`, and
+    // the next gate that reads `dist/` without building runs against it —
+    // `rung3` has no build step, so whether the run is valid would depend on
+    // the table's order. That is worse than a deterministic bug: reordering the
+    // rows silently changes the answer. The hash walk is nearly free and the
+    // rebuild only fires for the handful of gates that compile.
+    if (JSON.stringify(buildSignature()) !== JSON.stringify(buildBefore)) {
+      const restored = run(['pnpm', '-s', 'build']);
+      const residue =
+        restored.code === 0 ? assessBuildResidue(buildBefore, buildSignature()) : ['the rebuild failed'];
+      if (residue.length > 0) {
+        console.log('✗  this gate compiled the patch and the rebuild did not undo it');
+        for (const problem of residue) console.log(`      ${problem}`);
+        process.exit(1);
+      }
+    }
     if (verdict !== null) console.log(verdict);
   }
 
@@ -580,6 +606,12 @@ function main() {
   if (residue.length > 0) {
     console.log('✗  compiled residue survived the rebuild:');
     for (const problem of residue) console.log(`      ${problem}`);
+    console.log(
+      '\n   If dist/ was already stale when this run started, that is what this\n' +
+      '   reports and the fix is `pnpm -s build` before `pnpm sabotage`. A false\n' +
+      '   alarm here is how a check teaches people to bump past it, so the two\n' +
+      '   cases are worth telling apart before acting.',
+    );
     process.exit(1);
   }
 
