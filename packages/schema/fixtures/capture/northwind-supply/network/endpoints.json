@@ -153,6 +153,7 @@
           "observedOn": "root--anon-desktop--i0"
         }
       ],
+      "observedKeyValues": null,
       "discovery": {
         "kind": "observed"
       },
@@ -322,6 +323,16 @@
           "observedOn": "product-id--anon-desktop--i1"
         }
       ],
+      "observedKeyValues": {
+        "field": "sku",
+        "values": [
+          "MUG-BLUE-12OZ",
+          "NB-A5-DOT",
+          "PEN-FINE-4PK"
+        ],
+        "distinctObserved": 3,
+        "truncated": false
+      },
       "discovery": {
         "kind": "observed"
       },
@@ -438,6 +449,7 @@
           "observedOn": "product-id--anon-desktop--i0"
         }
       ],
+      "observedKeyValues": null,
       "discovery": {
         "kind": "observed"
       },
@@ -572,6 +584,7 @@
           "observedOn": "product-id--anon-desktop--i0"
         }
       ],
+      "observedKeyValues": null,
       "discovery": {
         "kind": "observed"
       },
@@ -672,6 +685,7 @@
           "observedOn": "account-orders--auth-desktop--i0"
         }
       ],
+      "observedKeyValues": null,
       "discovery": {
         "kind": "observed"
       },
@@ -798,6 +812,7 @@
           "observedOn": "account-orders--auth-desktop--i0"
         }
       ],
+      "observedKeyValues": null,
       "discovery": {
         "kind": "observed"
       },
@@ -914,6 +929,7 @@
           "observedOn": "root--anon-desktop--i0"
         }
       ],
+      "observedKeyValues": null,
       "discovery": {
         "kind": "observed"
       },

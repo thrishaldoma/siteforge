@@ -77,6 +77,88 @@ export const ResponseDescriptorSchema = z.strictObject({
   observedCount: z.int().positive(),
 });
 
+/**
+ * The cap on how many key values an endpoint records (decision 0027 §4).
+ *
+ * Higher than `examples`' five, and for a different job. Five values out of a
+ * collection is useless for the question this exists to answer — whether two
+ * endpoints returned the *same records* — because a five-value sample of two
+ * hundred rows shows an empty intersection almost every time and the false
+ * negative is indistinguishable from a real one. Two hundred covers a seeded
+ * fixture instance whole; against a production-sized collection it truncates,
+ * and `truncated` says so rather than the number quietly meaning something else.
+ */
+export const KEY_VALUE_CAP = 200;
+
+/**
+ * The key values this endpoint's rows carried.
+ *
+ * Ground truth for auditing an entity merge (0025, 0027): two endpoints whose
+ * rows share key values returned the same records, which is an observation,
+ * where field-set containment is an inference about shapes. It exists to check
+ * that the merge rule reached 1.000 for the right reason — a shape heuristic
+ * that happens to agree with the oracle is not distinguishable from a correct
+ * one from the inside.
+ *
+ * **Deliberately not an input to the merge.** Making it evidence would fail a
+ * merge whenever the crawl happened to see disjoint pages of one collection,
+ * which is a property of the crawl and not of the entities — the same mistake
+ * as scoring entity recall over all spec definitions rather than the reachable
+ * ones (0023).
+ *
+ * Key values only, never a general widening of `examples`. §3.4 exposure scales
+ * with how much is taken: five values of a string field is a sample, every
+ * value of every field is the database, and the defence against an unrecognised
+ * secret shape is not collecting it.
+ */
+export const ObservedKeyValuesSchema = z
+  .strictObject({
+    /** The field `keyOf`'s rule selected: the first `IDENTITY_KEYS` member present. */
+    field: z.string().min(1),
+    /** Scrubbed and sorted. Capped at `KEY_VALUE_CAP`. */
+    values: z.array(z.string()),
+    /**
+     * Distinct values seen **before** the cap.
+     *
+     * Without it a truncated overlap test reports a false negative that reads
+     * exactly like a real one: an empty intersection means "no shared records"
+     * or "we kept the first two hundred of nine hundred each", and the reader
+     * cannot tell which.
+     */
+    distinctObserved: z.int().nonnegative(),
+    /**
+     * Stated, never inferred from `values.length === KEY_VALUE_CAP`. A
+     * collection of exactly CAP distinct values is not truncated, and the two
+     * must not read alike.
+     */
+    truncated: z.boolean(),
+  })
+  .superRefine((k, ctx) => {
+    if (k.values.length > KEY_VALUE_CAP) {
+      ctx.addIssue({
+        code: 'custom', path: ['values'],
+        message: `${k.values.length} values exceeds the cap of ${KEY_VALUE_CAP}`,
+      });
+    }
+    if (k.values.length > k.distinctObserved) {
+      ctx.addIssue({
+        code: 'custom', path: ['distinctObserved'],
+        message: `${k.values.length} values were kept but only ${k.distinctObserved} were observed`,
+      });
+    }
+    if (k.truncated !== k.distinctObserved > k.values.length) {
+      ctx.addIssue({
+        code: 'custom', path: ['truncated'],
+        message: k.truncated
+          ? `truncated is set but all ${k.distinctObserved} observed values were kept`
+          : `${k.distinctObserved} values were observed and ${k.values.length} kept, which is truncation`,
+      });
+    }
+    if (new Set(k.values).size !== k.values.length) {
+      ctx.addIssue({ code: 'custom', path: ['values'], message: 'the values are not distinct' });
+    }
+  });
+
 export const EndpointDescriptorSchema = z
   .strictObject({
   endpointId: EndpointIdSchema,
@@ -103,6 +185,12 @@ export const EndpointDescriptorSchema = z
    * `EndpointIndexSchema` — the capture artifact — rejects anything but
    * `observed`, so the ownership rule is enforced rather than documented.
    */
+  /**
+   * Key values observed in this endpoint's 2xx rows, when it returned rows with
+   * a key. `null` where it returned none — an endpoint without a keyed row has
+   * nothing to record, and inventing a field to have something would be worse.
+   */
+  observedKeyValues: ObservedKeyValuesSchema.nullable(),
   discovery: z.discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('observed') }),
     z.strictObject({
@@ -304,5 +392,6 @@ export type ParamDescriptor = z.infer<typeof ParamDescriptorSchema>;
 export type HeaderDescriptor = z.infer<typeof HeaderDescriptorSchema>;
 export type ResponseSample = z.infer<typeof ResponseSampleSchema>;
 export type ResponseDescriptor = z.infer<typeof ResponseDescriptorSchema>;
+export type ObservedKeyValues = z.infer<typeof ObservedKeyValuesSchema>;
 export type EndpointDescriptor = z.infer<typeof EndpointDescriptorSchema>;
 export type EndpointIndex = z.infer<typeof EndpointIndexSchema>;

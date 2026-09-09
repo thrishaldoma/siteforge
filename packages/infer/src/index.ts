@@ -124,11 +124,48 @@ function pathParamValues(capture: Capture): Map<string, Set<string>> {
 /** Deterministic, and the same shape capture mints: a gap is addressable or it is prose. */
 const gapIdFor = (label: string): string => `gap_${shortHash(label).slice(0, 12)}`;
 
+/**
+ * Does the observation agree with the inference? (decision 0027)
+ *
+ * The merge rule reads **shapes**: one row's field set contained in another's.
+ * `observedKeyValues` is the other kind of evidence — two endpoints whose rows
+ * carry the same key values returned the same *records*, which is a fact rather
+ * than a similarity. This says whether the two agree.
+ *
+ * **It is a report and not a gate**, and that is the whole design. An empty
+ * intersection has two meanings the capture cannot tell apart — the merge is
+ * wrong, or the crawl saw disjoint pages of one collection — so §7's standing
+ * rule applies: record the fact, not the verdict. Wiring it into the merge would
+ * fail a correct merge whenever pagination happened to fall the wrong way.
+ */
+function auditMerge(
+  sources: readonly string[],
+  keyValues: Map<string, { field: string; values: readonly string[] }>,
+): string {
+  const seen = sources.map((id) => keyValues.get(id)).filter((k) => k !== undefined);
+  if (seen.length < 2) return 'key-value overlap not checkable: fewer than two sources recorded key values';
+  const fields = new Set(seen.map((k) => k!.field));
+  if (fields.size > 1) return `key fields disagree (${[...fields].join(', ')}), so no overlap is meaningful`;
+  const sets = seen.map((k) => new Set(k!.values));
+  const first = sets[0]!;
+  // empty: `sets` holds at least two members — the guard above returned for
+  // fewer — so there is no case where every() admits a value nothing contains.
+  const shared = [...first].filter((v) => sets.every((set) => set.has(v)));
+  const smallest = Math.min(...sets.map((set) => set.size));
+  // Reported as a fraction of the *smallest* side: a five-row item view fully
+  // contained in a two-hundred-row list is complete agreement, and scoring it
+  // against the union would read as 2.5%.
+  return shared.length === 0
+    ? `key values do NOT overlap (${sets.map((x) => x.size).join(' vs ')} distinct) — the containment may be coincidence, or the crawl saw disjoint pages`
+    : `${shared.length} of ${smallest} key values shared — the same records, observed twice`;
+}
+
 function buildEntities(
   rows: readonly RowShape[],
   keyed: Map<string, string>,
   values: Map<string, Set<string>>,
   carryNarrowings: boolean,
+  keyValues: Map<string, { field: string; values: readonly string[] }>,
 ): { entities: Entity[]; objections: string[]; merges: string[] } {
   const objections: string[] = [];
   const merges: string[] = [];
@@ -179,7 +216,8 @@ function buildEntities(
     if (mergedFrom !== null) {
       merges.push(
         `${name}: ${mergedFrom.narrowerFields} of ${mergedFrom.widerFields} fields contained, ` +
-          `keyed on ${mergedFrom.keyField}, from ${mergedFrom.sources.join(' + ')}`,
+          `keyed on ${mergedFrom.keyField}, from ${mergedFrom.sources.join(' + ')}` +
+          ` — ${auditMerge(mergedFrom.sources, keyValues)}`,
       );
     }
     entities.push({ name, key, fields, relations: [], mergedFrom, seed: null });
@@ -271,6 +309,11 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
     keyed,
     pathParamValues(capture),
     carryNarrowings,
+    new Map(
+      capture.endpoints.endpoints
+        .filter((e) => e.observedKeyValues !== null)
+        .map((e) => [e.endpointId, e.observedKeyValues!]),
+    ),
   );
   const declared = new Set(entities.map((e) => e.name));
 

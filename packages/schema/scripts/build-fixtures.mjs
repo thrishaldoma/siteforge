@@ -563,6 +563,7 @@ const ENDPOINTS = [
     requestBodySchema: null,
     responses: [{ status: 200, contentType: 'application/json', observedCount: 1, schema: { type: 'array', items: productSchema } }],
     samples: [sample('products', 200, [productJson(PRODUCTS[0], 'drinkware'), productJson(PRODUCTS[1], 'paper'), productJson(PRODUCTS[2], 'paper', false)], ROUTE.home)],
+    observedKeyValues: null,
     discovery: seenOnTheWire,
     isMutation: false, requiresAuth: 'not-required', authEvidence: anonOk(200, 1),
     observedCount: 1, observedOn: [ROUTE.home],
@@ -579,6 +580,19 @@ const ENDPOINTS = [
       sample('product-mug', 200, productJson(PRODUCTS[0], 'drinkware'), ROUTE.mug),
       sample('product-notebook', 200, productJson(PRODUCTS[1], 'paper'), ROUTE.notebook),
     ],
+    /**
+     * The one endpoint that carries them, so `null` does not read as a constant.
+     *
+     * `sku` rather than `id`: `keyOf`'s rule takes the first `IDENTITY_KEYS`
+     * member the row has, and these rows are keyed by a business key the site
+     * itself uses — which is also the case §10's entity anchors care about.
+     */
+    observedKeyValues: {
+      field: 'sku',
+      values: PRODUCTS.map((x) => x.sku).sort(),
+      distinctObserved: PRODUCTS.length,
+      truncated: false,
+    },
     discovery: seenOnTheWire,
     isMutation: false, requiresAuth: 'not-required', authEvidence: anonOk(200, 3),
     observedCount: 3, observedOn: [ROUTE.mug, ROUTE.notebook, ROUTE.mugMobile],
@@ -599,6 +613,7 @@ const ENDPOINTS = [
       },
     }],
     samples: [sample('cart-two', 200, { id: 'cart_0001', items: [{ sku: 'MUG-BLUE-12OZ', quantity: 2, unitPrice: 18 }], subtotal: 36 }, ROUTE.mug)],
+    observedKeyValues: null,
     discovery: seenOnTheWire,
     isMutation: false, requiresAuth: 'not-required', authEvidence: anonOk(200, 2),
     observedCount: 2, observedOn: [ROUTE.mug],
@@ -612,6 +627,7 @@ const ENDPOINTS = [
       schema: { type: 'object', properties: { id: idField(['identifier-name']), items: { type: 'array', items: { type: 'object', properties: { sku: idField(['identifier-name']), quantity: { type: 'integer' }, unitPrice: { type: 'number' } }, required: ['sku', 'quantity', 'unitPrice'], additionalProperties: false } }, subtotal: { type: 'number' } }, required: ['id', 'items', 'subtotal'], additionalProperties: false },
     }],
     samples: [sample('cart-add', 201, { id: 'cart_0001', items: [{ sku: 'MUG-BLUE-12OZ', quantity: 2, unitPrice: 18 }], subtotal: 36 }, ROUTE.mug)],
+    observedKeyValues: null,
     discovery: seenOnTheWire,
     isMutation: true, requiresAuth: 'not-required', authEvidence: anonOk(201, 1),
     observedCount: 1, observedOn: [ROUTE.mug],
@@ -624,6 +640,7 @@ const ENDPOINTS = [
     // domain, and nothing in the UI constrains this field — so it stays a string.
     responses: [{ status: 201, contentType: 'application/json', observedCount: 1, schema: { type: 'object', properties: { orderId: idField(['unique-per-record']), status: { type: 'string', examples: ['placed'] }, total: { type: 'number' } }, required: ['orderId', 'status', 'total'], additionalProperties: false } }],
     samples: [sample('checkout', 201, { orderId: 'NW-10428', status: 'placed', total: 30.5 }, ROUTE.orders)],
+    observedKeyValues: null,
     discovery: seenOnTheWire,
     // The rung-3 shape, preserved deliberately: every observation carried a
     // session cookie and no anonymous attempt was ever made, so this is honestly
@@ -668,6 +685,7 @@ const ENDPOINTS = [
       { orderId: 'NW-10428', placedAt: '2026-08-14T09:02:11.000Z', status: 'delivered', total: 30.5 },
       { orderId: 'NW-10391', placedAt: '2026-07-02T16:44:03.000Z', status: 'shipped', total: 18 },
     ], ROUTE.orders)],
+    observedKeyValues: null,
     discovery: seenOnTheWire,
     // §6 re-issues each distinct GET once anonymously, purely to learn this.
     isMutation: false, requiresAuth: 'required', authEvidence: anonRefused(1),
@@ -683,6 +701,7 @@ const ENDPOINTS = [
     ],
     // Request bodies are never sampled for this endpoint: they carry credentials (§3.3).
     samples: [sample('login-ok', 200, { userId: 'usr_0001', displayName: '[REDACTED:NAME]' }, ROUTE.home)],
+    observedKeyValues: null,
     discovery: seenOnTheWire,
     // This endpoint's 401 is a wrong password, not a refusal to serve an
     // anonymous caller — so it is deliberately *not* recorded as
@@ -1118,6 +1137,9 @@ const boundDeleteEndpoint = {
   origin: ORIGIN,
   params: { path: [], query: [], headers: sessionHeader },
   requestBodySchema: null,
+  // Never fired, so no row was ever observed and no key value exists — the
+  // shape §7.6 produces, and the one where `null` is the only honest value.
+  observedKeyValues: null,
   discovery: {
     kind: 'bound-from-control',
     controlId: `ctl_${sha256('northwind-control:delete-account').slice(0, 12)}`,

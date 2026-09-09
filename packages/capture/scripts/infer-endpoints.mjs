@@ -1,5 +1,5 @@
-import { deriveEndpointId } from '../../schema/dist/index.js';
-import { classifyStringField, dedupeByIdentity } from '../../shared/dist/index.js';
+import { deriveEndpointId, KEY_VALUE_CAP } from '../../schema/dist/index.js';
+import { classifyStringField, dedupeByIdentity, IDENTITY_KEYS } from '../../shared/dist/index.js';
 
 /**
  * §5: "Response schemas, not just responses. For each endpoint, infer a JSON
@@ -342,6 +342,49 @@ export function inferEndpoints(observations, { scrub, sha256, uiConstraints, min
       }
     }
   }
+/**
+ * The key values this endpoint's 2xx rows carried (decision 0027).
+ *
+ * Ground truth for auditing an entity merge: two endpoints whose rows share key
+ * values returned the same **records**, where field-set containment (0025) is
+ * an inference about shapes. It audits the merge and is deliberately not an
+ * input to it — as evidence it would fail a merge whenever the crawl happened
+ * to see disjoint pages of one collection, which is a fact about the crawl and
+ * not about the entities.
+ *
+ * **The key is `keyOf`'s rule, not a name heuristic**: the first
+ * `IDENTITY_KEYS` member the row carries, in that order, from the same shared
+ * constant the model's own `keyOf` reads. Two definitions of "the key" is the
+ * schema drift §13 opens with, and "fields ending in Id" is exactly what §7.5
+ * forbids for foreign keys — path normalisation collapses id segments to `:id`,
+ * so a name comparison tests against a constant.
+ */
+function observedKeyValuesOf(bodies) {
+  const rows = bodies
+    .flatMap((b) => (Array.isArray(b) ? b : [b]))
+    .filter((r) => r !== null && typeof r === 'object' && !Array.isArray(r));
+  // empty: an endpoint that returned no object rows has no key to record, which
+  // `find` on an empty list reports correctly as `undefined` two lines down.
+  if (rows.length === 0) return null;
+  const field = IDENTITY_KEYS.find((k) => rows.some((r) => r[k] !== undefined && r[k] !== null));
+  // A row with no identity key records nothing. Inventing a field so there is
+  // something to record would be worse than the absence.
+  if (field === undefined) return null;
+  const distinct = [...new Set(
+    rows.map((r) => r[field]).filter((v) => v !== undefined && v !== null).map(String),
+  )].sort();
+  if (distinct.length === 0) return null;
+  return {
+    field,
+    values: distinct.slice(0, KEY_VALUE_CAP),
+    distinctObserved: distinct.length,
+    // Stated, never inferred from `values.length === KEY_VALUE_CAP`: a
+    // collection of exactly CAP distinct values is not truncated, and the two
+    // must not read alike.
+    truncated: distinct.length > KEY_VALUE_CAP,
+  };
+}
+
   const schemaCtx = {
     uiConstraints,
     pathParamValues,
@@ -418,6 +461,13 @@ export function inferEndpoints(observations, { scrub, sha256, uiConstraints, min
       },
       requestBodySchema: inferSchema(g.requestBodies.map((x) => scrub(x)), schemaCtx),
       responses,
+      // Scrubbed like every other captured value — a key can be an email in an
+      // API that keys its users by address.
+      observedKeyValues: observedKeyValuesOf(
+        [...g.byStatus.entries()]
+          .filter(([status]) => status >= 200 && status < 300)
+          .flatMap(([, b]) => b.bodies.map((x) => scrub(x))),
+      ),
       samples,
       discovery: { kind: 'observed' },
       isMutation: !['GET', 'HEAD', 'OPTIONS'].includes(g.method),

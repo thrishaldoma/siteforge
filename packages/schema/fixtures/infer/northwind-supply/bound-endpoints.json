@@ -18,6 +18,7 @@
         ]
       },
       "requestBodySchema": null,
+      "observedKeyValues": null,
       "discovery": {
         "kind": "bound-from-control",
         "controlId": "ctl_9b5cba7d31dc",
