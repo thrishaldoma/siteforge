@@ -20,6 +20,8 @@ export interface HygieneFinding {
     | 'unanchored-pattern'
     | 'package-untracked'
     | 'package-ignored'
+    | 'walked-but-untracked'
+    | 'tracked-but-unwalked'
     | FirewallRule
     | ToolingHostileRule;
   readonly subject: string;
@@ -233,6 +235,85 @@ export function assessGraderFirewall(
       rule: 'firewall-dependency',
       subject: dependency,
       message: `${subject.package} declares ${dependency} as a dependency. Nothing imports it today, which is what makes this the edge nobody would notice going live.`,
+    });
+  }
+  return findings;
+}
+
+/**
+ * The two views of what the repository contains, reconciled.
+ *
+ * **Third occurrence of one root, and this is the generalisation.** Every gate
+ * has a *scope*, and a scope comes from one of two views — git's or the
+ * filesystem's — which are not the same set. Each time they have diverged here,
+ * a gate reported success over something it could not see:
+ *
+ *   - an unanchored `.gitignore` pattern hid `packages/capture`, so git's view
+ *     lacked a whole source package while every local check ran against the
+ *     filesystem and passed. `verify:clean` closed that by running from a clone,
+ *     and `assessTrackedPackages` closed it at *package* granularity;
+ *   - the walker's own `IGNORED_DIRS` held the bare name `capture`, so the
+ *     filesystem view lacked the crawler and the catch linter reported success
+ *     over 8 of its 21 catch blocks;
+ *   - `dist/` is gitignored, so `git status --porcelain` structurally could not
+ *     see a sabotaged build surviving a revert, and a score was read off it.
+ *     `assessBuildResidue` closed that one by hashing the files git cannot see.
+ *
+ * The first two are the *same* failure in opposite directions, and neither was
+ * visible from inside the view that had the gap. So this is the reconciliation
+ * at **file** granularity, asserted as a set difference both ways rather than
+ * as "the counts match" — a count is an aggregate and this repo has been bitten
+ * by aggregates hiding partial losses. Both sides arrive as parameters.
+ *
+ * `walkedButUntracked` has **no exemptions**: a source file no clone contains
+ * is one `verify:clean` never compiles, never lints and never tests, however
+ * green it looks here. `trackedButUnwalked` has declared ones, because a
+ * committed file legitimately outside every scanner's scope exists — but it has
+ * to be *said*, for the reason `NOT_FROZEN` entries are said: a file nobody
+ * scanned and nobody excused reads as "someone decided" when it means "nobody
+ * looked".
+ *
+ * Measured at the commit that added this: 135 walked, 135 tracked, zero
+ * divergence in either direction.
+ */
+export interface ScopeViews {
+  /** Repo-relative source paths the filesystem walker reached. */
+  readonly walked: readonly string[];
+  /** Repo-relative source paths `git ls-files` reports. */
+  readonly tracked: readonly string[];
+  /**
+   * Tracked paths deliberately outside every scanner's scope, each with its
+   * reason. A prefix match, so a directory can be excused once.
+   */
+  readonly excused?: Readonly<Record<string, string>>;
+}
+
+export function assessScopeAgreement(views: ScopeViews): HygieneFinding[] {
+  const walked = new Set(views.walked);
+  const tracked = new Set(views.tracked);
+  const excused = views.excused ?? {};
+  const findings: HygieneFinding[] = [];
+
+  for (const file of [...walked].sort()) {
+    if (tracked.has(file)) continue;
+    findings.push({
+      rule: 'walked-but-untracked',
+      subject: file,
+      message: `${file} is scanned by this repo's gates but is not tracked by git, so a fresh clone does not contain it. Every gate over it is green here and absent in verify:clean — the shape that hid packages/capture for eight commits. There is no exemption for this direction: commit it, or stop scanning it.`,
+    });
+  }
+  for (const file of [...tracked].sort()) {
+    if (walked.has(file)) continue;
+    // Prefix by path segment, never by string: `/packages/schema/fixtures` must
+    // not excuse `/packages/schema/fixtures-real/x.ts`.
+    const reason = Object.entries(excused).find(([prefix]) =>
+      file === prefix || file.startsWith(`${prefix}/`),
+    );
+    if (reason !== undefined) continue;
+    findings.push({
+      rule: 'tracked-but-unwalked',
+      subject: file,
+      message: `${file} is committed source that no scanner reaches, so the catch linter, the identifier linter and the empty-admits linter all skip it in silence — the shape that hid packages/capture's 21 catch blocks from the linter that was meant to read them. Either widen the walk, or excuse it by prefix with the reason it is outside scope.`,
     });
   }
   return findings;

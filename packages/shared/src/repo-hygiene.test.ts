@@ -34,6 +34,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assessGraderFirewall,
   assessGitignoreAnchoring,
+  assessScopeAgreement,
   assessToolingHostileSource,
   assessTrackedPackages,
   type PackageTracking,
@@ -257,5 +258,94 @@ describe('the grader/infer firewall, in the half a machine can hold (0020)', () 
       dependencies: Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }),
     });
     expect(findings.map((f) => f.message)).toEqual([]);
+  });
+});
+
+describe('the two views of the repository agree, and neither defines scope alone', () => {
+  /**
+   * Third occurrence of one root (§13). A gate's *scope* comes from git's view
+   * or from the filesystem's, and every time they have diverged here something
+   * reported success over what it could not see — `packages/capture` missing
+   * from git while local checks passed, the crawler missing from the walk while
+   * the catch linter passed, `dist/` invisible to `git status --porcelain` while
+   * a sabotaged build survived a revert.
+   *
+   * This file is two callers, as the rest of this suite is: the real repository,
+   * and synthetic pairs that drive each direction to a finding.
+   */
+  const SOURCE_RE = /\.(?:ts|mts|cts|mjs|cjs|js)$/;
+
+  /** Tracked source outside every scanner's scope, by prefix, with the reason. */
+  const EXCUSED: Readonly<Record<string, string>> = {};
+
+  const walkedSource = (): string[] => {
+    const { files, relative } = walkFiles({
+      root: REPO,
+      within: ['packages', 'scripts'],
+      profile: 'source',
+      expect: REPO_SOURCE_EXPECTATION,
+    });
+    return files.map((_, i) => relative[i]!).filter((f) => SOURCE_RE.test(f));
+  };
+
+  const trackedSource = (): string[] =>
+    git('ls-files')
+      .split('\n')
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0 && SOURCE_RE.test(f))
+      .filter((f) => f.startsWith('packages/') || f.startsWith('scripts/'));
+
+  it('has no source file that only one of the two views can see', () => {
+    // Measured at the commit that added this: 135 walked, 135 tracked, zero
+    // divergence. Asserted as the set difference both ways rather than as equal
+    // counts — a count is an aggregate, and this repo has been bitten by
+    // aggregates hiding partial losses in both directions at once.
+    const findings = assessScopeAgreement({
+      walked: walkedSource(),
+      tracked: trackedSource(),
+      excused: EXCUSED,
+    });
+    expect(findings.map((f) => `${f.rule}: ${f.subject}`)).toEqual([]);
+  });
+
+  it('examined something, so a green tick is not an empty walk', () => {
+    // The precondition, as the primary gate. Both sides empty produce zero
+    // findings, which renders identically to agreement — the failure mode that
+    // wears the answer's clothes.
+    expect(walkedSource().length).toBeGreaterThan(100);
+    expect(trackedSource().length).toBeGreaterThan(100);
+  });
+
+  it('objects to a scanned file no clone contains, with no exemption available', () => {
+    // The `packages/capture` shape at file granularity: green here, absent in
+    // verify:clean. Excusing it is deliberately impossible.
+    const findings = assessScopeAgreement({
+      walked: ['packages/capture/src/index.ts'],
+      tracked: [],
+      excused: { 'packages/capture': 'tempting, and not offered for this direction' },
+    });
+    expect(findings.map((f) => f.rule)).toEqual(['walked-but-untracked']);
+    expect(findings[0]?.message).toContain('a fresh clone does not contain it');
+  });
+
+  it('objects to committed source no scanner reaches, unless it is excused', () => {
+    // The walker's-ignore-list shape: committed code the linters skip in
+    // silence. Excusable, because a real one exists — but it has to be said.
+    const views = { walked: [], tracked: ['packages/x/src/a.ts'] };
+    expect(assessScopeAgreement(views).map((f) => f.rule)).toEqual(['tracked-but-unwalked']);
+    expect(
+      assessScopeAgreement({ ...views, excused: { 'packages/x': 'generated, and not ours to lint' } }),
+    ).toEqual([]);
+  });
+
+  it('excuses by path segment, never by string prefix', () => {
+    // §13's identifier rule, fifth grammar and counting: `packages/schema/fixtures`
+    // must not excuse `packages/schema/fixtures-real/`.
+    const findings = assessScopeAgreement({
+      walked: [],
+      tracked: ['packages/schema/fixtures-real/live.ts'],
+      excused: { 'packages/schema/fixtures': 'hand-built fixtures, not source' },
+    });
+    expect(findings.map((f) => f.rule)).toEqual(['tracked-but-unwalked']);
   });
 });
