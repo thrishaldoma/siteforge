@@ -1,8 +1,8 @@
 diff --git a/packages/verify/src/grade/grade.ts b/packages/verify/src/grade/grade.ts
-index 676dd58..cf000f0 100644
+index 5f448a9..d1b5ff6 100644
 --- a/packages/verify/src/grade/grade.ts
 +++ b/packages/verify/src/grade/grade.ts
-@@ -518,15 +518,10 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
+@@ -577,15 +577,9 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
     * the second, and it reports a bug in the first — the same arrangement as the
     * post-click origin check behind the router chokepoint.
     */
@@ -14,8 +14,7 @@ index 676dd58..cf000f0 100644
    const metrics: MetricResult[] = GRADE_METRICS.map((metric) => {
      const tally = byMetric[metric.id] ?? ZERO;
      const ungrounded =
--      emptyTruth ?? notDerived.get(metric.category) ?? tally.ungrounded;
-+      notDerived.get(metric.category) ?? tally.ungrounded;
-     const kind: MetricKind = COUNT_METRICS.has(metric.id) ? 'count' : 'rate';
-     const vacuous = ungrounded !== undefined || tally.denominator === 0;
-     const value = vacuous
+-      emptyTruth ??
+       notDerivedByMetric.get(metric.id) ??
+       notDerivedByCategory.get(metric.category) ??
+       tally.ungrounded;
