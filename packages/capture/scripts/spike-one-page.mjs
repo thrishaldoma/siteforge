@@ -984,6 +984,11 @@ const extractedCounts = {
   interactionCandidates: built.filter((n) => n.nodeType === 'element' && n.interaction).length,
   assets: Object.keys(assetEntries).length,
   endpointsWithAuthEvidence: 0,
+  // This driver captures one page and fires nothing, so both halves of the
+  // behaviour ceiling are zero — an honest zero, not an absent field: "no
+  // control was driven" and "the count was never taken" must not read alike.
+  controlsFired: 0,
+  controlsUndriveable: 0,
   sessionDestructiveFired: 0,
   a11yNodes: built.filter((n) => n.nodeType === 'element' && n.a11y).length,
 };
