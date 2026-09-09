@@ -196,7 +196,7 @@ export const MUTATIONS: readonly Mutation[] = [
     change: 'drop GET /api/v1/repos/:owner/:repo/topics from the model',
     reachable:
       'a crawl that never reached the page issuing it, or an inference pass that dropped an endpoint with no entity behind it',
-    mustMove: [{ metric: 'endpoint-identity.recall', direction: 'down', minimum: 1 / 15 }],
+    mustMove: [{ metric: 'endpoint-identity.conservation', direction: 'down', minimum: 1 / 15 }],
     mustHold: ['endpoint-identity.precision'],
     apply: (input) => {
       const model = cloneModel(input.model);
@@ -212,7 +212,7 @@ export const MUTATIONS: readonly Mutation[] = [
     reachable:
       '§7 calls this the cardinal sin and it is the easiest one to commit: a path assembled from a URL template in page source rather than from a request that was actually issued',
     mustMove: [{ metric: 'endpoint-identity.precision', direction: 'down', minimum: 1 / 16 }],
-    mustHold: ['endpoint-identity.recall', 'synthesized-endpoint.precision'],
+    mustHold: ['endpoint-identity.conservation', 'synthesized-endpoint.precision'],
     apply: (input) => {
       const model = cloneModel(input.model);
       const template = structuredClone(operation(model, LABELS));
@@ -308,7 +308,7 @@ export const MUTATIONS: readonly Mutation[] = [
     change: 'drop Label.url from the labels list response',
     reachable: 'a field absent from every body the crawl happened to see — an empty list has no shape at all',
     mustMove: [{ metric: 'response-field-presence.recall', direction: 'down', minimum: 0.005 }],
-    mustHold: ['response-field-presence.precision', 'endpoint-identity.recall'],
+    mustHold: ['response-field-presence.precision', 'endpoint-identity.conservation'],
     apply: (input) => {
       const model = cloneModel(input.model);
       delete itemOf(responseSchema(model, LABELS)).properties!['url'];
@@ -470,7 +470,7 @@ export const MUTATIONS: readonly Mutation[] = [
     mustMove: [{ metric: 'path-param-naming.accuracy', direction: 'down', minimum: 0.05 }],
     mustHold: [
       'endpoint-identity.precision',
-      'endpoint-identity.recall',
+      'endpoint-identity.conservation',
       'path-param-arity.accuracy',
       'response-field-presence.precision',
       'response-field-presence.recall',
@@ -635,6 +635,30 @@ export function assessMutationTable(
       if (category !== undefined) covered.add(category);
     }
   }
+  /**
+   * A conservation metric names the defect that moves it; a mutation has to be
+   * that defect.
+   *
+   * 0022 labels `endpoint-identity.conservation` "moves only when a stage drops
+   * an observed endpoint … exercised by the `endpoint-deleted` mutation". That
+   * is a claim in a docstring, and a claim in a docstring is 0012's
+   * gap-recorded-only-in-prose all over again — the label's whole purpose is to
+   * keep the number falsifiable, so the row it points at has to exist. Without
+   * this, deleting the row would leave a metric that cannot fall *and* nothing
+   * demonstrating what would make it.
+   */
+  const conserved = GRADE_METRICS.filter((m) => m.conservation !== undefined).map((m) => m.id);
+  const moved = new Set(
+    mutations.filter((m) => m.wholeSide !== true).flatMap((m) => m.mustMove.map((c) => c.metric)),
+  );
+  for (const metric of conserved) {
+    if (!moved.has(metric)) {
+      problems.push(
+        `${metric} is labelled a conservation check but no mutation moves it. The label names the one defect that would — a row has to actually be that defect, or the number cannot fall and nothing says what would make it.`,
+      );
+    }
+  }
+
   const missing = categories.filter((c) => !covered.has(c));
   if (missing.length > 0) {
     problems.push(

@@ -46,7 +46,7 @@ describe('the grader is written before infer, and stays that way', () => {
 
   it('reports the frozen contract it scored against', () => {
     const report = gradeSiteModel(input);
-    expect(report.metricsVersion).toBe(2);
+    expect(report.metricsVersion).toBe(3);
     expect(report.metrics.map((m) => m.id)).toEqual(GRADE_METRICS.map((m) => m.id));
   });
 });

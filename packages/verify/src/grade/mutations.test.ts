@@ -84,7 +84,7 @@ describe('every mutation moves the metric it names', () => {
     const delta = (id: string) => result.deltas.find((d) => d.metric === id)!;
     expect(delta('path-param-naming.accuracy').after).toBeLessThan(1);
     expect(delta('endpoint-identity.precision').after).toBe(1);
-    expect(delta('endpoint-identity.recall').after).toBe(1);
+    expect(delta('endpoint-identity.conservation').after).toBe(1);
   });
 
   it('an emptied side reports nothing rather than 1.0', () => {
@@ -111,24 +111,50 @@ describe('the table itself is well formed, and the rule saying so can fail', () 
     change: 'something',
     reachable: REACHABLE,
     mustMove: [{ metric: 'endpoint-identity.precision', direction: 'down', minimum: 0.1 }],
-    mustHold: ['endpoint-identity.recall'],
+    mustHold: ['endpoint-identity.conservation'],
     apply: (i) => i,
     ...over,
   });
 
-  /** A table naming every scored category, so a test can break one thing at a time. */
-  const complete = (): Mutation[] =>
-    GRADE_CATEGORIES.map((category) => {
+  /**
+   * A table naming every scored category **and** moving every conservation
+   * metric, so a test can break one thing at a time.
+   *
+   * Both completeness rules, because a helper that satisfies only one of them
+   * cannot tell which rule a failure came from — and the conservation rows are
+   * derived from the contract rather than typed out, so a second conservation
+   * metric is covered the day it lands (§13's freeze-as-a-complete-set rule).
+   */
+  const complete = (): Mutation[] => [
+    ...GRADE_CATEGORIES.map((category) => {
       const metric = GRADE_METRICS.find((m) => m.category === category)!;
       return row({
         id: `moves-${category}`,
         mustMove: [{ metric: metric.id, direction: 'down', minimum: 0.1 }],
         mustHold: [],
       });
-    });
+    }),
+    ...GRADE_METRICS.filter((m) => m.conservation !== undefined).map((m) =>
+      row({
+        id: `moves-${m.id}`,
+        mustMove: [{ metric: m.id, direction: 'down', minimum: 0.1 }],
+        mustHold: [],
+      }),
+    ),
+  ];
 
   it('accepts the real table', () => {
     expect(harness.tableProblems).toEqual([]);
+  });
+
+  it('objects when a conservation metric has no mutation that moves it', () => {
+    // 0022's label says which defect moves `endpoint-identity.conservation`.
+    // That claim lives in a docstring, and a claim in a docstring is 0012's
+    // gap-recorded-only-in-prose — so the rule checks it, and this drives the
+    // rule to its failing verdict by dropping exactly that row.
+    const withoutIt = complete().filter((m) => !m.id.startsWith('moves-endpoint-identity.'));
+    const problems = assessMutationTable(withoutIt);
+    expect(problems.join('\n')).toMatch(/labelled a conservation check but no mutation moves it/);
   });
 
   it('accepts a synthetic table that names every category and has a control', () => {

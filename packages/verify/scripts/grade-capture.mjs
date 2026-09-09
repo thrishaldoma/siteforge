@@ -6,10 +6,13 @@
  *
  * Reads three files and nothing else: the model infer wrote, the truth the
  * snapshot pinned, and the endpoint index capture recorded. **The observed list
- * comes from the capture, never from the model** — `endpoint-identity.recall`
+ * comes from the capture, never from the model** — `endpoint-identity.conservation`
  * is over what the crawl touched, and recomputing it from the model would make
- * a dropped endpoint disappear from its own denominator, so the recall would
- * read 1.0 for a model that emitted nothing.
+ * a dropped endpoint disappear from its own denominator, so it would read 1.000
+ * for a model that emitted nothing. That is also why it is named a conservation
+ * check rather than a recall: both sides come from the observed list, so any
+ * stage that transcribes the index scores 1.000 and only a *dropped* endpoint
+ * moves it.
  *
  * This direction of dependency is the allowed one: verify reads infer's output.
  * The reverse — infer importing the grader — is what 0020 forbids and
@@ -18,7 +21,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SiteModelSchema } from '../../schema/dist/index.js';
+import { GRADE_SUITES, SiteModelSchema } from '../../schema/dist/index.js';
 import { gradeSiteModel } from '../dist/grade/grade.js';
 import { loadVikunjaTruth } from '../dist/grade/truth/vikunja.js';
 
@@ -58,20 +61,37 @@ console.log(
   `  matched ${m.matched} endpoint(s), ${m.unmatchedOperations} unmatched, ` +
   `${m.outOfUniverse} out-of-universe, ${m.ambiguous.length} ambiguous, ${m.arityMismatches} arity mismatch(es)`,
 );
-console.log('');
-console.log('  metric                                value       n/d  gate');
-for (const metric of report.metrics) {
-  const mark = metric.vacuous ? '✗' : metric.passed === false ? '✗' : '✓';
-  const value = metric.vacuous
-    ? 'vacuous'
-    : metric.kind === 'count'
-      ? String(metric.numerator)
-      : metric.value.toFixed(3);
-  console.log(
-    `  ${mark} ${metric.id.padEnd(34)} ${value.padStart(7)}  ${`${metric.numerator}/${metric.denominator}`.padStart(8)}  ${gateOf(metric)}`,
-  );
-  if (metric.vacuous && metric.emptyDenominator) {
-    console.log(`      ${metric.emptyDenominator}`);
+/**
+ * Grouped by suite, and a conservation check is marked rather than printed
+ * beside the measurements.
+ *
+ * 0021 printed `endpoint-identity.recall 1.000` next to
+ * `path-param-naming 0.600` as though both were results. Both sides of the
+ * first come from the observed list, so it reads 1.000 for any stage that
+ * transcribes the endpoint index — a number that cannot fall is not evidence,
+ * and the report is where that has to be visible.
+ */
+for (const suite of GRADE_SUITES) {
+  const metrics = report.metrics.filter((m) => m.suite === suite);
+  console.log('');
+  console.log(`  ── ${suite} ${'─'.repeat(Math.max(0, 62 - suite.length))}`);
+  console.log('  metric                                value       n/d  gate');
+  for (const metric of metrics) {
+    const mark = metric.vacuous ? '✗' : metric.passed === false ? '✗' : '✓';
+    const value = metric.vacuous
+      ? 'vacuous'
+      : metric.kind === 'count'
+        ? String(metric.numerator)
+        : metric.value.toFixed(4);
+    console.log(
+      `  ${mark} ${metric.id.padEnd(34)} ${value.padStart(7)}  ${`${metric.numerator}/${metric.denominator}`.padStart(8)}  ${gateOf(metric)}`,
+    );
+    if (metric.conservation) {
+      console.log(`      conservation check, not a measurement — ${metric.conservation}`);
+    }
+    if (metric.vacuous && metric.emptyDenominator) {
+      console.log(`      ${metric.emptyDenominator}`);
+    }
   }
 }
 console.log('');

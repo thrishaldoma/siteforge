@@ -15,7 +15,9 @@ import {
   GRADE_CATEGORIES,
   GRADE_CONTRACT_DIGEST,
   GRADE_METRICS,
+  GRADE_SUITES,
   GradeCategoryIdSchema,
+  GradeSuiteIdSchema,
   InferMetricsBlockSchema,
   KnownDivergenceSchema,
   METRICS_VERSION,
@@ -34,6 +36,28 @@ describe('the scored-field contract is frozen before the model it constrains', (
     // change cannot be made quietly — it shows up in review as two lines.
     expect(computeGradeContractDigest(), 'the contract table moved without its digest')
       .toBe(GRADE_CONTRACT_DIGEST);
+  });
+
+  it('changes when a metric changes suite, or stops being a measurement', () => {
+    // The digest's job is to make a quiet change loud, so what it *covers* has
+    // to be exercised rather than asserted. `suite` decides what a number is a
+    // claim about and `conservation` decides whether it is a claim at all —
+    // either one left out of the canonical form would let a metric change
+    // subject in silence. Driven by recomputing over a perturbed table, which
+    // is the pure-gate form of the same check.
+    const canonical = (metrics: typeof GRADE_METRICS) =>
+      JSON.stringify(
+        metrics.map((m) => [m.id, m.suite, m.category, m.numerator, m.denominator, m.gate, m.conservation ?? null]),
+      );
+    const real = canonical(GRADE_METRICS);
+    const movedSuite = canonical(
+      GRADE_METRICS.map((m) =>
+        m.id === 'field-type.accuracy' ? { ...m, suite: 'inference' as never } : m,
+      ),
+    );
+    const droppedLabel = canonical(GRADE_METRICS.map(({ conservation, ...m }) => m as typeof GRADE_METRICS[number]));
+    expect(movedSuite, 'a metric changed suite and the digest could not see it').not.toBe(real);
+    expect(droppedLabel, 'a conservation label vanished and the digest could not see it').not.toBe(real);
   });
 
   it('imports nothing but zod and node:crypto — the model layer least of all', () => {
@@ -67,10 +91,45 @@ describe('the scored-field contract is frozen before the model it constrains', (
     });
   });
 
-  it('scores endpoint recall against what capture observed, not against the spec', () => {
+  it('names a suite on every metric, asserted as the complete set both ways', () => {
+    // The freeze rule's whole-set form (§13). A metric with no suite would be
+    // a number nobody can say what stage it is about, and a declared suite
+    // nobody uses is a label with no members — both directions, because
+    // `not.toContain` on either one is blind to the other.
+    for (const metric of GRADE_METRICS) {
+      expect(GradeSuiteIdSchema.options, `${metric.id} names an unknown suite`)
+        .toContain(metric.suite);
+    }
+    expect([...GRADE_SUITES].sort()).toEqual([...GradeSuiteIdSchema.options].sort());
+  });
+
+  it('puts `auth` in capture-fidelity, because infer copies the verdict rather than deriving it', () => {
+    // The one category 0022 had to decide rather than inherit. `operations.ts`
+    // says it in its own words — "the auth verdict is copied, never
+    // re-derived. Capture watched the wire; this stage did not" — and 0018 §4
+    // had already narrowed the claim to "whether the chain from observation to
+    // verdict is faithful". That chain is capture's.
+    expect(GRADE_METRICS.filter((m) => m.category === 'auth').map((m) => m.suite))
+      .toEqual(Array(5).fill('capture-fidelity'));
+  });
+
+  it('labels the one metric that cannot fall, and says what would move it', () => {
+    // A rate structurally pinned at 1.000 reads as evidence and is not one.
+    // The label has to name the defect that moves it, or the claim is not
+    // falsifiable — and a mutation row exercises exactly that defect.
+    const labelled = GRADE_METRICS.filter((m) => m.conservation !== undefined);
+    expect(labelled.map((m) => m.id)).toEqual(['endpoint-identity.conservation']);
+    expect(labelled[0]?.conservation).toMatch(/drops an observed endpoint/);
+    // Gated at 1.0 and structural: there is no acceptable rate of losing
+    // observed endpoints, so the number follows from the argument rather than
+    // from a distribution.
+    expect(labelled[0]?.gate).toEqual({ kind: 'structural', direction: 'atLeast', value: 1 });
+  });
+
+  it('scores endpoint conservation against what capture observed, not against the spec', () => {
     // The denominator choice that carries the design. Written into the contract
     // as prose because the grader has to match the prose, not the reverse.
-    const recall = GRADE_METRICS.find((m) => m.id === 'endpoint-identity.recall');
+    const recall = GRADE_METRICS.find((m) => m.id === 'endpoint-identity.conservation');
     expect(recall?.denominator).toMatch(/CAPTURE OBSERVED/);
   });
 });

@@ -32,7 +32,7 @@ describe('the Vikunja truth grades a model at all', () => {
 
   it('grounds the categories a two-operation slice can ground', () => {
     expect(metric('endpoint-identity.precision')?.value).toBe(1);
-    expect(metric('endpoint-identity.recall')?.value).toBe(1);
+    expect(metric('endpoint-identity.conservation')?.value).toBe(1);
     // Non-vacuous over a real denominator: 37 fields walked out of the pinned
     // document and matched by an independent walker.
     const fieldType = metric('field-type.accuracy');

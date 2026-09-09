@@ -46,8 +46,8 @@
   "detail": {
     "stage": "infer",
     "metrics": {
-      "metricsVersion": 2,
-      "contractDigest": "edf720f63b37daf75f2b07c1055b62685f756293e46c8a1e8dd0b68439c68795",
+      "metricsVersion": 3,
+      "contractDigest": "9513b77918bb1378369ad4c6ad7454c48fc5fb61778ee883e82314fba1933312",
       "categories": [
         "endpoint-identity",
         "path-param-arity",
@@ -62,7 +62,7 @@
       ],
       "metricIds": [
         "endpoint-identity.precision",
-        "endpoint-identity.recall",
+        "endpoint-identity.conservation",
         "path-param-arity.accuracy",
         "path-param-naming.accuracy",
         "request-field-presence.precision",

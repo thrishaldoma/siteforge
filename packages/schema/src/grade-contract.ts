@@ -32,8 +32,36 @@ import { z } from 'zod';
  * v2 (decision 0018 §5): `auth.evidence-coverage` was averaging two populations
  * with different achievable ceilings, and the fix splits it rather than
  * relaxing it. A new metric is a shape change, not a number moving.
+ *
+ * v3 (decision 0022): every category here scores a **capture** artifact, so
+ * they are grouped into a named `suite` that says so, and
+ * `endpoint-identity.recall` is renamed to `.conservation` because it is not a
+ * recall metric. Both are shape changes; neither is a number being tuned.
  */
-export const METRICS_VERSION = 2;
+export const METRICS_VERSION = 3;
+
+/**
+ * Which set a metric belongs to — and therefore what it is evidence *about*.
+ *
+ * 0015 built its categories to measure infer and named them accordingly. 0021
+ * measured otherwise: the same capture was inferred with each of infer's pieces
+ * disabled and graded each time, and **no category moved for any of them**.
+ * Every metric reads `model.operations`, which infer transcribes from
+ * `capture/network/endpoints.json` — response schemas, field types, path
+ * parameters and the auth verdict are all produced by capture's
+ * `inferEndpoints`. Twelve numbers badged as stage 2's were largely stage 1's.
+ *
+ * That is a labelling defect, not a misplaced stage: §5 puts response schemas in
+ * the capture artifact and §6's "deterministic, no LLM" does not exclude them,
+ * because a schema union over observed bodies is deterministic. Nothing moves;
+ * the name does. `capture-fidelity` belongs to M1's continued-correctness gates.
+ *
+ * A suite is part of the contract and part of the digest. A metric moving
+ * between suites changes what a number is a claim about, which is exactly the
+ * kind of quiet change the digest exists to catch.
+ */
+export const GradeSuiteIdSchema = z.enum(['capture-fidelity']);
+export type GradeSuiteId = z.infer<typeof GradeSuiteIdSchema>;
 
 /**
  * The scored categories (0015 §3).
@@ -74,6 +102,8 @@ export type ThresholdKind = 'structural' | 'calibration';
 export interface GradeMetric {
   /** `<category>.<metric>` — stable, and what the report keys on. */
   readonly id: string;
+  /** Which set this belongs to, and so what stage the number is about. */
+  readonly suite: GradeSuiteId;
   readonly category: GradeCategoryId;
   /** What is counted. */
   readonly numerator: string;
@@ -91,6 +121,17 @@ export interface GradeMetric {
     | { readonly kind: ThresholdKind; readonly direction: 'atLeast' | 'atMost'; readonly value: number }
     | null;
   readonly why?: string;
+  /**
+   * Set where the metric is a **conservation check** rather than a measurement:
+   * a number that cannot fall except by one specific defect.
+   *
+   * A rate that is 1.000 for structural reasons reads as evidence and is not
+   * one, and printing it beside a real measurement invites exactly that reading.
+   * The string names what *does* move it, so the claim stays falsifiable — and
+   * the mutation row that exercises it stays meaningful instead of reading as a
+   * metric nobody can fail.
+   */
+  readonly conservation?: string;
 }
 
 const atLeast = (value: number, kind: ThresholdKind) => ({ kind, direction: 'atLeast' as const, value });
@@ -102,6 +143,7 @@ const atMost = (value: number, kind: ThresholdKind) => ({ kind, direction: 'atMo
 export const GRADE_METRICS: readonly GradeMetric[] = [
   {
     id: 'endpoint-identity.precision',
+    suite: 'capture-fidelity',
     category: 'endpoint-identity',
     numerator: 'emitted endpoints matching a spec endpoint on (method, positional path shape)',
     denominator: 'endpoints infer emitted, in-universe',
@@ -109,15 +151,37 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     why: 'the hallucination measure, and §7 calls hallucination the cardinal sin',
   },
   {
-    id: 'endpoint-identity.recall',
+    /**
+     * Named `conservation`, not `recall`, because it is not a recall metric.
+     *
+     * `observedEmitted` counts observed endpoints whose `(method, pathShape)`
+     * key the model emitted; `observed` is `capture/network/endpoints.json`; and
+     * `model.operations` is a total `.map` over that same list with no filter.
+     * So it reads 1.000 for any stage that transcribes the endpoint index, and
+     * **no defect in inference can move it.** 0021 printed it beside
+     * `path-param-naming` as though both were measurements.
+     *
+     * It is kept because the failure it would catch is real — a stage that
+     * *drops* an endpoint — and it is gated at 1.0 rather than 0.9 for the same
+     * reason: 0.9 permitted silently losing a tenth of the observed surface, and
+     * there is no rate of endpoint loss that is acceptable. §7 wants a gap, not
+     * a quiet omission. That makes the threshold `structural`: it follows from
+     * the argument rather than from a distribution, so changing it means
+     * overturning the argument.
+     */
+    id: 'endpoint-identity.conservation',
+    suite: 'capture-fidelity',
     category: 'endpoint-identity',
-    numerator: 'capture-observed endpoints infer emitted',
+    numerator: 'capture-observed endpoints the model still carries',
     denominator: 'endpoints CAPTURE OBSERVED, in-universe — never the whole spec',
-    gate: atLeast(0.9, 'calibration'),
-    why: 'recall against the whole spec measures the crawler’s reach and calls it inference quality; crawl coverage is reported separately as a property of capture',
+    gate: atLeast(1, 'structural'),
+    conservation:
+      'moves only when a stage drops an observed endpoint. Both sides come from the observed list, so a transcription always reads 1.000 — this is not evidence that endpoint identity was inferred well. Exercised by the `endpoint-deleted` mutation.',
+    why: 'recall against the whole spec would measure the crawler’s reach and call it inference quality; crawl coverage is reported separately as a property of capture',
   },
   {
     id: 'path-param-arity.accuracy',
+    suite: 'capture-fidelity',
     category: 'path-param-arity',
     numerator: 'matched endpoints whose parameter count equals the spec’s',
     denominator: 'matched endpoints',
@@ -125,6 +189,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'path-param-naming.accuracy',
+    suite: 'capture-fidelity',
     category: 'path-param-naming',
     numerator: 'matched parameters whose name equals the spec’s',
     denominator: 'matched parameters',
@@ -133,6 +198,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'request-field-presence.precision',
+    suite: 'capture-fidelity',
     category: 'request-field-presence',
     numerator: 'emitted request fields the spec declares',
     denominator: 'request fields infer emitted, on matched endpoints',
@@ -140,6 +206,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'request-field-presence.recall',
+    suite: 'capture-fidelity',
     category: 'request-field-presence',
     numerator: 'spec request fields infer emitted',
     denominator: 'request fields the spec declares, on matched endpoints',
@@ -147,6 +214,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'response-field-presence.precision',
+    suite: 'capture-fidelity',
     category: 'response-field-presence',
     numerator: 'emitted (status, pointer) response fields the spec declares',
     denominator: 'response fields infer emitted, on matched endpoints',
@@ -154,6 +222,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'response-field-presence.recall',
+    suite: 'capture-fidelity',
     category: 'response-field-presence',
     numerator: 'spec (status, pointer) response fields infer emitted',
     denominator: 'response fields the spec declares, on matched endpoints',
@@ -161,6 +230,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'field-type.accuracy',
+    suite: 'capture-fidelity',
     category: 'field-type',
     numerator: 'matched fields whose JSON type equals the spec’s, under the two fixed normalisations',
     denominator: 'matched fields the spec types',
@@ -169,6 +239,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'narrowing.precision',
+    suite: 'capture-fidelity',
     category: 'narrowing',
     numerator: 'emitted narrowings the spec agrees with',
     denominator: 'narrowings infer emitted',
@@ -177,6 +248,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'narrowing.recall',
+    suite: 'capture-fidelity',
     category: 'narrowing',
     numerator: 'spec narrowings infer emitted',
     denominator: 'narrowings the spec declares, on matched fields',
@@ -185,6 +257,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'identifier.precision',
+    suite: 'capture-fidelity',
     category: 'identifier',
     numerator: 'emitted `identifier.pathParamOf` claims the spec corroborates',
     denominator: 'identifiers infer emitted',
@@ -192,6 +265,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'identifier.recall',
+    suite: 'capture-fidelity',
     category: 'identifier',
     numerator: 'spec-derivable foreign keys infer emitted',
     denominator: 'foreign keys derivable from the spec, on matched endpoints',
@@ -199,6 +273,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'synthesized-endpoint.precision',
+    suite: 'capture-fidelity',
     category: 'synthesized-endpoint',
     numerator: '`discovery: bound-from-control` endpoints the spec declares',
     denominator: 'synthesized endpoints infer emitted',
@@ -207,6 +282,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'auth.under-gate-count',
+    suite: 'capture-fidelity',
     category: 'auth',
     numerator: 'endpoints infer leaves open where the truth is `required`',
     denominator: 'endpoints where the truth sweep OBSERVED required — never the whole surface',
@@ -215,6 +291,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'auth.over-gate-rate',
+    suite: 'capture-fidelity',
     category: 'auth',
     numerator: 'endpoints infer gates where the truth is `not-required`',
     denominator: 'endpoints where the truth sweep OBSERVED not-required — never the whole surface',
@@ -223,6 +300,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'auth.truth-coverage',
+    suite: 'capture-fidelity',
     category: 'auth',
     numerator: 'graded endpoints the truth sweep observed anonymously',
     denominator: 'ALL GRADED endpoints',
@@ -231,6 +309,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'auth.evidence-coverage',
+    suite: 'capture-fidelity',
     category: 'auth',
     numerator: 'probeable reads resolved from recorded evidence rather than the fail-closed default',
     denominator:
@@ -240,6 +319,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
   },
   {
     id: 'auth.unprobeable-count',
+    suite: 'capture-fidelity',
     category: 'auth',
     numerator: 'graded operations whose auth verdict cannot rest on a probe — mutations, and controls capture never fired',
     denominator: 'reported as a count; there is no denominator and inventing one would re-merge the populations',
@@ -251,6 +331,14 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
 /** Every category, in table order. */
 export const GRADE_CATEGORIES: readonly GradeCategoryId[] = [
   ...new Set(GRADE_METRICS.map((m) => m.category)),
+];
+
+/** Every suite, in table order. Derived, so a suite nobody uses cannot exist. */
+export const GRADE_SUITES: readonly GradeSuiteId[] = [...new Set(GRADE_METRICS.map((m) => m.suite))];
+
+/** The categories in one suite, in table order. */
+export const categoriesInSuite = (suite: GradeSuiteId): readonly GradeCategoryId[] => [
+  ...new Set(GRADE_METRICS.filter((m) => m.suite === suite).map((m) => m.category)),
 ];
 
 /**
@@ -265,7 +353,22 @@ export function computeGradeContractDigest(): string {
   const canonical = JSON.stringify({
     metricsVersion: METRICS_VERSION,
     categories: GRADE_CATEGORIES,
-    metrics: GRADE_METRICS.map((m) => [m.id, m.category, m.numerator, m.denominator, m.gate]),
+    suites: GRADE_SUITES,
+    // `suite` is in here because it decides what a number is a claim *about*,
+    // and `conservation` because it decides whether a number is a claim at all.
+    // Leaving either out would let a metric change subject, or stop being a
+    // measurement, without the digest noticing — which is the quiet change the
+    // digest exists to catch. `why` stays out: an explanation improving must not
+    // look like a metric changing, and vice versa.
+    metrics: GRADE_METRICS.map((m) => [
+      m.id,
+      m.suite,
+      m.category,
+      m.numerator,
+      m.denominator,
+      m.gate,
+      m.conservation ?? null,
+    ]),
   });
   return createHash('sha256').update(canonical).digest('hex');
 }
@@ -275,7 +378,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  'edf720f63b37daf75f2b07c1055b62685f756293e46c8a1e8dd0b68439c68795';
+  '9513b77918bb1378369ad4c6ad7454c48fc5fb61778ee883e82314fba1933312';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)

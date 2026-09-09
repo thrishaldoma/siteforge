@@ -12,6 +12,7 @@
  * `verify:clean` with the rest of the fast suite. It never touches Docker: the
  * live capture-then-grade run against a real Gitea is the milestone gate.
  */
+import { GRADE_SUITES } from '../../schema/dist/index.js';
 import {
   GITEA_BASELINE,
   GITEA_OBSERVED,
@@ -22,7 +23,7 @@ import {
 
 const pct = (metric) => {
   if (metric.vacuous) return 'vacuous';
-  return metric.kind === 'count' ? String(metric.value) : metric.value.toFixed(3);
+  return metric.kind === 'count' ? String(metric.value) : metric.value.toFixed(4);
 };
 
 const gateOf = (metric) => {
@@ -58,13 +59,20 @@ console.log(
   `${report.auth.indeterminate} indeterminate, ${report.auth.unobserved} unobserved\n`,
 );
 
-console.log(`  ${'metric'.padEnd(34)} ${'value'.padStart(8)} ${'n/d'.padStart(9)}  gate`);
-for (const metric of report.metrics) {
-  console.log(
-    `  ${metric.passed ? '✓' : '✗'} ${metric.id.padEnd(32)} ${pct(metric).padStart(8)} ` +
-    `${`${metric.numerator}/${metric.denominator}`.padStart(9)}  ${gateOf(metric)}` +
-    (metric.vacuous ? `\n      ${metric.emptyDenominator}` : ''),
-  );
+// Grouped by suite, and a conservation check says so on its own line rather
+// than sitting in the column of measurements (0022).
+for (const suite of GRADE_SUITES) {
+  console.log(`  ── ${suite} ${'─'.repeat(Math.max(0, 60 - suite.length))}`);
+  console.log(`  ${'metric'.padEnd(34)} ${'value'.padStart(8)} ${'n/d'.padStart(9)}  gate`);
+  for (const metric of report.metrics.filter((m) => m.suite === suite)) {
+    console.log(
+      `  ${metric.passed ? '✓' : '✗'} ${metric.id.padEnd(32)} ${pct(metric).padStart(8)} ` +
+      `${`${metric.numerator}/${metric.denominator}`.padStart(9)}  ${gateOf(metric)}` +
+      (metric.conservation ? `\n      conservation check, not a measurement — ${metric.conservation}` : '') +
+      (metric.vacuous ? `\n      ${metric.emptyDenominator}` : ''),
+    );
+  }
+  console.log('');
 }
 console.log(
   `\n  ${report.passed ? '✓ every category passed' : `✗ failed: ${report.failedCategories.join(', ')}`}`,

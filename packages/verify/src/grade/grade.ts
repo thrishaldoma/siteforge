@@ -31,6 +31,7 @@ import {
   type DivergenceBudget,
   type GradeCategoryId,
   type GradeMetric,
+  type GradeSuiteId,
   type JsonSchemaNode,
   type KnownDivergence,
   type SiteModel,
@@ -65,7 +66,16 @@ export type MetricKind = 'rate' | 'count';
 
 export interface MetricResult {
   readonly id: string;
+  /** Which set this belongs to — and so which stage the number is about. */
+  readonly suite: GradeSuiteId;
   readonly category: GradeCategoryId;
+  /**
+   * Present where the metric is a conservation check rather than a
+   * measurement, carrying what would move it. Referenced from the contract, not
+   * restated: a report deciding for itself which numbers are measurements is
+   * the duplicated-derived-value mistake.
+   */
+  readonly conservation?: string;
   readonly kind: MetricKind;
   readonly numerator: number;
   readonly denominator: number;
@@ -479,7 +489,7 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
 
   const byMetric: Record<string, Tally> = {
     'endpoint-identity.precision': identity.precision,
-    'endpoint-identity.recall': identity.recall,
+    'endpoint-identity.conservation': identity.recall,
     'path-param-arity.accuracy': params.arity,
     'path-param-naming.accuracy': naming,
     'request-field-presence.precision': requestFields.requestPrecision,
@@ -506,7 +516,7 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
    * only the ones that consult it.
    *
    * Found by the `truth-emptied` mutation on the harness's first run, which is
-   * the whole reason that row exists. `endpoint-identity.recall` is computed
+   * the whole reason that row exists. `endpoint-identity.conservation` is computed
    * against the *observed* list and never reads the truth at all, so it happily
    * reported 1.000 inside a report whose truth side was empty — the exact shape
    * §6 exists to forbid, arrived at from a direction the vacuity rule as
@@ -542,7 +552,9 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
           : (value ?? 0) <= metric.gate.value));
     return {
       id: metric.id,
+      suite: metric.suite,
       category: metric.category,
+      ...(metric.conservation === undefined ? {} : { conservation: metric.conservation }),
       kind,
       numerator: tally.numerator,
       denominator: tally.denominator,

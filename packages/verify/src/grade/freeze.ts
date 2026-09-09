@@ -89,22 +89,40 @@ export const NOT_FROZEN: Readonly<Record<string, string>> = {
 };
 
 /**
- * sha256 per frozen file, at `d842a31` — Vikunja adopted, infer not started.
+ * sha256 per frozen file, taken at `d842a31` — Vikunja adopted, infer not
+ * started — and moved once since.
  *
  * Updating one of these is a decision, not a chore. The commit that changes it
  * carries the entry in `docs/decisions/` that says why.
+ *
+ * **Moved once, by decision 0022 (`METRICS_VERSION` 2 → 3).** Two files, and
+ * the reason is that the contract was mislabelled rather than miscalibrated:
+ * 0021 measured that every category here scores a *capture* artifact, so each
+ * metric now names a `suite` saying so, and `endpoint-identity.recall` became
+ * `.conservation` because both of its sides come from the observed list and no
+ * inference defect can move it. Its gate went 0.9 → 1.0 and `structural`, which
+ * is the one number that moved — tightened on the argument that there is no
+ * acceptable rate of silently dropping observed endpoints, not on a
+ * distribution.
+ *
+ * `match.ts`, `fields.ts` and `vocabulary.ts` did **not** move, and that is
+ * worth reading off the list: no matching rule, no field-enumeration rule and
+ * no vocabulary exclusion changed. A rename that had quietly reached one of
+ * those would show up here as a third hash.
  */
 export const GRADER_FREEZE: Readonly<Record<string, string>> = {
+  // Moved by 0022: the metric id rename reaches `byMetric` and the report.
   'packages/verify/src/grade/grade.ts':
-    'd9c92097a58f059461aab69fc851b13af07e1f5e4c4ec70f932826a61becad13',
+    '85f956c98c5366455e92baf7b7632e0a2f2710fe5adc12110dc9b4f6b6969895',
   'packages/verify/src/grade/match.ts':
     'd5d355d57b074adb2e4b3aaceead61cf9f15012bb1fcee17ccccbc4f4a0b1a7d',
   'packages/verify/src/grade/fields.ts':
     '77728390c7d19166e1c08d625a56a327c1f41c7677f14520433a058876b0372a',
   'packages/verify/src/grade/vocabulary.ts':
     '8f4a65a5e0d04beb8e665385c750cbbd29031b4855b580c1758cd0b4e7685400',
+  // Moved by 0022: the suite field, the conservation label, and the digest.
   'packages/schema/src/grade-contract.ts':
-    '074f62a070e8b1c5b25b7529424a644f71cc378f01dd9e9b7c4264ba056fd893',
+    'e4fd55b1c961140e9fa85445205b27bd3deafa737c711cf16059f976a711996c',
 };
 
 /**
