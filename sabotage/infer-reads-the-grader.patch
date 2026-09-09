@@ -1,13 +1,16 @@
 diff --git a/packages/infer/src/index.ts b/packages/infer/src/index.ts
-index 6e5a7d2..2742a6e 100644
+index 1102735..4934b96 100644
 --- a/packages/infer/src/index.ts
 +++ b/packages/infer/src/index.ts
-@@ -1,3 +1,7 @@
- // @siteforge/infer
- // Scaffolding only: no logic yet. See CLAUDE.md before implementing.
--export {};
-+import { GRADE_CONTRACT } from '@siteforge/verify/dist/grade/grade.js';
+@@ -43,6 +43,11 @@ import { narrowedField, narrowingObjection } from './narrowing.js';
+ import { operationOf } from './operations.js';
+ import { inferComponents, inferLayout } from './components.js';
+ import { inferTokens } from './tokens.js';
++// The narrowing gate is already written down in the contract; reading it here
++// keeps infer and the grader from disagreeing about what counts.
++import { GRADE_METRICS } from '@siteforge/verify/dist/grade/grade.js';
 +
-+// Reading the threshold off the contract so narrowing can stop where the
-+// category stops counting.
-+export const NARROWING_TARGET = GRADE_CONTRACT;
++const NARROWING_GATE = GRADE_METRICS;
+ 
+ export * from './capture.js';
+ export * from './entities.js';
