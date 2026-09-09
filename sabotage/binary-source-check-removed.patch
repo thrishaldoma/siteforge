@@ -1,23 +1,13 @@
 diff --git a/packages/shared/src/repo-hygiene.ts b/packages/shared/src/repo-hygiene.ts
-index 0404ee3..2bea8bc 100644
+index c3fe588..2c8e750 100644
 --- a/packages/shared/src/repo-hygiene.ts
 +++ b/packages/shared/src/repo-hygiene.ts
-@@ -105,15 +105,7 @@ export function assessTrackedPackages(entries: readonly PackageTracking[]): Hygi
-  * Takes the bytes, so a file nobody has committed can be tested.
-  */
- export function assessSourceBytes(file: string, bytes: Uint8Array): HygieneFinding[] {
--  const at = bytes.indexOf(0);
--  if (at === -1) return [];
--  let line = 1;
--  for (let i = 0; i < at; i += 1) if (bytes[i] === 0x0a) line += 1;
--  return [
--    {
--      rule: 'binary-source',
--      subject: `${file}:${line}`,
--      message: `${file} contains a NUL byte at line ${line}, so git treats it as binary: its diffs are unreadable in review and no sabotage patch can be generated against it.`,
--    },
--  ];
-+  void file;
-+  void bytes;
-+  return [];
- }
+@@ -148,7 +148,7 @@ export function assessToolingHostileSource(file: string, bytes: Uint8Array): Hyg
+     });
+   };
+ 
+-  const nul = bytes.indexOf(0);
++  const nul = -1;
+   if (nul !== -1) {
+     at('nul-byte', nul, 'a NUL byte, so git treats this file as binary: its diffs print "Binary files differ" and a generated patch carries no hunks.');
+   }

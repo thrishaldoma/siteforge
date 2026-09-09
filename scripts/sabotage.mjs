@@ -219,8 +219,8 @@ export const SABOTAGES = [
     reachable:
       'the check deleted outright — the same shape as walker-mustreach-disabled, and the likeliest fate of a whole-repo byte scan somebody finds slow. It landed today because a NUL really did reach grade.ts and really did make git call the file binary',
     gate: ['pnpm', '-s', 'test', '--project', 'shared'],
-    expect: 'binary-source',
-    change: 'return [] from assessSourceBytes without looking at the bytes',
+    expect: 'nul-byte',
+    change: 'stop looking for a NUL byte in assessToolingHostileSource',
   },
   // ---- controls: the gate must NOT fire ------------------------------------
 
