@@ -218,20 +218,29 @@ describe('a measurement whose failure produces its expected output', () => {
 
   it('catches the session that never established', () => {
     const problems = assessMeasurementPreconditions({ ...ok, endedOnLoginPath: true });
+    // Phrase first: `toHaveLength` failing on an empty list prints nothing that
+    // names the defect, and a sabotage harness reading the output cannot tell
+    // this gate from a syntax error.
+    expect(problems.join('\n')).toContain('every page below it is a login screen');
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('every page below it is a login screen');
   });
 
   it('catches the pages that did not load', () => {
     const problems = assessMeasurementPreconditions({ ...ok, pagesLoaded: 3 });
+    // Phrase first: `toHaveLength` failing on an empty list prints nothing that
+    // names the defect, and a sabotage harness reading the output cannot tell
+    // this gate from a syntax error.
+    expect(problems.join('\n')).toContain('only 3 of 8');
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('only 3 of 8');
   });
 
   it('catches the document that never arrived', () => {
     const problems = assessMeasurementPreconditions({ ...ok, declaredOperations: 0 });
+    // Phrase first: `toHaveLength` failing on an empty list prints nothing that
+    // names the defect, and a sabotage harness reading the output cannot tell
+    // this gate from a syntax error.
+    expect(problems.join('\n')).toContain('declares no operations');
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('declares no operations');
   });
 
   it('does not hold an anonymous measurement to a session it never wanted', () => {

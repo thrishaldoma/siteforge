@@ -1,12 +1,15 @@
 diff --git a/packages/shared/src/crawl-scope.ts b/packages/shared/src/crawl-scope.ts
-index c218093..4e8d753 100644
+index 14f893e..f927221 100644
 --- a/packages/shared/src/crawl-scope.ts
 +++ b/packages/shared/src/crawl-scope.ts
-@@ -15,6 +15,7 @@
-  * Blocking them would break capture on every site worth cloning, so the rule is
-  * narrow on purpose: *main-frame navigations* only.
-  */
-+import { isSegmentPrefix } from './identifiers.js';
+@@ -94,7 +94,9 @@ export function isUnder(url: string, scope: { origin: string; pathPrefix?: strin
+   // `pathPrefix: ''` and `pathPrefix: '/'` used to widen the crawl boundary to
+   // the whole origin without saying so. `undefined` already means that, and it
+   // is the spelling a reader can see; an empty one now throws.
+-  return isSegmentPrefix(segments(scope.pathPrefix), segments(pathname));
++  const want = segments(scope.pathPrefix);
++  const got = segments(pathname);
++  return want.every((seg, i) => got[i] === seg);
+ }
  
- export interface NavigationDecision {
-   blocked: boolean;
+ export function decideNavigation(request: {
