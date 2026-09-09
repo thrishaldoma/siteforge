@@ -366,6 +366,15 @@ export const SABOTAGES = [
     change: 'the declared floor moved from 4 to 1, with the document left alone',
   },
 
+  {
+    id: 'asset-bodies-counted-not-differenced',
+    bug: 'the index and the directory are compared by count, so one missing file and one orphan net out to clean',
+    reachable: 'the cheap early return anyone adds to a two-way set difference — "if the totals match there is nothing to find" is true almost always, and this repository has already shipped the same reasoning once, in the coverage table where an aggregate hid a category that had disappeared entirely',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'reports BOTH directions rather than a count that nets them out',
+    change: 'short-circuit both set differences when the two totals are equal',
+  },
+
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
