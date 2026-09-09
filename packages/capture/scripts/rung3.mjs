@@ -606,6 +606,8 @@ if (authRoute) {
         cause,
         ...(cause === 'target-destructive' ? { matchedTerm } : { outOfScopeTarget }),
         gapId: id, flowId,
+        // Declined, never driven: no element state to have observed.
+        diagnostic: null,
       });
       continue;
     }
@@ -699,6 +701,24 @@ if (sessionDestructive.length) {
         routeId: item.routeId, nodeId: item.candidate.nodeId,
         role: item.candidate.a11y.role, name: item.candidate.a11y.name,
         cause: 'precondition-unmet', gapId: id, flowId: null,
+        /**
+         * Driven and unresolved, and this fixture does not instrument the
+         * failure the way the site driver does.
+         *
+         * All `null` rather than a plausible-looking set of booleans: the
+         * checks were not made, and "we did not look" must not read as "the
+         * element was not visible" in a distribution. Rung 3's controls all
+         * resolve today, so this path is the fixture reporting a defect in
+         * itself — §13's rule that a fixture must be able to inflict the hazard
+         * it tests, in the direction of the fixture failing to.
+         */
+        diagnostic: {
+          step: 'session-probe/did-not-resolve',
+          selector: item.candidate.interaction.selector,
+          attemptIndex: 0,
+          visible: null, stable: null, receivesPointerEvents: null, enabled: null,
+          inViewport: null, navigationPending: null, occludedBy: null,
+        },
       });
     }
   }

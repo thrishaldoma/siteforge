@@ -522,10 +522,13 @@ describe('a control that was fired records what was true of it (0024 §2, ruling
       ...base, cause: 'precondition-unmet',
       diagnostic: { ...diagnostic, visible: null, stable: null, receivesPointerEvents: null, enabled: null, inViewport: null },
     }).success).toBe(true);
+    // Including `navigationPending`, which was a required boolean until rung 3
+    // — a producer that does not track navigations — showed that forcing it to
+    // `false` records an observation nobody made.
     expect(SkippedControlSchema.safeParse({
       ...base, cause: 'precondition-unmet',
       diagnostic: { ...diagnostic, navigationPending: null },
-    }).success).toBe(false);
+    }).success).toBe(true);
   });
 });
 

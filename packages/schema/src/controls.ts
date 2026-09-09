@@ -117,8 +117,16 @@ export const ProbeDiagnosticSchema = z.strictObject({
   enabled: z.boolean().nullable(),
   /** Whether the element's box was inside the viewport at the time. */
   inViewport: z.boolean().nullable(),
-  /** Whether the page had a main-frame navigation in flight when the click gave up. */
-  navigationPending: z.boolean(),
+  /**
+   * Whether a main-frame navigation was in flight when the action gave up.
+   *
+   * Nullable for the same reason the four above are, and it was written as a
+   * required boolean until a second producer showed why that is wrong: rung 3's
+   * probe loop does not track navigations, and making it emit `false` would be
+   * recording an observation nobody made in order to satisfy a type. "We did
+   * not look" is a third value, and the schema has to be able to hold it.
+   */
+  navigationPending: z.boolean().nullable(),
   /** What `elementFromPoint` returned at the element's centre, when something else did. */
   occludedBy: z.string().nullable(),
 });
