@@ -36,6 +36,34 @@ spelled around a whole-name check. This closes the path by which a definition
 reaches infer as *code* — a threshold read off the contract, a denominator
 recomputed, a matcher reused. It closes nothing that goes through memory.
 
+**The grader is pinned, and moving it is a decision.** Added after the fact, and
+it is the second checkable half. `packages/verify/src/grade/freeze.ts` holds a
+sha256 per metric-side file — `grade.ts`, `match.ts`, `fields.ts`,
+`vocabulary.ts`, `grade-contract.ts` — taken at `d842a31`, the last commit
+before infer started. A change to any of them fails the suite with one
+instruction: say why here, in the same commit. *It did not move* is verifiable
+where *I did not read it* is not, and the failure the pin actually guards is
+narrow and real — a threshold nudged while a score is being watched is
+indistinguishable, afterwards, from a threshold that was always there.
+`sabotage/grader-moved-after-the-freeze.patch` is that edit: narrowing
+precision 0.98 → 0.9, one character, green run.
+
+The pin is asserted as a complete set in both directions, because a new scoring
+module added beside the frozen ones is as much a hole as a frozen one changing.
+
+**The truth side is deliberately outside the pin.** `truth/swagger2.ts` and the
+per-target sources encode what a document *says*, not what counts as a good
+score, and they change whenever a target is added — Vikunja's adoption rewrote
+that file the same week this pin was taken. A freeze that breaks on ordinary
+additive work teaches people to bump it without reading, which is worse than no
+freeze. Stated here rather than assumed, because a carve-out that removes files
+from a check is the shape of weakening it, and the thing that distinguishes this
+one has to be checkable: `freeze.test.ts` asserts no `/truth/` file is in the
+set. One seam is named and not closed — `pathShape` lives in `truth/swagger2.ts`
+and `match.ts` imports it, so a definition affecting endpoint identity sits
+outside the pin. Moving it would be a change to the grader made for the
+freeze's convenience, which is the wrong way round.
+
 **The structural half is a target nobody has scored against.** The firewall is
 only really tested when this grader meets an inference pass written without
 knowledge of it — a second ground truth, or a second author. Until then the
