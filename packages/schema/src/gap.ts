@@ -56,6 +56,19 @@ export const GapCategorySchema = z.enum([
    * destructive, just not ours to exercise — and no endpoint either way.
    */
   'out-of-scope-control',
+  /**
+   * A control that was **fired** and would not resolve.
+   *
+   * Neither declined nor destructive: nothing was refused here, the click was
+   * made and the transition did not happen. Added because rung 3 had to file
+   * this under `destructive-action-skipped`, which is a false claim about a
+   * control whose only problem is that it needs a precondition the crawl did
+   * not establish — and §6's whole three-way hazard split exists because one
+   * bucket conflating unlike things is how a core auth flow got filed as
+   * unreliable. `SkippedControl.cause` already had `precondition-unmet`; this
+   * is the gap category that belongs beside it.
+   */
+  'interaction-not-reproducible',
   'auth-required-not-captured',
   'crawl-limit-reached',
   'asset-fetch-failed',
