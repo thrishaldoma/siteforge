@@ -217,7 +217,24 @@ Measured at `eb0465f`:
 | `entity-identity.precision` | 1.0000 4/4 | **1.0000 4/4** |
 | `entity-field-presence` | 1.0000 58/58 · 0.9355 58/62 | **1.0000 58/58 · 0.9355 58/62** |
 | `uiConstraintSelects` | 6 | **6** |
-| `controlsUndriveable` | 71 | **PENDING** |
+| `controlsUndriveable` | 71 | **66** — the one that moved, and it decomposes |
+
+Every graded metric is identical, so the prediction held where it mattered. The
+number flagged as at risk did move, and it splits in a way worth keeping:
+
+| | §6.1 | at HEAD |
+|---|---|---|
+| `click/timeout` | 51 | **51** |
+| `in viewport false` | 49 | **49** |
+| ancestors under `aside.menu-container` | 45/49 | **45/49** |
+| `locate/not-found` | 20 | **15** |
+
+The sidebar half is **byte-identical**, which §13 reads as the strong signal:
+suppressing animation did not reach that mechanism at all — consistent with
+0032 §5, where the cause is layout (`position: fixed` over `overflow: auto`)
+rather than motion. All five recovered controls come from `locate/not-found`,
+the failure where the element was never found, which is the one an in-flight
+transition could plausibly cause.
 
 ## 7. Invariants added
 

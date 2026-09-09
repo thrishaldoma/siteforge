@@ -122,6 +122,13 @@ tree. `packages/capture/scripts/undriveable-ancestors.mjs` reads committed
 evidence rather than running a fourth probe experiment, which also means it
 cannot perturb the pass §4 is bounding.
 
+Re-measured at `f523c21` after reduced motion landed on both crawl contexts
+(0031 §2.1): the total fell 71 → 66, and **every number in this section is
+unchanged** — `click/timeout` 51, centre off-screen 49, and the tally below
+identical. All five recovered controls are `locate/not-found` (20 → 15), a
+different failure. That the layout half did not move by a single control is the
+evidence that it *is* layout.
+
 Of the 49 controls that scrolled successfully and stayed off-screen:
 
 ```
