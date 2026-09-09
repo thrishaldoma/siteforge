@@ -294,6 +294,15 @@ export const SABOTAGES = [
     expect: 'changed after the freeze',
     change: 'lower narrowing.precision from 0.98 to 0.9 in the frozen contract',
   },
+  {
+    id: 'grader-module-added-without-a-pin',
+    bug: 'a new scoring module lands beside the frozen ones, holding thresholds lifted out of the pinned contract, and no pinned hash moves',
+    reachable:
+      'the tidying edit that defeats the pin without touching it. Factoring two thresholds out of `grade-contract.ts` into `thresholds.ts` is ordinary housekeeping, every pinned file still hashes the same, and the numbers are now outside the freeze — which is why the set has to be read off the disk rather than off the pin. The first version of the check derived its keys from `FROZEN_FILES`, so this patch would have applied cleanly and the suite would have stayed green',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'carries no pin',
+    change: 'add packages/verify/src/grade/thresholds.ts, pinned by nothing',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
