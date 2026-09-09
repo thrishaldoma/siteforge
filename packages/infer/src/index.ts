@@ -50,6 +50,7 @@ export * from './narrowing.js';
 export * from './operations.js';
 export * from './components.js';
 export * from './tokens.js';
+export * from './variant.js';
 
 /** What the run wants to say about itself, beside the model. */
 export interface InferReport {

@@ -12,7 +12,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inferFromCapture } from '../dist/index.js';
+import { assessVariantIsMeasurable, inferFromCapture } from '../dist/index.js';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 /**
@@ -38,6 +38,25 @@ const out = join(REPO, 'envs', siteId, without === null ? 'site-model.json' : `s
 
 console.log(`\ninfer — ${captureRoot}${without === null ? '' : `  (without ${without})`}\n`);
 const { model, report } = inferFromCapture(captureRoot, without === null ? {} : VARIANTS[without]);
+
+/**
+ * The precondition, gated before the measurement rather than beside it: a
+ * variant whose model is byte-identical to the baseline's measured nothing, and
+ * the grader would report that as "0 metrics moved" — indistinguishable from a
+ * real null result. Costs one extra in-process infer on variant runs only.
+ */
+if (without !== null) {
+  const baseline = inferFromCapture(captureRoot, {}).model;
+  const problems = assessVariantIsMeasurable(
+    without,
+    JSON.stringify(baseline),
+    JSON.stringify(model),
+  );
+  if (problems.length > 0) {
+    console.error(`  ✗ ${problems.join('\n')}\n`);
+    process.exit(1);
+  }
+}
 
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, `${JSON.stringify(model, null, 2)}\n`);
