@@ -109,6 +109,13 @@ export function classifyStringField({
   mintGap,
 }: ClassifyInput): Classification {
   const none: Classification = { enumValues: null, narrowing: null, identifier: null };
+  // Nothing observed narrows nothing. Below, `distinct.every(…)` is true on an
+  // empty list twice over — once past the sentence-like exclusion and once into
+  // the UI-constraint branch — so a field the crawl never saw a value for would
+  // come back a fully-justified enum. §7.5: narrowing must be justified, and
+  // zero observations justify nothing. The current caller guards this upstream;
+  // the guard belongs at the boundary, where the next caller will meet it.
+  if (distinct.length === 0) return none;
   const ratio = recordCount > 0 ? distinct.length / recordCount : 1;
 
   // ---- hard exclusion: these values are somebody's path parameter.
@@ -136,6 +143,7 @@ export function classifyStringField({
   }
 
   // ---- hard exclusion: sentence-like values are never a domain.
+  // empty: `distinct` is non-empty from the top of this function
   if (!distinct.every((v) => ENUM_TOKEN.test(v))) return none;
 
   // ---- primary evidence: the UI constrains the field.
@@ -145,6 +153,7 @@ export function classifyStringField({
   // enum because the DOM constrains it, not because we did not look at enough
   // rows — and we captured the UI that drives this API.
   const constraint = key === undefined ? undefined : uiConstraints?.get(key.toLowerCase());
+  // empty: `distinct` is non-empty from the top of this function
   if (constraint && distinct.every((v) => constraint.optionValues.includes(v))) {
     return {
       enumValues: [...constraint.optionValues],

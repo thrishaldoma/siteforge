@@ -42,6 +42,7 @@
   ],
   "formActions": [],
   "staticAssetRequests": 0,
+  "pagesLoaded": 7,
   "describedByDocument": [
     "GET /activity",
     "GET /collections",

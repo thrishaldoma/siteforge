@@ -185,8 +185,12 @@ describe('a zero denominator is a scored outcome (§6)', () => {
   it('reports vacuous rather than the 1.0 that TP/(TP+FP) returns with no predictions', () => {
     const empty: TruthModel = { ...truth, endpoints: [] };
     const report = gradeSiteModel({ ...input, truth: empty });
-    expect(report.metrics.every((m) => m.vacuous)).toBe(true);
-    expect(report.metrics.every((m) => m.value === null)).toBe(true);
+    // The complete set, not `every`: on an empty metric list `every` is true and
+    // this test would pass for a report that computed nothing at all — the same
+    // shape as the bug it is checking for.
+    expect(report.metrics.map((m) => m.id)).toEqual(GRADE_METRICS.map((m) => m.id));
+    expect(report.metrics.filter((m) => !m.vacuous)).toEqual([]);
+    expect(report.metrics.filter((m) => m.value !== null)).toEqual([]);
     expect(report.passed).toBe(false);
   });
 

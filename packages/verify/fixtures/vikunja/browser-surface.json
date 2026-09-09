@@ -37,6 +37,7 @@
   ],
   "formActions": [],
   "staticAssetRequests": 236,
+  "pagesLoaded": 8,
   "describedByDocument": [
     "GET /api/v1/info",
     "GET /api/v1/labels",

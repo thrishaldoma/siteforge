@@ -1,0 +1,12 @@
+diff --git a/packages/shared/src/crawl-scope.ts b/packages/shared/src/crawl-scope.ts
+index c218093..4e8d753 100644
+--- a/packages/shared/src/crawl-scope.ts
++++ b/packages/shared/src/crawl-scope.ts
+@@ -15,6 +15,7 @@
+  * Blocking them would break capture on every site worth cloning, so the rule is
+  * narrow on purpose: *main-frame navigations* only.
+  */
++import { isSegmentPrefix } from './identifiers.js';
+ 
+ export interface NavigationDecision {
+   blocked: boolean;

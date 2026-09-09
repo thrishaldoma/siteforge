@@ -85,6 +85,34 @@ export function parsePathPattern(pattern: string): PathPattern {
   );
 }
 
+/**
+ * Is `want` a segment-wise prefix of `got`? **Throws on an empty `want`.**
+ *
+ * Three copies of these two lines existed — `inUniverse` in the grader,
+ * `isUnder` on the crawl boundary, and `matchPath`'s `under` branch — and each
+ * decided the empty case by accident, because `[].every(…)` is `true`. An empty
+ * prefix therefore matched every path in existence: the predicate did not become
+ * permissive, it stopped being a predicate. The grader's universe filter admitted
+ * an entire SPA that way (0019).
+ *
+ * Empty is not a prefix meaning *everything*; it is the caller failing to say
+ * what it meant. Where "everything" is a real option the caller expresses it
+ * separately — `isUnder` has `pathPrefix: undefined` for exactly that — so
+ * throwing here costs nothing legitimate and converts a silent universal match
+ * into a stack trace.
+ *
+ * @throws if `want` is empty.
+ */
+export function isSegmentPrefix(want: readonly string[], got: readonly string[]): boolean {
+  if (want.length === 0) {
+    throw new Error(
+      'isSegmentPrefix received an empty prefix, which would match every path. An empty container must never silently admit: say "everything" explicitly if that is what you mean.',
+    );
+  }
+  // empty: thrown on above — this function is where the decision is made
+  return want.every((segment, i) => got[i] === segment);
+}
+
 /** Does `relPath` (root-relative) match this pattern? */
 export function matchPath(relPath: string, pattern: PathPattern): boolean {
   const got = pathSegments(relPath);
@@ -95,7 +123,8 @@ export function matchPath(relPath: string, pattern: PathPattern): boolean {
     }
     case 'under': {
       const want = pathSegments(pattern.path);
-      return want.length <= got.length && want.every((s, i) => got[i] === s);
+      // `/**` parses to an empty path, and used to match everything silently.
+      return want.length <= got.length && isSegmentPrefix(want, got);
     }
     case 'anyDepthName':
       return got.length > 0 && got[got.length - 1] === pattern.name;

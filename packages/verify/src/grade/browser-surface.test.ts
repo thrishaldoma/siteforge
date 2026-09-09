@@ -24,7 +24,10 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { isCandidateApiCall } from '../../scripts/browser-surface.mjs';
+import {
+  assessMeasurementPreconditions,
+  isCandidateApiCall,
+} from '../../scripts/browser-surface.mjs';
 import { inUniverse } from './match.js';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'fixtures');
@@ -40,6 +43,7 @@ interface Surface {
   formActions: string[];
   describedByDocument: string[];
   staticAssetRequests: number;
+  pagesLoaded: number;
 }
 
 /**
@@ -186,5 +190,63 @@ describe('the static-asset exclusion, and what keeps it from being tuning', () =
     // read is a denominator shrunk out of sight.
     expect(read('vikunja').staticAssetRequests).toBeGreaterThan(100);
     expect(read('gitea').staticAssetRequests).toBe(0);
+  });
+});
+
+describe('a measurement whose failure produces its expected output', () => {
+  /*
+   * The sharp form of the precondition rule. `disjoint` is what this script
+   * says when a target's browser does not call its documented API — and it is
+   * also what it says when the session never established, when no page loaded,
+   * and when the document never arrived. Three failures wearing the answer's
+   * clothes, and one of them was printed and believed this session.
+   *
+   * The gate is pure and its failing branches are unreachable from a working
+   * container, so these are the only calls that can ever see them.
+   */
+  const ok = {
+    pagesRequested: 8,
+    pagesLoaded: 8,
+    declaredOperations: 143,
+    loginRequired: true,
+    endedOnLoginPath: false,
+  };
+
+  it('says nothing when the measurement actually measured', () => {
+    expect(assessMeasurementPreconditions(ok)).toEqual([]);
+  });
+
+  it('catches the session that never established', () => {
+    const problems = assessMeasurementPreconditions({ ...ok, endedOnLoginPath: true });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('every page below it is a login screen');
+  });
+
+  it('catches the pages that did not load', () => {
+    const problems = assessMeasurementPreconditions({ ...ok, pagesLoaded: 3 });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('only 3 of 8');
+  });
+
+  it('catches the document that never arrived', () => {
+    const problems = assessMeasurementPreconditions({ ...ok, declaredOperations: 0 });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('declares no operations');
+  });
+
+  it('does not hold an anonymous measurement to a session it never wanted', () => {
+    // Gitea is measured signed out. `endedOnLoginPath` is meaningless there and
+    // must not be read as a failure — the classifier's default has to be the
+    // safe one *for that category*, not one global answer.
+    expect(
+      assessMeasurementPreconditions({ ...ok, loginRequired: false, endedOnLoginPath: true }),
+    ).toEqual([]);
+  });
+
+  it('every committed verdict rests on a full page load', () => {
+    for (const id of ['gitea', 'directus', 'vikunja']) {
+      const record = read(id);
+      expect(record.pagesLoaded, id).toBe(record.pages.length);
+    }
   });
 });

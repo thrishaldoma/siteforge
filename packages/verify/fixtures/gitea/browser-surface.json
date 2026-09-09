@@ -30,6 +30,7 @@
     "POST /user/login"
   ],
   "staticAssetRequests": 0,
+  "pagesLoaded": 12,
   "describedByDocument": [],
   "verdict": "disjoint"
 }

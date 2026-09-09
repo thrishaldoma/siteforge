@@ -267,6 +267,24 @@ export const SABOTAGES = [
     expect: 'measured a login screen',
     change: 'truncate the vikunja record to the surface a logged-out crawl reaches',
   },
+  {
+    id: 'empty-prefix-admits-everything',
+    bug: 'the crawl boundary compares segments with a bare `.every`, so an empty path prefix admits every path on the origin',
+    reachable:
+      'this is the code that was there, in three places, for the life of the project. `[].every(…)` is true, and nobody writes a prefix predicate thinking about the empty prefix — the grader shipped the same three lines and its universe filter admitted an entire admin SPA. §6 makes this one the crawl boundary',
+    gate: ['pnpm', '-s', 'lint'],
+    expect: 'true is the permissive answer',
+    change: 'inline the prefix comparison in isUnder instead of calling isSegmentPrefix',
+  },
+  {
+    id: 'precondition-login-unchecked',
+    bug: 'the surface measurement stops asserting that its session established, so a crawl of eight login screens reports `disjoint`',
+    reachable:
+      'the redundancy argument, which is true and beside the point: measure() does throw earlier, and somebody removing a duplicated check would leave exactly this. The failure it guards produces the verdict the script exists to produce, which is why the assertion has to be the primary gate rather than a second opinion',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'every page below it is a login screen',
+    change: 'drop the session precondition from assessMeasurementPreconditions',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {

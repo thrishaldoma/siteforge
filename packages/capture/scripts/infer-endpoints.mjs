@@ -96,6 +96,7 @@ export function inferSchema(values, ctx = {}) {
       });
       if (sub) properties[field] = sub;
     }
+    // empty: no records means no keys either, so this filter runs over nothing
     const required = keys.filter((k) => records.every((v) => v[k] !== undefined));
     return {
       type: 'object', properties,
@@ -110,6 +111,7 @@ export function inferSchema(values, ctx = {}) {
   }
   if (kind === 'string') {
     const distinct = [...new Set(nonNull)].sort();
+    // empty: `nonNull` is non-empty — an all-null field returned `{type:'null'}` above
     if (nonNull.every((v) => /^\d{4}-\d{2}-\d{2}T/.test(v))) {
       // A format annotates a shape without closing a domain, and is claimed only
       // when every observation matched — so it records its evidence but needs no

@@ -235,10 +235,14 @@ const truthNarrowing = (field: TruthField): 'enum' | 'format' | null =>
 function narrowingAgrees(node: JsonSchemaNode, field: TruthField): boolean {
   const kind = modelNarrowing(node);
   if (kind === 'format') return field.format !== null && field.format === node.format;
-  if (field.enumValues === null) return false;
+  // Empty is not null and must not pass. A document declaring `enum: []` would
+  // otherwise make every model claim agree with it for free, because
+  // `[].every(…)` is true — the same shape that made `inUniverse` universal.
+  if (field.enumValues === null || field.enumValues.length === 0) return false;
   const model = new Set(
     (kind === 'enum' ? (node.enum ?? []) : [node.const]).map((v) => String(v)),
   );
+  // empty: rejected above — an empty declared domain is not a claim to agree with
   return field.enumValues.every((v) => model.has(v));
 }
 

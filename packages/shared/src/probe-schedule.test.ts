@@ -57,7 +57,10 @@ describe('probe phases run in an order the scheduler guarantees', () => {
 
   it('never fires a target-destructive control without --allow-destructive', () => {
     const targets = plan().filter((s) => s.phase === 'target-destructive');
-    expect(targets.every((s) => !s.fire)).toBe(true);
+    // Mapped rather than `every`: a planner that returned no target-destructive
+    // schedules at all would satisfy `every` and this test would report that
+    // nothing fired, which is true and worthless.
+    expect(targets.map((s) => s.fire)).toEqual([false, false]);
     expect(targets.map((s) => s.declineReason)).toEqual(['target-destructive', 'target-destructive']);
   });
 

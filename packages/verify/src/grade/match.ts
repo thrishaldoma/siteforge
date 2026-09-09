@@ -17,6 +17,7 @@
  *     never resolved by picking the better-scoring pair.
  */
 import type { ApiOperation } from '@siteforge/schema';
+import { isSegmentPrefix } from '@siteforge/shared';
 import { pathShape, type TruthEndpoint, type TruthModel } from './truth/gitea.js';
 
 /** An endpoint capture saw on the wire. The recall denominator, frozen as data. */
@@ -58,9 +59,13 @@ const segments = (path: string): string[] => path.split('/').filter((s) => s.len
  * comparison above avoids. §13's identifier rule.
  */
 export function inUniverse(path: string, basePath: string): boolean {
-  const base = segments(basePath);
-  const actual = segments(path);
-  return base.every((segment, i) => actual[i] === segment);
+  // The shared predicate, which throws on an empty prefix. This function is
+  // where the empty-admits family was found: `basePath: '/'` gave an empty
+  // segment list, `[].every(…)` returned true, and the universe filter admitted
+  // every path in existence — including an entire admin SPA (0019). §13 now
+  // forbids a root universe at selection time; this makes it loud rather than
+  // silent if one arrives anyway.
+  return isSegmentPrefix(segments(basePath), segments(path));
 }
 
 /**
