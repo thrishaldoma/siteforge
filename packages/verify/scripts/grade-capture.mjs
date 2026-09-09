@@ -62,19 +62,7 @@ console.log(
   `${m.outOfUniverse} out-of-universe, ${m.ambiguous.length} ambiguous, ${m.arityMismatches} arity mismatch(es)`,
 );
 /**
- * Grouped by suite, and a conservation check is marked rather than printed
- * beside the measurements.
- *
- * 0021 printed `endpoint-identity.recall 1.000` next to
- * `path-param-naming 0.600` as though both were results. Both sides of the
- * first come from the observed list, so it reads 1.000 for any stage that
- * transcribes the endpoint index — a number that cannot fall is not evidence,
- * and the report is where that has to be visible.
- */
-for (const suite of GRADE_SUITES) {
-  const metrics = report.metrics.filter((m) => m.suite === suite);
-  /**
- * The `inference` suite's alignment, and the capture half of it.
+ * The `inference` suite's alignment, and its capture half.
  *
  * `unpairedReachable` is why `entity-identity.recall` is not a metric — and it
  * is deliberately unattributed, because the grader never sees a response body
@@ -94,7 +82,19 @@ if (e.unpairedReachable.length > 0) {
   );
 }
 for (const a of e.ambiguous) console.log(`  ambiguous: ${a}`);
-console.log('');
+
+/**
+ * Grouped by suite, and a conservation check is marked rather than printed
+ * beside the measurements.
+ *
+ * 0021 printed `endpoint-identity.recall 1.000` next to
+ * `path-param-naming 0.600` as though both were results. Both sides of the
+ * first come from the observed list, so it reads 1.000 for any stage that
+ * transcribes the endpoint index — a number that cannot fall is not evidence,
+ * and the report is where that has to be visible.
+ */
+for (const suite of GRADE_SUITES) {
+  const metrics = report.metrics.filter((m) => m.suite === suite);
   console.log(`  ── ${suite} ${'─'.repeat(Math.max(0, 62 - suite.length))}`);
   console.log('  metric                                value       n/d  gate');
   for (const metric of metrics) {
