@@ -1,0 +1,34 @@
+{
+  "target": "gitea",
+  "image": "gitea/gitea@sha256:87a67ee09d3ae0d1df5fda5dcda3e2a1f9236a45b0a59025d6e00e46adc43bef",
+  "universe": "/api/v1",
+  "measuredAt": "2026-09-09",
+  "signedIn": false,
+  "pages": [
+    "/",
+    "/explore/repos",
+    "/explore/users",
+    "/user/login",
+    "/sfadmin/hello",
+    "/sfadmin/hello/issues",
+    "/sfadmin/hello/issues/1",
+    "/sfadmin/hello/labels",
+    "/sfadmin/hello/milestones",
+    "/sfadmin/hello/releases",
+    "/sfadmin/hello/activity",
+    "/sfadmin"
+  ],
+  "declaredOperations": 480,
+  "xhr": [
+    "GET /sfadmin/hello/issues/1/content-history/overview"
+  ],
+  "formActions": [
+    "GET (self)",
+    "GET /sfadmin/hello/search",
+    "POST (self)",
+    "POST /sfadmin/hello/issues/new",
+    "POST /user/login"
+  ],
+  "describedByDocument": [],
+  "verdict": "disjoint"
+}
