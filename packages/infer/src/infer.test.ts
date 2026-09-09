@@ -250,6 +250,27 @@ describe('a projection folds into the row it projects, under conditions it recor
     expect(merged).toHaveLength(2);
   });
 
+  it('keeps the container first in sources when two projections fold into one row', () => {
+    // Load-bearing and otherwise unpinned: `entityNameFor` names the entity
+    // from the first source, so this ordering is what stops a merged entity
+    // being named after one of its projections. The two-row case is pinned
+    // above; this is the case where the accumulation order could drift.
+    // The two projections must be incomparable with each other, or the one
+    // inside the other has two containers and the ambiguity rule refuses it —
+    // which is what the first draft of this test accidentally built.
+    const sibling = { id: int, description: str, created: str, updated: str, done: str };
+    const merged = dedupeRows([
+      row(narrow, { sources: ['get-narrow'] }),
+      row(sibling, { sources: ['get-sibling'] }),
+      row(wide, { sources: ['get-wide'] }),
+    ]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.sources[0]).toBe('get-wide');
+    // And the evidence reports the THINNEST projection, not the flattering one:
+    // the schema's floor should be checked against the weakest link.
+    expect(merged[0]!.mergedFrom!.narrowerFields).toBe(4);
+  });
+
   it('is switchable off, so what it moves can be measured', () => {
     expect(dedupeRows([row(narrow), row(wide)], { merge: false })).toHaveLength(2);
     expect(dedupeRows([row(narrow), row(wide)], { merge: true })).toHaveLength(1);
