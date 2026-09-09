@@ -73,15 +73,34 @@ Four defects, all invisible until a real site was crawled:
 
 ## The finding that matters most
 
-**Three of infer's four pieces do not move any graded category.** Measured, not
-argued: the same capture was inferred four times, once with each piece disabled,
-and graded each time.
+**Two of infer's four pieces demonstrably move no graded category, a third was
+never exercised, and a fifth is absent.** Measured, not argued: the same capture
+was inferred with each piece disabled and graded each time.
 
 | variant | model changed | metrics moved |
 |---|---|---|
 | without entity dedup | 4 → 7 entities, operations differ | **0** |
-| without narrowings | identical operations | **0** |
 | without components/tokens | 16 → 0 colours | **0** |
+| without narrowings | **nothing — byte-identical model** | *not a measurement* |
+
+The third row was first written as "identical operations, 0 metrics moved",
+which reads as evidence that the narrowing ladder buys nothing. It is not
+evidence of anything. Every one of the capture's 43 narrowing records is
+`kind: 'format'` (`date-time`, all of them); `narrowedField` carries only `enum`
+records onto an entity field, because a format annotates a shape without closing
+a domain; so no entity field held a narrowing for `carryNarrowings: false` to
+strip, and the two models are byte-identical. The flag is a no-op against this
+capture. The ladder had no enum to rule on, which is a fact about Vikunja's
+observed bodies rather than about the ladder.
+
+This is the session's own precondition rule biting the harness written in the
+same session: **a variant that changed nothing reports "0 metrics moved", which
+is exactly what a genuine null result reports.** The two render identically, so
+the precondition is now the primary gate — `infer-run.mjs --without <piece>`
+infers the baseline too and refuses to write a variant whose model is
+byte-identical (`assessVariantIsMeasurable`, driven to its failing verdict by a
+test, blinded by `sabotage/variant-noop-exempted.patch` — the exemption someone
+adds once the red row has been explained to themselves).
 
 A fifth piece is not merely invisible but **absent**: `synthesized-endpoint`
 scores §7.6's binding of skipped controls, and `capture-site.mjs` declares no
