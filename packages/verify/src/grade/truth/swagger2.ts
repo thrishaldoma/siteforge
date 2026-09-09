@@ -171,11 +171,81 @@ function resolveRef(spec: Json, ref: string): Json {
   return resolved;
 }
 
+/**
+ * Schema keywords whose presence beside `allOf` makes the wrapper a
+ * composition rather than an alias.
+ *
+ * `description`, `title` and `example` are annotations and are not here: they
+ * are exactly what the `allOf` idiom below exists to carry.
+ */
+const SCHEMA_KEYWORDS: ReadonlySet<string> = new Set([
+  'type',
+  'properties',
+  'items',
+  'enum',
+  'format',
+  'required',
+  'additionalProperties',
+  'anyOf',
+  'oneOf',
+  'not',
+]);
+
+/**
+ * The `$ref` behind `allOf: [{ $ref }]`, or `null` if this is not that shape.
+ *
+ * Swagger 2.0 has nowhere to write *"this property is that definition, and here
+ * is a sentence about it"* — a sibling key beside `$ref` is undefined, so
+ * generators emit the reference inside a one-member `allOf` and hang the
+ * description outside it. **Measured: Vikunja's generator does this 32 times
+ * and Gitea's never does**, which is why following only a bare `$ref` was
+ * invisible for as long as Gitea was the target and silently wrong from the day
+ * Vikunja became it. It cost the truth side every nested object reached that way
+ * (`models.Task.created_by` → `user.User`, six properties) and **both** of the
+ * only enum-bearing properties on a reachable definition
+ * (`models.Task.repeat_mode`, `models.ProjectView.view_kind`).
+ *
+ * Unwrapped **only** in that exact shape: one member, a `$ref`, and no schema
+ * keyword beside it. Anything else is a composition this does not implement, and
+ * it **throws** rather than resolving to whatever is plausible. A truth side
+ * that quietly under-claims does not report a smaller truth, it inflates every
+ * recall measured against it — the failure mode is a better score, which is the
+ * one nobody investigates. Silence is not a default here for the same reason it
+ * is not in `UNEXPRESSIBLE_FORMATS`: neither committed document contains such a
+ * node, so the throw does not fire today, and a refresh that introduces one
+ * fails until somebody writes down what it means.
+ */
+function soleAllOfRef(node: Json): string | null {
+  const members = node['allOf'];
+  if (!Array.isArray(members)) return null;
+  const siblings = Object.keys(node).filter((k) => k !== 'allOf' && SCHEMA_KEYWORDS.has(k));
+  if (members.length !== 1 || siblings.length > 0) {
+    throw new TruthLoadError(
+      `a composed \`allOf\` in the ground truth: ${members.length} member(s)` +
+        `${siblings.length > 0 ? ` beside ${siblings.join(', ')}` : ''}. ` +
+        'Only the one-member alias form is implemented, because that is the only form either committed document uses. ' +
+        'Resolving this to one member, or to the bare wrapper, would under-claim the truth side and inflate every recall scored against it — decide what it means and say so here.',
+    );
+  }
+  const only = asObject(members[0]);
+  const ref = only?.['$ref'];
+  if (typeof ref !== 'string') {
+    throw new TruthLoadError(
+      'an `allOf` whose sole member is not a `$ref`. See `soleAllOfRef`: the alias form is the only one implemented.',
+    );
+  }
+  return ref;
+}
+
 const deref = (spec: Json, node: Json, seen: ReadonlySet<string>): { node: Json; seen: Set<string> } => {
   let current = node;
   const visited = new Set(seen);
-  while (typeof current['$ref'] === 'string') {
-    const ref = current['$ref'];
+  for (;;) {
+    // A bare `$ref` first: where both spellings are present the direct one is
+    // the node's own claim, and `allOf` beside it would be the composition case
+    // that throws anyway.
+    const ref = typeof current['$ref'] === 'string' ? current['$ref'] : soleAllOfRef(current);
+    if (ref === null) break;
     // A cycle is not an error in a schema — Gitea's `Repository.parent` is a
     // Repository. It is a place to stop, and stopping silently at a fixed depth
     // is what keeps the truth finite without pretending the field is absent.

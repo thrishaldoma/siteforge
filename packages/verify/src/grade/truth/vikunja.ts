@@ -64,6 +64,24 @@ export const VIKUNJA_TRUTH: TruthSource = {
       endpoints.some((e) => e.requestFields.length > 0),
       'no request fields were enumerated; body parameters are not being read',
     ],
+    /**
+     * The floor that would have caught the `allOf` defect on the day Vikunja
+     * was adopted.
+     *
+     * This generator writes a typed property as `allOf: [{ $ref }]` so it can
+     * hang a `description` beside the reference — 32 times, where Gitea's
+     * document uses the idiom zero times. Following only a bare `$ref` therefore
+     * read every one of them as an untyped `object`, which silently deleted both
+     * of the document's reachable closed-domain claims and every nested object
+     * behind a wrapper. **Measured: 50 enum-bearing response fields with the
+     * wrapper resolved, and 0 without.** A truth side that under-claims does not
+     * report a smaller truth — it inflates every recall scored against it, so
+     * the failure looks like a better number.
+     */
+    [
+      endpoints.flatMap((e) => e.responseFields).filter((f) => f.enumValues !== null).length >= 20,
+      'no enum-bearing response fields were enumerated. This document reaches all seven of its enums through `allOf: [{ $ref }]` wrappers, so a walk that follows only a bare `$ref` reports zero here and quietly raises `narrowing.recall` — 50 were measured against the pinned digest.',
+    ],
   ],
 };
 

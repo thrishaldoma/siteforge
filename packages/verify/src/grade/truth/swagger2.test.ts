@@ -19,6 +19,8 @@ import { describe, expect, it } from 'vitest';
 import {
   TruthLoadError,
   type Snapshot,
+  type TruthSource,
+  buildSwagger2Truth,
   classifyAnonymousStatus,
   pathParameterNames,
   pathShape,
@@ -252,5 +254,137 @@ describe('the staleness gate compares bytes, and the exemption list is empty', (
     // assertion, in a diff someone reads — which is the point.
     const pin = JSON.parse(readFileSync(join(FIXTURES, 'pin.json'), 'utf8'));
     expect(pin.volatileFields).toEqual([]);
+  });
+});
+
+/**
+ * `allOf: [{ $ref }]`, which is how a Swagger 2.0 generator writes "this
+ * property is that definition" when it also wants a description.
+ *
+ * Driven through `buildSwagger2Truth` with a source whose floors are empty, so
+ * each shape can be handed in directly. The bug this covers was invisible for
+ * as long as Gitea was the target — Gitea's document contains the string
+ * `allOf` zero times — and silently active from the day Vikunja replaced it,
+ * where the idiom appears 32 times.
+ */
+describe('an `allOf` alias resolves, and a composition refuses to guess', () => {
+  /** Floors deliberately empty: the subject here is the walk, not the surface. */
+  const noFloors: TruthSource = {
+    id: 'synthetic',
+    specFile: 'docs.json',
+    defaultBasePath: '/api/v1',
+    notDerived: [],
+    floors: () => [],
+  };
+
+  const snapshotOf = (definitions: Record<string, unknown>, property: unknown): Snapshot => {
+    const spec = {
+      swagger: '2.0',
+      basePath: '/api/v1',
+      paths: {
+        '/thing': {
+          get: {
+            operationId: 'getThing',
+            responses: {
+              '200': { schema: { type: 'object', properties: { field: property } } },
+            },
+          },
+        },
+      },
+      definitions,
+    };
+    const specBytes = Buffer.from(JSON.stringify(spec));
+    return {
+      spec,
+      specBytes,
+      pin: { specSha256: createHash('sha256').update(specBytes).digest('hex'), basePath: '/api/v1' },
+      probe: { entries: [] },
+    };
+  };
+
+  const fieldsOf = (definitions: Record<string, unknown>, property: unknown) =>
+    buildSwagger2Truth(snapshotOf(definitions, property), noFloors).endpoints[0]!.responseFields;
+
+  it('reads the referent’s enum through the wrapper, where the bug read none', () => {
+    // The discriminating property. Under the defect this field resolved to the
+    // bare wrapper: `type` fell back to `object` and `enumValues` was null, so
+    // the document's only closed-domain claims vanished from the truth side and
+    // `narrowing.recall`'s denominator read zero. Asserting the enum is what
+    // separates the two states — asserting the field merely *exists* would not,
+    // because it existed under the bug too.
+    const fields = fieldsOf(
+      { Kind: { type: 'string', enum: ['list', 'kanban'] } },
+      { description: 'the kind of thing', allOf: [{ $ref: '#/definitions/Kind' }] },
+    );
+    const field = fields.find((f) => f.pointer === '/field');
+    expect(field?.enumValues).toEqual(['list', 'kanban']);
+    expect(field?.type).toBe('string');
+  });
+
+  it('descends into the referent’s own properties, which the bug truncated', () => {
+    // `models.Task.created_by` → `user.User` is this shape, and six properties
+    // were being dropped from the truth side per occurrence. A truth side that
+    // under-claims does not report a smaller truth; it inflates recall.
+    const fields = fieldsOf(
+      { User: { type: 'object', properties: { id: { type: 'integer' }, username: { type: 'string' } } } },
+      { description: 'who made it', allOf: [{ $ref: '#/definitions/User' }] },
+    );
+    expect(fields.map((f) => f.pointer).sort()).toEqual([
+      '/field',
+      '/field/id',
+      '/field/username',
+    ]);
+  });
+
+  it('keeps an annotation sibling, because that is the shape the real document uses', () => {
+    // The negative control, and it is not the vacuous spelling: `description` is
+    // precisely why the wrapper exists, so a rule that rejected any sibling at
+    // all would refuse all 32 real occurrences. This asserts the rule
+    // discriminates between an annotation and a schema keyword rather than
+    // counting keys.
+    const withAnnotations = fieldsOf(
+      { Kind: { type: 'string', enum: ['a'] } },
+      {
+        description: 'a description',
+        title: 'a title',
+        example: 'a',
+        allOf: [{ $ref: '#/definitions/Kind' }],
+      },
+    );
+    expect(withAnnotations.find((f) => f.pointer === '/field')?.enumValues).toEqual(['a']);
+  });
+
+  it('throws on a multi-member `allOf` rather than picking one', () => {
+    expect(() =>
+      fieldsOf(
+        { A: { type: 'object' }, B: { type: 'object' } },
+        { allOf: [{ $ref: '#/definitions/A' }, { $ref: '#/definitions/B' }] },
+      ),
+    ).toThrow(/composed `allOf`.*2 member/s);
+  });
+
+  it('throws when a schema keyword sits beside `allOf`, rather than choosing a side', () => {
+    expect(() =>
+      fieldsOf({ A: { type: 'object' } }, {
+        type: 'string',
+        allOf: [{ $ref: '#/definitions/A' }],
+      }),
+    ).toThrow(/beside type/);
+  });
+
+  it('throws when the sole member is not a `$ref`', () => {
+    expect(() => fieldsOf({}, { allOf: [{ type: 'string' }] })).toThrow(/not a `\$ref`/);
+  });
+
+  it('stops on a cycle reached through a wrapper, as it does through a bare `$ref`', () => {
+    // `models.Project.owner` → `user.User` and back is the real instance of
+    // this. Unwrapping without sharing the bare `$ref` path's cycle set would
+    // recurse forever rather than stopping.
+    expect(() =>
+      fieldsOf(
+        { Node: { type: 'object', properties: { parent: { allOf: [{ $ref: '#/definitions/Node' }] } } } },
+        { allOf: [{ $ref: '#/definitions/Node' }] },
+      ),
+    ).not.toThrow();
   });
 });

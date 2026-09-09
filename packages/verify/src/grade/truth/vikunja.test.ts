@@ -39,6 +39,24 @@ describe('the pinned document, read as a truth', () => {
     // operation would pass the floor.
     expect(truth.endpoints.filter((e) => e.responseFields.length === 0)).toEqual([]);
   });
+
+  it('resolves the `allOf: [{ $ref }]` wrappers this generator writes 32 times', () => {
+    // The exact count, not a floor: §13 prefers an equality wherever the data
+    // allows one, and a committed snapshot does. Under the defect these read
+    // **0** and **0** — the document's every closed-domain claim, gone, with
+    // `narrowing.recall`'s denominator falling to zero and `response-field-
+    // presence.recall` rising because its denominator shrank.
+    const enumBearing = (fields: ReadonlyArray<{ enumValues: readonly string[] | null }>) =>
+      fields.filter((f) => f.enumValues !== null).length;
+    expect(enumBearing(truth.endpoints.flatMap((e) => e.responseFields))).toBe(50);
+    expect(enumBearing(truth.endpoints.flatMap((e) => e.requestFields))).toBe(26);
+
+    // And the nested-object half of the same defect: `models.Task.created_by`
+    // reaches `user.User` through a wrapper, so its six properties existed only
+    // once the wrapper was followed.
+    const task = truth.endpoints.find((e) => e.method === 'GET' && e.specPath === '/tasks/{id}');
+    expect(task?.responseFields.map((f) => f.pointer)).toContain('/created_by/username');
+  });
 });
 
 describe('what this document cannot ground, and why', () => {
