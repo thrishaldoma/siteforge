@@ -131,7 +131,31 @@ export function assertPermitted(url) {
 /* --------------------------------------------------------- §3.4 scrubber */
 
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-export const scrub = (text) => text.replace(EMAIL, '[REDACTED:EMAIL]');
+
+/**
+ * §3.4 names tokens before it names emails, and this scrubber only ever did
+ * emails.
+ *
+ * Found by the gate, on the first real site: Vikunja answers `POST
+ * /api/v1/login` with `{ "token": "eyJ…" }`, so the JWT went into the inferred
+ * response schema as a `const` and four of them reached
+ * `network/endpoints.json`. Nothing in the rung-3 fixture returns a credential
+ * in a body, so two rungs of green said nothing about this.
+ *
+ * Deliberately a **second implementation** of the same idea as
+ * `secret-scan.ts`'s rules, not a shared constant. The scanner is the check on
+ * the scrubber; one regex behind both would mean a hole in it removes the
+ * finding and the redaction together, and the run would report clean. Over-
+ * redacting here is free — this is capture output, not the document.
+ */
+const JWT = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g;
+const BEARER = /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/g;
+
+export const scrub = (text) =>
+  text
+    .replace(JWT, '[REDACTED:TOKEN]')
+    .replace(BEARER, 'Bearer [REDACTED:TOKEN]')
+    .replace(EMAIL, '[REDACTED:EMAIL]');
 export function scrubDeep(value) {
   if (typeof value === 'string') return scrub(value);
   if (Array.isArray(value)) return value.map(scrubDeep);

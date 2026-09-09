@@ -66,7 +66,7 @@ const CONTEXTS = [
     contextId: 'auth-desktop', label: 'Signed in · 1280×800 · en-US',
     auth: {
       mode: 'storage-state', storageStatePath: 'auth/storage-state.json',
-      acquiredBy: 'interactive-headful', expiresAt: null, credentialSource: 'env',
+      acquiredBy: 'scripted', expiresAt: null, credentialSource: 'env',
     },
     viewport: VIEWPORT, locale: { language: 'en-US', timezone: 'UTC' }, variant: null,
   },

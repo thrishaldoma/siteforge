@@ -54,6 +54,16 @@ export const PINS = {
   specPath: '/swagger.v1.json',
   /** §5's graded universe. The document's own `basePath`. */
   basePath: '/api/v1',
+  /**
+   * The env var that tells the app what URL it is reachable at.
+   *
+   * Named here rather than baked into `env`, because a second caller boots this
+   * image on a different port — a capture driver, say — and an app told the
+   * wrong public URL sends its own frontend to a port nothing is listening on.
+   * Vikunja's SPA did exactly that: it loaded, called `localhost:3802`, and
+   * rendered no login form at all.
+   */
+  rootUrlEnv: 'GITEA__server__ROOT_URL',
   env: {
     GITEA__security__INSTALL_LOCK: 'true',
     GITEA__database__DB_TYPE: 'sqlite3',
@@ -95,6 +105,7 @@ export const PINS = {
    * depend on whatever the last run left behind.
    */
   runArgs: ['--tmpfs', '/db', '--tmpfs', '/files'],
+  rootUrlEnv: 'VIKUNJA_SERVICE_PUBLICURL',
   env: {
     VIKUNJA_SERVICE_JWTSECRET: 'sf-local-fixture-only-secret',
     VIKUNJA_SERVICE_PUBLICURL: 'http://localhost:3802/',
@@ -220,7 +231,10 @@ async function get(path, { timeoutMs = 10_000 } = {}) {
 
 async function bootAndFetch() {
   docker('rm', '-f', PIN.containerName);
-  const env = Object.entries(PIN.env).flatMap(([k, v]) => ['-e', `${k}=${v}`]);
+  const env = Object.entries({
+    ...PIN.env,
+    [PIN.rootUrlEnv]: `http://localhost:${PIN.hostPort}/`,
+  }).flatMap(([k, v]) => ['-e', `${k}=${v}`]);
   const started = docker(
     'run', '-d', '--name', PIN.containerName,
     '-p', `127.0.0.1:${PIN.hostPort}:${PIN.containerPort}`,

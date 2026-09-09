@@ -181,6 +181,12 @@ export function inferEndpoints(observations, { scrub, sha256, uiConstraints, min
     if (!groups.has(key)) {
       groups.set(key, {
         method: obs.method, pattern, origin: url.origin,
+        // One Set per positional hole, never one flat list. A pattern with two
+        // holes has two parameters, and a value seen in the second is not an
+        // example of the first — `/projects/:id/views/:id/tasks` is where the
+        // flat version was found, by a schema cross-check, on the first real
+        // site with a nested resource. Neither the rung-3 fixture nor the
+        // hand-written Gitea baseline has one, so it had never come up.
         pathParams: [], query: new Map(), headers: new Map(),
         byStatus: new Map(), requestBodies: [], routeIds: new Set(),
         anonRefused: 0, anonSucceeded: 0,
@@ -188,8 +194,16 @@ export function inferEndpoints(observations, { scrub, sha256, uiConstraints, min
       });
     }
     const g = groups.get(key);
-    params.forEach((v) => { if (!g.pathParams.includes(v)) g.pathParams.push(v); });
+    params.forEach((v, i) => {
+      g.pathParams[i] ??= new Set();
+      g.pathParams[i].add(v);
+    });
     for (const [name, value] of url.searchParams) {
+      // A trailing `&` or a bare `=` yields an empty name. It is not a
+      // parameter, and the schema rejects one; dropping it here keeps the
+      // difference between "no query string" and "a nameless field" out of the
+      // artifact rather than out of the reader's way.
+      if (name.length === 0) continue;
       if (!g.query.has(name)) g.query.set(name, new Set());
       g.query.get(name).add(value);
     }
@@ -209,16 +223,30 @@ export function inferEndpoints(observations, { scrub, sha256, uiConstraints, min
     if (credentialed) g.authenticatedObservations += 1;
     else g.unauthenticatedObservations += 1;
 
-    // A request that went out with no credential, from a context that has none,
-    // settles the question — in whichever direction the server answered.
-    //
-    // A 401 answering a *signed-in* request is a different fact: it is the
-    // endpoint's own failure mode, a wrong password on a login route, not a
-    // statement about needing auth. Evidence is an interpretation the producer
-    // makes, never an automatic consequence of a status code.
-    if (!credentialed && fromAnonContext) {
-      if (obs.status === 401 || obs.status === 403) g.anonRefused += 1;
-      else if (obs.status >= 200 && obs.status < 300) g.anonSucceeded += 1;
+    /*
+     * What an uncredentialed request settles, and it is not symmetric.
+     *
+     * **Success settles `not-required`, whatever context it came from.** A
+     * request that carried no cookie and no Authorization header and got a 2xx
+     * is a public endpoint; which browser context issued it changes nothing
+     * about that. `POST /api/v1/login` is the case that found this — the sign-in
+     * exchange is uncredentialed by definition and happens in the *authenticated*
+     * context, so the context test recorded no evidence at all and the coverage
+     * invariant fired. An endpoint you cannot have a session for cannot require
+     * one.
+     *
+     * **Refusal settles `required` only from a deliberate anonymous probe.**
+     * This is the asymmetry, and §6 wrote down why: a 401 is often the
+     * endpoint's own failure mode rather than a statement about needing auth —
+     * a wrong password on a login route answers 401 to a request that was
+     * uncredentialed because it is *supposed* to be. Only a GET we re-issued on
+     * purpose, knowing it succeeded with a session, makes the refusal mean what
+     * it looks like. §13: the default is the safe one *for that category*, and
+     * these are two categories.
+     */
+    if (!credentialed) {
+      if (obs.status >= 200 && obs.status < 300) g.anonSucceeded += 1;
+      else if (fromAnonContext && (obs.status === 401 || obs.status === 403)) g.anonRefused += 1;
     }
     if (!g.byStatus.has(obs.status)) g.byStatus.set(obs.status, { contentType: obs.contentType, bodies: [], routeIds: [] });
     const bucket = g.byStatus.get(obs.status);
@@ -234,9 +262,11 @@ export function inferEndpoints(observations, { scrub, sha256, uiConstraints, min
   const pathParamValues = new Map();
   for (const g of groups.values()) {
     const id = endpointId(g.method, g.pattern);
-    for (const value of g.pathParams) {
-      if (!pathParamValues.has(value)) pathParamValues.set(value, new Set());
-      pathParamValues.get(value).add(id);
+    for (const position of g.pathParams) {
+      for (const value of position) {
+        if (!pathParamValues.has(value)) pathParamValues.set(value, new Set());
+        pathParamValues.get(value).add(id);
+      }
     }
   }
   const schemaCtx = {
@@ -297,9 +327,12 @@ export function inferEndpoints(observations, { scrub, sha256, uiConstraints, min
       pathPattern: g.pattern,
       origin: g.origin,
       params: {
-        path: g.pathParams.length
-          ? [{ name: 'id', type: 'string', required: true, examples: g.pathParams.slice(0, 10) }]
-          : [],
+        // One entry per hole, in order. `normalizePath` writes every id segment
+        // as `:id`, so they share a name — which is what the pattern declares
+        // and what the schema cross-checks against.
+        path: g.pathParams.map((values) => ({
+          name: 'id', type: 'string', required: true, examples: [...values].slice(0, 10),
+        })),
         query: [...g.query.entries()].map(([name, values]) => ({
           name, type: 'string', required: false, examples: [...values].slice(0, 10),
         })),

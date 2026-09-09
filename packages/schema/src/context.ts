@@ -59,7 +59,17 @@ export const AuthContextSchema = z.discriminatedUnion('mode', [
     /** Path only. The file is gitignored and chmod 600 (§5). */
     storageStatePath: z.string().regex(/^auth\/[A-Za-z0-9._-]+\.json$/, 'expected auth/<name>.json'),
     /** §6: `--auth` launches headful and waits for a hand sign-in. */
-    acquiredBy: z.enum(['interactive-headful', 'reused-existing']),
+    /**
+     * How the session was got.
+     *
+     * `scripted` was added when a second driver needed it and rung 3 was found
+     * to be calling its scripted login `interactive-headful` — a small untruth
+     * with a real consequence, since §6 reads the two auth modes off how the
+     * session was acquired. A fixture app signed into from `SITEFORGE_USER` /
+     * `SITEFORGE_PASS` is not a human at a headful browser: it can be repeated,
+     * which is exactly what makes session-destructive probes affordable.
+     */
+    acquiredBy: z.enum(['interactive-headful', 'reused-existing', 'scripted']),
     expiresAt: z.iso.datetime().nullable(),
     credentialSource: z.enum(['env', 'os-keychain', 'interactive-only']),
   }),
