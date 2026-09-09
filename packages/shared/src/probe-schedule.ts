@@ -124,3 +124,85 @@ export function terminatesAfterSchedule<T>(
     schedule.some((s) => s.phase === 'session-destructive' && s.fire)
   );
 }
+
+// ---------------------------------------------------------------------------
+// Classifying a control (§6, decision 0011)
+// ---------------------------------------------------------------------------
+
+/**
+ * The term lists, in one place for every driver.
+ *
+ * §6's original heuristic had a single "destructive" bucket and it conflated
+ * three unrelated things: "Sign out" and "Delete account" both match, and
+ * treating them alike was wrong in both directions — it left
+ * `POST /api/auth/logout` uncaptured while §10's auth tasks depend on it, and
+ * it filed a core auth flow as unreliable.
+ *
+ * These were `rung3.mjs`'s local constants. A second driver needed them and
+ * copying was the obvious move; §13's schema-drift argument says otherwise, and
+ * the concrete failure would be two crawlers disagreeing about whether the same
+ * button is safe to press. One implementation, imported by both.
+ */
+export const TARGET_DESTRUCTIVE_TERMS: readonly string[] = [
+  'delete',
+  'remove',
+  'cancel subscription',
+  'deactivate',
+  'close account',
+];
+
+export const SESSION_DESTRUCTIVE_TERMS: readonly string[] = [
+  'sign out',
+  'log out',
+  'logout',
+  'switch account',
+  'revoke',
+];
+
+/** Controls the operator declines to fire even under `--allow-destructive`. */
+export const NEVER_FIRE_NAMES: readonly string[] = ['delete account'];
+
+export interface ControlClassification {
+  readonly hazard: 'target-destructive' | 'session-destructive' | 'out-of-scope' | null;
+  /** The term that classified it. Required for a destructive verdict. */
+  readonly matchedTerm?: string;
+  /** What put it outside scope: the scheme, or the foreign origin. */
+  readonly outOfScopeTarget?: string;
+}
+
+/**
+ * Classify one control by **who absorbs the harm** (decision 0011).
+ *
+ * Order matters and is not arbitrary: "delete account" must not be read as a
+ * session action just because signing out is a side effect of it, so the
+ * target-destructive list is consulted first. Out-of-scope comes before both,
+ * because a `mailto:` named "Delete" is still not ours to fire.
+ *
+ * `sameOrigin` is passed in rather than imported so this stays a pure function
+ * of its arguments — and so the origin comparison is the caller's parsed one
+ * rather than a prefix test reinvented here. §13: `${ORIGIN}@evil.example/x`
+ * and `${ORIGIN}.evil.net/x` both satisfy `startsWith` and are foreign.
+ */
+export function classifyControlHazard(options: {
+  /** The accessible name. Matched case-insensitively. */
+  readonly name: string;
+  readonly href?: string | undefined;
+  /** True when the href is on the crawl's own origin. Parsed by the caller. */
+  readonly isSameOrigin: (href: string) => boolean;
+}): ControlClassification {
+  const { name, href = '', isSameOrigin } = options;
+  const lower = name.toLowerCase();
+
+  if (href !== '' && /^(mailto:|tel:)/i.test(href)) {
+    return { hazard: 'out-of-scope', outOfScopeTarget: `${href.split(':')[0]!}:` };
+  }
+  if (href !== '' && /^https?:\/\//i.test(href) && !isSameOrigin(href)) {
+    // The caller parsed it, so `new URL` here cannot disagree with the test above.
+    return { hazard: 'out-of-scope', outOfScopeTarget: new URL(href).origin };
+  }
+  const target = TARGET_DESTRUCTIVE_TERMS.find((t) => lower.includes(t));
+  if (target !== undefined) return { hazard: 'target-destructive', matchedTerm: target };
+  const session = SESSION_DESTRUCTIVE_TERMS.find((t) => lower.includes(t));
+  if (session !== undefined) return { hazard: 'session-destructive', matchedTerm: session };
+  return { hazard: null };
+}

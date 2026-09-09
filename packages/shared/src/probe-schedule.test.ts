@@ -7,11 +7,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   POLICY_BY_CREDENTIAL_SOURCE,
+  classifyControlHazard,
   decideNavigation,
   isOperationalError,
   operationalKind,
   planProbeSchedule,
   rethrowIfDefect,
+  sameOrigin,
   terminatesAfterSchedule,
   OperationalError,
   allowedOrigins,
@@ -199,5 +201,77 @@ describe('the catch taxonomy distinguishes a bad site from a bad program', () =>
     const liar = new ReferenceError('Timeout 30000ms exceeded');
     expect(isOperationalError(liar)).toBe(false);
     expect(() => rethrowIfDefect(liar)).toThrow(ReferenceError);
+  });
+});
+
+describe('a control is classified by who absorbs the harm, not by one bucket', () => {
+  // These lists and this ordering were `rung3.mjs`'s locals until a second
+  // driver needed them. Two crawlers disagreeing about whether the same button
+  // is safe to press is §13's schema drift with a hazard attached, so the
+  // judgement moved here and both import it — which also makes it testable
+  // without driving a browser.
+  // The real parsed comparison, not a stub. A `startsWith` double would pass
+  // the prefix test below while asserting the opposite of what it claims — and
+  // `lint:identifiers` said so, on this line, which is the rule working.
+  const ORIGIN = 'http://127.0.0.1:3803';
+  const classify = (name: string, href?: string) =>
+    classifyControlHazard({ name, href, isSameOrigin: (h) => sameOrigin(h, ORIGIN) });
+
+  it('separates the three hazards §6 used to conflate', () => {
+    // The failure that produced the split: one "destructive" bucket put
+    // "Sign out" and "Delete account" together, which left POST /logout
+    // uncaptured while §10's auth tasks depend on it.
+    expect(classify('Delete your Vikunja Account').hazard).toBe('target-destructive');
+    expect(classify('Sign out').hazard).toBe('session-destructive');
+    expect(classify('Save').hazard).toBe(null);
+  });
+
+  it('reads "delete account" as target-destructive, not as a session action', () => {
+    // Order matters and is the reason it is written down. Signing out is a side
+    // effect of deleting an account, so a session-first classifier would call
+    // this recoverable and fire it.
+    expect(classify('Delete account and log out')).toEqual({
+      hazard: 'target-destructive',
+      matchedTerm: 'delete',
+    });
+  });
+
+  it('names the term that classified it, because the schema demands the evidence', () => {
+    // `SkippedControlSchema` refuses a target-destructive skip with no
+    // `matchedTerm`: a derived field carries what it was derived from.
+    expect(classify('Remove label').matchedTerm).toBe('remove');
+    expect(classify('Revoke token').matchedTerm).toBe('revoke');
+  });
+
+  it('puts a foreign origin out of scope ahead of any term match', () => {
+    // A `mailto:` named "Delete" is still not ours to fire, so scope is decided
+    // before hazard.
+    expect(classify('Delete', 'mailto:ops@example.com')).toEqual({
+      hazard: 'out-of-scope',
+      outOfScopeTarget: 'mailto:',
+    });
+    expect(classify('Powered by Vikunja', 'https://vikunja.io/')).toEqual({
+      hazard: 'out-of-scope',
+      outOfScopeTarget: 'https://vikunja.io',
+    });
+  });
+
+  it('decides the origin by the caller’s parsed comparison, never a prefix test', () => {
+    // §13's identifier rule. `http://127.0.0.1:3803@evil.example/x` satisfies a
+    // `startsWith` against the origin and is a foreign host; the caller passes
+    // its parsed `sameOrigin` in so this cannot reinvent the mistake.
+    expect(classify('Go', 'http://127.0.0.1:3803@evil.example/x').hazard).toBe('out-of-scope');
+    expect(classify('Go', 'http://127.0.0.1:3803/projects').hazard).toBe(null);
+  });
+
+  it('is case-insensitive on the name, because a button shouts', () => {
+    // Measured on the real target: Vikunja renders a `button "DELETE"`.
+    expect(classify('DELETE').hazard).toBe('target-destructive');
+  });
+
+  it('leaves an ordinary control alone even when its href is same-origin', () => {
+    // The negative case. A classifier that flagged anything with an href would
+    // decline the whole navigation surface and probe nothing.
+    expect(classify('Projects', 'http://127.0.0.1:3803/projects')).toEqual({ hazard: null });
   });
 });
