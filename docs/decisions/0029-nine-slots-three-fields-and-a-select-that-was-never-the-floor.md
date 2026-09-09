@@ -183,6 +183,42 @@ re-parsing it threw on every exchange. §13's first vacuity mode, wearing a gree
 tick — and found only by reading the number instead of the ✓, which is the
 argument for printing both sides of every invariant rather than a verdict.
 
+## 6.2 Re-measured at HEAD, after the reduced-motion fix
+
+§6.1 was measured at `5108730`. 0031 §2.1 then changed what a context *is* —
+`prefers-reduced-motion: reduce` now applies to both crawl contexts, which
+previously ran without it. That is a capture-behaviour change, so §6.1's numbers
+are stamped to a commit that no longer describes the driver, and the grade has
+to be taken again rather than assumed to carry.
+
+Run-to-run stability does not answer this. 0032 §3.1 shows the read-only
+idempotence residual is **exactly 4 before and after**, but reproducing perfectly
+says nothing about whether the artifact *changed* — a different capture that
+reproduces is still a different capture.
+
+Predicted before running:
+
+| | prediction | why |
+|---|---|---|
+| every graded metric | **unchanged** | reduced motion suppresses animation; it does not alter API traffic, and every scored category reads endpoints and fields. |
+| `uiConstraintSelects` | **6** | the six selects are static markup. |
+| `controlsUndriveable` | **the one number genuinely at risk** | 49 of 51 timeouts are on a `position: fixed` sidebar that carries an animated `transform` (0032 §5). Suppressing animation is the one change that could plausibly move it, in either direction. |
+
+Measured at `eb0465f`:
+
+| metric | §6.1 | at HEAD |
+|---|---|---|
+| `narrowing.recall` | 0.0000 0/9 | **0.0000 0/9** |
+| `entity-narrowing.recall` | 0.0000 0/1 | **0.0000 0/1** |
+| `endpoint-identity.precision` | 0.9545 21/22 | **0.9545 21/22** |
+| `request-field-presence` | 0.6494 · 0.5155 | **0.6494 · 0.5155** |
+| `response-field-presence` | 0.4538 · 0.4954 | **0.4538 · 0.4954** |
+| `field-type.accuracy` | 0.8969 287/320 | **0.8969 287/320** |
+| `entity-identity.precision` | 1.0000 4/4 | **1.0000 4/4** |
+| `entity-field-presence` | 1.0000 58/58 · 0.9355 58/62 | **1.0000 58/58 · 0.9355 58/62** |
+| `uiConstraintSelects` | 6 | **6** |
+| `controlsUndriveable` | 71 | **PENDING** |
+
 ## 7. Invariants added
 
 §6's standing rule: whenever a rung finds a silent drop, add the invariant that

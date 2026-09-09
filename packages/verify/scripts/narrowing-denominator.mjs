@@ -22,7 +22,7 @@
  * and belongs in a document; what belongs in the repository is the means to
  * check that argument without rebuilding it from memory.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SiteModelSchema } from '../../schema/dist/index.js';
@@ -39,12 +39,52 @@ if (loadTruth === undefined) {
   process.exit(1);
 }
 
+/**
+ * What this reads, before it reads it.
+ *
+ * §13's discriminator: does "reached nothing" render the same as "reached
+ * everything and found nothing"? Here it did. Run against a read-only capture —
+ * which `capture-idempotence --no-probe` leaves on disk — the model shrinks, the
+ * table gets shorter, and the conclusion at the bottom still prints *"every slot
+ * falls in one of those two"*. A smaller correct-looking answer, from an input
+ * that cannot support it.
+ *
+ * `assessMeasurementPreconditions` in `browser-surface.mjs` is the same fix for
+ * the same shape. This one is smaller: say what was read, and refuse the input
+ * that produces the plausible wrong answer.
+ */
+function requireFullCapture(captureRoot, capture) {
+  const problems = [];
+  // The directory survives a read-only run and `skipped-controls.json` is
+  // written either way, so neither is the discriminator. A *trace* is: it only
+  // exists where a control was actually driven, and a crawl that drove nothing
+  // saw only the traffic page loads caused.
+  const flows = existsSync(join(captureRoot, 'flows'))
+    ? readdirSync(join(captureRoot, 'flows')).filter((f) => f.startsWith('probe-'))
+    : [];
+  if (flows.length === 0) {
+    problems.push(
+      'the capture holds no probe traces — a read-only crawl, so its endpoint set is a subset ' +
+      'of what a full one reaches and the denominator would be read off the wrong input',
+    );
+  }
+  if (capture.endpoints.length === 0) problems.push('the capture recorded no endpoints');
+  if (problems.length > 0) {
+    console.error(`\ncannot read the denominator from this capture:`);
+    for (const p of problems) console.error(`  - ${p}`);
+    console.error('\nre-run `node packages/capture/scripts/capture-site.mjs` first.\n');
+    process.exit(1);
+  }
+}
+
 const model = SiteModelSchema.parse(
   JSON.parse(readFileSync(join(REPO, 'envs', siteId, 'site-model.json'), 'utf8')),
 );
 const capture = JSON.parse(
   readFileSync(join(REPO, 'capture', siteId, 'network', 'endpoints.json'), 'utf8'),
 );
+requireFullCapture(join(REPO, 'capture', siteId), capture);
+
 const truth = loadTruth();
 const { pairs } = matchEndpoints(
   model.operations,
@@ -90,7 +130,14 @@ const narrowingOf = (n) =>
       : n.format !== undefined ? `format ${n.format}`
         : null;
 
-console.log(`\nnarrowing.recall denominator — ${siteId}: ${rows.length} field(s) over ${pairs.length} matched pair(s)\n`);
+// What it read, printed beside what it concluded. A count with no inputs beside
+// it cannot be told from a count taken over the wrong inputs.
+console.log(`\nnarrowing.recall denominator — ${siteId}`);
+console.log(
+  `  read ${capture.endpoints.length} observed endpoint(s), ${model.operations.length} model operation(s), ` +
+  `${truth.endpoints.length} spec endpoint(s)`,
+);
+console.log(`  ${rows.length} field(s) over ${pairs.length} matched pair(s)\n`);
 for (const r of rows) {
   const truthValues = r.tf.enumValues
     ? `enum ${JSON.stringify(r.tf.enumValues)}`
