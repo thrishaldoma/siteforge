@@ -218,6 +218,11 @@ async function measure(target, origin) {
   });
 
   const formActions = new Set();
+  // The escape guards exist to record boundary crossings into `capture/` and to
+  // keep a crawl inside its target's origin. This is not a crawl: it boots a
+  // container from a pinned image, reads it, and throws it away, writing no
+  // capture artifact — so there is nothing to record into and no session to leak.
+  // unguarded: measurement harness against a container it booted itself
   const page = await context.newPage();
   if (target.login) await target.login(page, origin);
   for (const path of target.pages) {
@@ -230,6 +235,7 @@ async function measure(target, origin) {
       .$$eval('form', (fs) =>
         fs.map((f) => `${(f.getAttribute('method') ?? 'GET').toUpperCase()} ${f.getAttribute('action') ?? '(self)'}`),
       )
+      // operational: a page that failed to load has no forms to record
       .catch(() => []);
     for (const form of forms) formActions.add(form);
   }
