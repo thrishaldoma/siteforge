@@ -1,8 +1,8 @@
-diff --git a/packages/verify/src/grade/truth/gitea.ts b/packages/verify/src/grade/truth/gitea.ts
-index 590f9b1..1578bf4 100644
---- a/packages/verify/src/grade/truth/gitea.ts
-+++ b/packages/verify/src/grade/truth/gitea.ts
-@@ -274,7 +274,7 @@ function responseFields(spec: Json, operation: Json): TruthResponseField[] {
+diff --git a/packages/verify/src/grade/truth/swagger2.ts b/packages/verify/src/grade/truth/swagger2.ts
+index 64c1eb5..2606cb2 100644
+--- a/packages/verify/src/grade/truth/swagger2.ts
++++ b/packages/verify/src/grade/truth/swagger2.ts
+@@ -272,7 +272,7 @@ function responseFields(spec: Json, operation: Json): TruthResponseField[] {
  export function classifyAnonymousStatus(status: number | null): TruthAuth {
    if (status === null) return 'indeterminate';
    if (status === 200) return 'not-required';
