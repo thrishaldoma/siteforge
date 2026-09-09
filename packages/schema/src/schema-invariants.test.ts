@@ -379,6 +379,26 @@ describe('merging two rows into one entity requires evidence (decision 0025)', (
     ...over,
   });
 
+  /**
+   * The threshold is a *declaration*, and this is what makes it one.
+   *
+   * 0025 states the floor and the reasoning before the measurement, precisely so
+   * a later adjustment cannot be confused with tuning. A constant nothing checks
+   * is a number someone can move in the same commit that reports the score it
+   * moved — so the code and the document are compared, and lowering the floor
+   * fails until the argument for the new one is written down.
+   */
+  it('agrees with the floor decision 0025 declares', () => {
+    const doc = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs', 'decisions',
+        '0025-two-observations-of-one-entity.md'),
+      'utf8',
+    );
+    expect(doc, '0025 no longer states the floor it declared').toContain(
+      `MERGE_MIN_SHARED_FIELDS = ${MERGE_MIN_SHARED_FIELDS}`,
+    );
+  });
+
   it('accepts a projection wholly contained in its item view', () => {
     expect(MergeRecordSchema.safeParse(merge()).success).toBe(true);
   });
