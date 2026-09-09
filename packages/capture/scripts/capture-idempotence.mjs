@@ -111,7 +111,11 @@ const durations = [];
 for (let i = 0; i < RUNS; i += 1) {
   const started = Date.now();
   const args = [join(REPO, 'packages/capture/scripts/capture-site.mjs'), siteId];
-  if (REUSE) args.push('--reuse-container');
+  // The first crawl boots and seeds and then holds the container; the rest
+  // reuse it. Using the driver's own boot rather than a second copy of the pin
+  // here — a measurement whose setup is duplicated is one that can be set up
+  // two different ways.
+  if (REUSE) args.push(i === 0 ? '--hold-container' : '--reuse-container');
   const run = spawnSync('node', args, { encoding: 'utf8', cwd: REPO, maxBuffer: 64 * 1024 * 1024 });
   const seconds = ((Date.now() - started) / 1000).toFixed(1);
   durations.push(Number(seconds));
@@ -129,6 +133,10 @@ for (let i = 0; i < RUNS; i += 1) {
     `  run ${i + 1}  ${seconds}s  ${counts ? `${counts[1]} routes · ${counts[2]} endpoints · ${counts[3]} gaps` : ''}` +
     `${undriveable ? ` · ${undriveable[1]} undriveable` : ''}`,
   );
+}
+
+if (REUSE) {
+  spawnSync('docker', ['rm', '-f', `siteforge-capture-${siteId}`], { encoding: 'utf8' });
 }
 
 const report = assessCaptureIdempotence({ runs: trees, exempt: EXEMPT });

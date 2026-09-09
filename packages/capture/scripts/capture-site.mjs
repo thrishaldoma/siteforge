@@ -132,6 +132,8 @@ const ALLOW_DESTRUCTIVE = process.argv.includes('--allow-destructive');
  * without anyone having to reason about which fields look like target state.
  */
 const REUSE_CONTAINER = process.argv.includes('--reuse-container');
+/** Boot and seed as usual, then leave the container running for the next crawl. */
+const HOLD_CONTAINER = process.argv.includes('--hold-container');
 
 const gaps = [];
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1089,8 +1091,15 @@ async function main() {
     await boot();
   }
   const api = (path, init) => fetch(`${ORIGIN}${path}`, init);
-  await PIN.seed({ origin: ORIGIN, api });
-  console.log('  seeded');
+  if (REUSE_CONTAINER) {
+    // Already seeded by the crawl that booted it. Re-registering the fixture
+    // account against a live instance fails, and the point of holding the
+    // container is that its state does not move between crawls.
+    console.log('  seeded (by the crawl holding this container)');
+  } else {
+    await PIN.seed({ origin: ORIGIN, api });
+    console.log('  seeded');
+  }
 
   const browser = await chromium.launch();
   const routes = new Map();
@@ -1274,7 +1283,7 @@ async function main() {
     await context.close();
   }
   await browser.close();
-  if (!REUSE_CONTAINER) docker('rm', '-f', CONTAINER);
+  if (!REUSE_CONTAINER && !HOLD_CONTAINER) docker('rm', '-f', CONTAINER);
 
   // --- §3.4 before anything else touches the tree ---------------------------
   for (const context of CONTEXTS) {
