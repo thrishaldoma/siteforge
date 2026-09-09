@@ -340,6 +340,15 @@ export const SABOTAGES = [
     expect: 'PRECISION is not derived',
     change: 'build notDerivedByCategory from every entry, ignoring `metric`',
   },
+  {
+    id: 'scope-untracked-excusable',
+    bug: 'the walked-but-untracked direction becomes excusable, so a source file no clone contains can be waved through',
+    reachable:
+      "the symmetry argument, which is wrong and reads as tidiness: one direction consults `excused` and the other does not, so making both consult it looks like removing a special case. It is the special case that matters — a committed file outside every scanner is a real thing to excuse, and a scanned file outside every clone is the packages/capture defect, which stayed green for eight commits precisely because something local could see it. The patch also spells the prefix test as `startsWith`, which is the substring-for-segment mistake in the same line",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'walked-but-untracked',
+    change: 'consult `excused` in the walked-but-untracked loop too',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {

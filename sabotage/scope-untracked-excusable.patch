@@ -1,0 +1,12 @@
+diff --git a/packages/shared/src/repo-hygiene.ts b/packages/shared/src/repo-hygiene.ts
+index 0d50d48..9bb5799 100644
+--- a/packages/shared/src/repo-hygiene.ts
++++ b/packages/shared/src/repo-hygiene.ts
+@@ -296,6 +296,7 @@ export function assessScopeAgreement(views: ScopeViews): HygieneFinding[] {
+ 
+   for (const file of [...walked].sort()) {
+     if (tracked.has(file)) continue;
++    if (Object.keys(excused).some((prefix) => file.startsWith(prefix))) continue;
+     findings.push({
+       rule: 'walked-but-untracked',
+       subject: file,
