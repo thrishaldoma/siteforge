@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest';
 // here would fail loudly if that guard were removed, because the harness
 // refuses to run against this repo's own dirty tree during a test run.
 // @ts-expect-error — a .mjs script with no type declarations; the shapes are asserted below.
-import { SABOTAGES, assessSabotageTable, isControl } from '../../../scripts/sabotage.mjs';
+import { SABOTAGES, assessBuildResidue, assessSabotageTable, isControl } from '../../../scripts/sabotage.mjs';
 
 interface Entry {
   id: string;
@@ -108,5 +108,37 @@ describe('the real table', () => {
   it('carries both kinds', () => {
     expect(SABOTAGES.filter((s: Entry) => !isControl(s)).length).toBeGreaterThan(5);
     expect(SABOTAGES.filter((s: Entry) => isControl(s)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('the residue check covers the output git cannot see', () => {
+  /**
+   * `dist/` is gitignored, so `git status --porcelain` reports nothing about it
+   * and the harness's "the tree came back byte for byte" check was blind to
+   * compiled residue by construction. Several gates build before they run —
+   * `grade:baseline` is `pnpm --filter @siteforge/verify build && …` — so a
+   * patch really does get compiled, and reverting the source leaves the
+   * sabotaged JavaScript in place. This session read two auth metrics off that
+   * residue and they looked entirely ordinary.
+   */
+  it('objects when a built file changed and the rebuild did not restore it', () => {
+    const problems = assessBuildResidue(
+      { 'packages/verify/dist/grade/grade.js': 'a'.repeat(64) },
+      { 'packages/verify/dist/grade/grade.js': 'b'.repeat(64) },
+    );
+    expect(problems.join('\n')).toContain('differs after the run');
+    expect(problems.join('\n')).toContain('scores against a sabotaged grader');
+    expect(problems).toHaveLength(1);
+  });
+
+  it('objects when a built file vanished', () => {
+    expect(assessBuildResidue({ 'packages/verify/dist/x.js': 'a'.repeat(64) }, {}).join('\n'))
+      .toContain('is missing after it');
+  });
+
+  it('holds still when the rebuild reproduced every byte', () => {
+    const same = { 'packages/verify/dist/grade/grade.js': 'c'.repeat(64) };
+    expect(assessBuildResidue(same, { ...same, 'packages/infer/dist/new.js': 'd'.repeat(64) }))
+      .toEqual([]);
   });
 });

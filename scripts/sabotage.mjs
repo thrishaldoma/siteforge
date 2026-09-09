@@ -76,7 +76,8 @@
  * Runs last in `verify:clean`, because it mutates the working tree.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -407,6 +408,63 @@ const git = (...args) => execFileSync('git', ['-C', REPO, ...args], { encoding: 
  */
 const treeSignature = () => git('status', '--porcelain');
 
+/**
+ * The same signature for **compiled output**, which `git status` cannot see.
+ *
+ * `dist/` is gitignored, so it never appears in `--porcelain` and the residue
+ * check was blind to it by construction. That is not hypothetical: several
+ * gates build before they run (`grade:baseline` is
+ * `pnpm --filter @siteforge/verify build && …`, `lint` builds shared), so a
+ * patch gets **compiled** and reverting the source leaves the sabotaged
+ * JavaScript sitting in `dist/`. This session read a score off that residue —
+ * `probeable-includes-mutations` with `method === 'GET' &&` stripped out — and
+ * got two auth metrics that were wrong and looked ordinary. A tool that reports
+ * a confident wrong number is the failure this whole harness exists to prevent,
+ * and here it was the harness producing it.
+ */
+function buildSignature() {
+  const out = {};
+  for (const pkg of readdirSync(join(REPO, 'packages'))) {
+    const dist = join(REPO, 'packages', pkg, 'dist');
+    if (!existsSync(dist)) continue;
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) walk(path);
+        // `.tsbuildinfo` records timestamps and is expected to move.
+        else if (!entry.name.endsWith('.tsbuildinfo')) {
+          out[path.slice(REPO.length + 1)] = createHash('sha256')
+            .update(readFileSync(path))
+            .digest('hex');
+        }
+      }
+    };
+    walk(dist);
+  }
+  return out;
+}
+
+/**
+ * Did the run leave compiled residue the rebuild did not undo?
+ *
+ * Takes both sides as parameters (§13) so a test can hand it a pair that
+ * disagrees; `main()` supplies the real before-and-after.
+ */
+export function assessBuildResidue(before, after) {
+  const problems = [];
+  for (const [file, hash] of Object.entries(before)) {
+    const now = after[file];
+    if (now === undefined) {
+      problems.push(`${file} was built before the run and is missing after it.`);
+    } else if (now !== hash) {
+      problems.push(
+        `${file} differs after the run, and a rebuild did not restore it. A gate that builds compiles the patch into dist/, git status cannot see it because dist/ is ignored, and the next script to read dist/ scores against a sabotaged grader without a word.`,
+      );
+    }
+  }
+  return problems;
+}
+
 const run = (command) => {
   const [bin, ...args] = command;
   const result = spawnSync(bin, args, { cwd: REPO, encoding: 'utf8' });
@@ -420,6 +478,10 @@ function main() {
     console.error(dirty);
     process.exit(1);
   }
+
+  // Compiled output, before anything is applied. Several gates build, so this
+  // is the half of "leaves no trace" that `git status` structurally cannot see.
+  const buildBefore = buildSignature();
 
   const onDisk = existsSync(PATCHES)
     ? readdirSync(PATCHES).filter((f) => f.endsWith('.patch')).map((f) => f.slice(0, -6))
@@ -494,6 +556,24 @@ function main() {
     if (verdict !== null) console.log(verdict);
   }
 
+  // The source came back byte for byte; `dist/` did not, because gates that
+  // build compiled the patch. Rebuild from the restored source, then assert the
+  // rebuild actually restored it — the same standard, applied to the artifact
+  // `git status` cannot see.
+  console.log('\n  restoring compiled output …');
+  const rebuilt = run(['pnpm', '-s', 'build']);
+  if (rebuilt.code !== 0) {
+    console.log('✗  could not rebuild after the run; dist/ may hold sabotaged output');
+    console.log(rebuilt.output.trim());
+    process.exit(1);
+  }
+  const residue = assessBuildResidue(buildBefore, buildSignature());
+  if (residue.length > 0) {
+    console.log('✗  compiled residue survived the rebuild:');
+    for (const problem of residue) console.log(`      ${problem}`);
+    process.exit(1);
+  }
+
   console.log('');
   if (failed > 0) {
     console.log(`✗ ${failed} entr(ies) did not behave as declared.\n`);
@@ -501,7 +581,7 @@ function main() {
   }
   console.log(
     '✓ every gate failed when its bug came back, held still when nothing changed,\n' +
-    '  and the tree is clean.\n',
+    '  and both the tree and its compiled output are clean.\n',
   );
 }
 
