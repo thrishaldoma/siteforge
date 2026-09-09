@@ -159,8 +159,8 @@
     },
     {
       "path": "assets/index.json",
-      "sha256": "824fffedc7f6ee4b4bd6d79e1bb895b4fb49becdb4bcd2e5c74b49934c78bd0e",
-      "bytes": 13282
+      "sha256": "c8f7f7924d2885b229bf594d04d2195b7e62f24ffd5228395f8fadc57b7517b0",
+      "bytes": 13849
     },
     {
       "path": "flows/skipped-controls.json",
@@ -189,7 +189,7 @@
     },
     {
       "path": "manifest.json",
-      "sha256": "134d282afe17133c680ae1914c9c2a94eb3ecdd3248ffe237b8c9172df72130b",
+      "sha256": "c6e73b8d8050c193801ed174cff3392564aabf61238c713cb851405acf63c4fc",
       "bytes": 4677
     },
     {

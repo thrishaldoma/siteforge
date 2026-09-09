@@ -212,6 +212,30 @@ export function assetKind(contentType: string): AssetKind {
   return SUBTYPE_KIND[stripped] ?? SUBTYPE_KIND[mime.suffix ?? ''] ?? 'other';
 }
 
+/**
+ * Is this body text the scrubber can safely rewrite?
+ *
+ * §3.4 redacts before an artifact is written, and the redaction is a string
+ * substitution — run over a JPEG it would replace bytes inside a container and
+ * produce an image that no longer decodes. So the scrubber is pointed only at
+ * bodies that are text, and binary is stored verbatim.
+ *
+ * That is not a hole in §3.4: `scanCaptureTree` reads **every** file as latin1,
+ * binary included, so a credential inside an image is a finding that fails the
+ * run. Redacting is what we do where we can do it without destroying the
+ * artifact; failing is what we do everywhere else. Deciding by kind rather than
+ * by sniffing the bytes keeps the choice visible in the index.
+ */
+export function isTextualAsset(contentType: string): boolean {
+  const mime = parseMime(contentType);
+  if (mime === null) return false;
+  if (mime.type === 'text') return true;
+  // `image/svg+xml` is markup, and it is the one image kind that can carry a
+  // URL, a script, or an email — the suffix is what says so, not the type.
+  if (mime.suffix === 'xml' || mime.suffix === 'json') return true;
+  return ['script', 'stylesheet', 'json', 'document'].includes(assetKind(contentType));
+}
+
 /** Is this content type the given `type/subtype`, ignoring parameters? */
 export function isMime(contentType: string, type: string, subtype: string): boolean {
   const mime = parseMime(contentType);

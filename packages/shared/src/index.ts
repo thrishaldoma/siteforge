@@ -8,3 +8,4 @@ export * from './errors.js';
 export * from './crawl-scope.js';
 export * from './probe-schedule.js';
 export * from './repo-hygiene.js';
+export * from './asset-bodies.js';

@@ -151,11 +151,31 @@ const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const JWT = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g;
 const BEARER = /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/g;
 
-export const scrub = (text) =>
-  text
-    .replace(JWT, '[REDACTED:TOKEN]')
-    .replace(BEARER, 'Bearer [REDACTED:TOKEN]')
-    .replace(EMAIL, '[REDACTED:EMAIL]');
+/**
+ * The scrub, and how many redactions it made.
+ *
+ * One implementation rather than a `scrub` beside a `countRedactions`: two
+ * would drift, and the count is what `AssetEntry.stored` reports, so a count
+ * disagreeing with the redaction is a claim about the artifact that the
+ * artifact does not support. Tallied through the same sequence the replacement
+ * runs in, because the patterns overlap — `Bearer eyJ…` is matched by JWT
+ * first, and counting the two independently would report two redactions where
+ * one happened.
+ */
+export function scrubCounting(text) {
+  let redactions = 0;
+  const tally = (replacement) => () => {
+    redactions += 1;
+    return replacement;
+  };
+  const out = text
+    .replace(JWT, tally('[REDACTED:TOKEN]'))
+    .replace(BEARER, tally('Bearer [REDACTED:TOKEN]'))
+    .replace(EMAIL, tally('[REDACTED:EMAIL]'));
+  return { text: out, redactions };
+}
+
+export const scrub = (text) => scrubCounting(text).text;
 export function scrubDeep(value) {
   if (typeof value === 'string') return scrub(value);
   if (Array.isArray(value)) return value.map(scrubDeep);

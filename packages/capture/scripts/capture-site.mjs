@@ -32,15 +32,17 @@
  * everything the grader scores is here. `flows` is empty and the run says so.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import * as S from '../../schema/dist/index.js';
 import {
   allowedOrigins as deriveAllowedOrigins,
+  assessAssetBodies,
   assetKind,
   decideNavigation,
+  isTextualAsset,
   formatFindings,
   isUnder,
   operationalKind,
@@ -58,6 +60,7 @@ import {
   assertPermitted,
   installEscapeGuards,
   installOriginGuard,
+  scrubCounting,
   scrubDeep,
   scrubHarFile,
   selectorClassNames,
@@ -243,6 +246,12 @@ const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
               sha256: sha256(body), mime: contentType || 'application/octet-stream',
               bytes: body.length, status: response.status(),
               sameOrigin: sameOrigin(url, ORIGIN),
+              // **The body, kept.** It was hashed and thrown away until now, so
+              // `assets/index.json` advertised a `localPath` for a file that had
+              // never been written — and §7.6, whose whole job is to find a
+              // control's handler in the captured source, had no source to
+              // search. §6 says persist every response body; this is that.
+              body,
             });
           }
         }
@@ -1136,15 +1145,85 @@ if (clientRedirectRoutes.length > 0) {
   });
 }
 
+/**
+ * The bodies, on disk, content-addressed — §6's "persist **every** response
+ * body", which this driver had never done.
+ *
+ * Text is scrubbed and binary is not (`isTextualAsset` carries that argument).
+ * The scrub round-trips through **latin1** rather than utf8: latin1 is a
+ * bijection between bytes and code points 0–255, so every byte the regexes do
+ * not match comes back exactly as it went in, and a bundle that is not valid
+ * UTF-8 is not silently rewritten into replacement characters. The patterns are
+ * ASCII, so nothing is lost by decoding this way.
+ *
+ * A redacted body no longer hashes to the name it is filed under. The file
+ * keeps the **wire** hash — that is the asset's identity, what `assetId` is and
+ * what a reference resolves through — and `stored` records the divergence, so
+ * the mismatch is a stated fact rather than something a reader discovers by
+ * hashing the file.
+ */
 const assetEntries = {};
+const assetFiles = [];
 for (const [url, a] of allAssets) {
   const ext = (a.mime.split('/')[1] ?? 'bin').replace(/[^a-z0-9]/gi, '') || 'bin';
+  const localPath = `assets/files/${a.sha256}.${ext}`;
+  const textual = isTextualAsset(a.mime);
+  const asText = textual ? a.body.toString('latin1') : null;
+  const scrubbed = asText === null ? null : scrubCounting(asText);
+  const changed = scrubbed !== null && scrubbed.redactions > 0;
+  const bytes = changed ? Buffer.from(scrubbed.text, 'latin1') : a.body;
+
+  const abs = join(OUT, localPath);
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, bytes);
+  assetFiles.push({ localPath, storedSha256: sha256(bytes) });
+
   assetEntries[url] = {
-    assetId: a.sha256, originalUrl: url, localPath: `assets/files/${a.sha256}.${ext}`,
+    assetId: a.sha256, originalUrl: url, localPath,
     sha256: a.sha256, mime: a.mime, bytes: a.bytes, kind: assetKind(a.mime),
-    status: a.status, sameOrigin: a.sameOrigin, fromCache: false, referencedBy: [],
+    status: a.status, sameOrigin: a.sameOrigin, fromCache: false,
+    stored: changed
+      ? {
+          kind: 'redacted',
+          sha256: sha256(bytes),
+          bytes: bytes.length,
+          // Counted from the difference in length, which is exact because every
+          // replacement is a fixed string: a count of zero would mean nothing
+          // was redacted, and then `verbatim` is the honest kind.
+          redactions: scrubbed.redactions,
+        }
+      : { kind: 'verbatim' },
+    referencedBy: [],
   };
 }
+/**
+ * The index and the directory, reconciled both ways.
+ *
+ * The disk side is a `readdirSync`, not the list the writer just built: a
+ * writer compared against its own record of what it wrote agrees with itself
+ * whatever it actually did, which is the same shape as an invariant counting
+ * its input with the extractor's own parser (§6).
+ */
+{
+  const dir = join(OUT, 'assets', 'files');
+  const onDisk = existsSync(dir)
+    ? readdirSync(dir).map((name) => `assets/files/${name}`)
+    : [];
+  const hashOnDisk = Object.fromEntries(
+    onDisk.map((rel) => [rel, sha256(readFileSync(join(OUT, rel)))]),
+  );
+  const bodies = assessAssetBodies({ entries: assetFiles, onDisk, hashOnDisk });
+  for (const path of bodies.indexedWithoutFile) {
+    finding('asset-body-missing', `${path} is indexed and was never written — the index describes a file it does not contain`);
+  }
+  for (const path of bodies.fileWithoutEntry) {
+    finding('asset-body-orphan', `${path} is on disk and in no index entry — nothing can reach it and nothing will clean it up`);
+  }
+  for (const path of bodies.misaddressed) {
+    finding('asset-body-misaddressed', `${path} does not hash to what its entry says was stored`);
+  }
+}
+
 write('assets/index.json', S.AssetIndexSchema, {
   ...envelope('asset-index'),
   byUrl: assetEntries,

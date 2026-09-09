@@ -19,6 +19,9 @@
       "status": 200,
       "sameOrigin": true,
       "fromCache": false,
+      "stored": {
+        "kind": "verbatim"
+      },
       "referencedBy": [
         {
           "kind": "dom-attribute",
@@ -111,6 +114,12 @@
       "status": 200,
       "sameOrigin": true,
       "fromCache": false,
+      "stored": {
+        "kind": "redacted",
+        "sha256": "e291ebef21882a6f12d7bc1aa0111cf2d263f9900b45df8d2bc24a9bc0119452",
+        "bytes": 18396,
+        "redactions": 1
+      },
       "referencedBy": [
         {
           "kind": "dom-attribute",
@@ -167,6 +176,9 @@
       "status": 200,
       "sameOrigin": true,
       "fromCache": false,
+      "stored": {
+        "kind": "verbatim"
+      },
       "referencedBy": [
         {
           "kind": "font-face",
@@ -220,6 +232,9 @@
       "status": 200,
       "sameOrigin": true,
       "fromCache": false,
+      "stored": {
+        "kind": "verbatim"
+      },
       "referencedBy": [
         {
           "kind": "css-url",
@@ -276,6 +291,9 @@
       "status": 200,
       "sameOrigin": true,
       "fromCache": false,
+      "stored": {
+        "kind": "verbatim"
+      },
       "referencedBy": [
         {
           "kind": "dom-attribute",
@@ -308,6 +326,9 @@
       "status": 200,
       "sameOrigin": true,
       "fromCache": false,
+      "stored": {
+        "kind": "verbatim"
+      },
       "referencedBy": [
         {
           "kind": "dom-attribute",
@@ -334,6 +355,9 @@
       "status": 200,
       "sameOrigin": true,
       "fromCache": false,
+      "stored": {
+        "kind": "verbatim"
+      },
       "referencedBy": [
         {
           "kind": "dom-attribute",
@@ -354,6 +378,9 @@
       "status": 200,
       "sameOrigin": false,
       "fromCache": false,
+      "stored": {
+        "kind": "verbatim"
+      },
       "referencedBy": [
         {
           "kind": "dom-attribute",

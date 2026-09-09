@@ -426,11 +426,28 @@ const FILES = [
   { url: `${ORIGIN}/static/img/pens-fine.jpg`, id: ASSET.imgPens, mime: 'image/jpeg', kind: 'image', bytes: 61980, ext: 'jpg' },
   { url: 'https://widgets.example.net/reviews?site=northwind', id: ASSET.reviewsPlaceholder, mime: 'image/png', kind: 'image', bytes: 14902, ext: 'png', sameOrigin: false },
 ];
+/**
+ * `app.css` carries a redaction, and every other file does not.
+ *
+ * A fixture where every asset is `verbatim` never exercises the state the
+ * schema exists to describe — the stored bytes diverging from the wire hash —
+ * and a reader of the fixture would take `verbatim` for a constant. The
+ * stylesheet is the right one to redact: §3.4 names emails, and a stylesheet is
+ * the sort of text body that carries an author comment with one in it.
+ */
+const REDACTED_STORED = {
+  kind: 'redacted',
+  sha256: sha256('northwind/app.css/redacted'),
+  bytes: 18396,
+  redactions: 1,
+};
 const byUrl = Object.fromEntries(FILES.map((f) => [f.url, {
   assetId: f.id, originalUrl: f.url,
   localPath: `assets/files/${f.id}.${f.ext}`,
   sha256: f.id, mime: f.mime, bytes: f.bytes, kind: f.kind, status: 200,
-  sameOrigin: f.sameOrigin ?? true, fromCache: false, referencedBy: [],
+  sameOrigin: f.sameOrigin ?? true, fromCache: false,
+  stored: f.id === ASSET.appCss ? REDACTED_STORED : { kind: 'verbatim' },
+  referencedBy: [],
 }]));
 const resolveUrl = (v) => (v.startsWith('http') ? v : `${ORIGIN}${v}`);
 

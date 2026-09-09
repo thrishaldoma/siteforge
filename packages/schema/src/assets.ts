@@ -88,8 +88,55 @@ export const AssetEntrySchema = z.strictObject({
   sameOrigin: z.boolean(),
   /** Served from the browser cache rather than the network during this crawl. */
   fromCache: z.boolean(),
+  /**
+   * What is on disk at `localPath`, when it is not the bytes the server sent.
+   *
+   * §6 says persist every response body content-addressed by sha256, and §3.4
+   * says the scrubber redacts before any artifact is written. Both, and they
+   * pull against each other: a redacted bundle no longer hashes to the name it
+   * is filed under. Rather than pick one and quietly break the other, the file
+   * keeps the **wire** hash as its identity — that is what `assetId` is, what
+   * dedup keys on, and what a reference resolves through — and the divergence
+   * is recorded here instead of being left for a reader to discover by hashing
+   * the file and finding it does not match.
+   *
+   * `verbatim` is the ordinary case and the only one for binary: a JPEG is not
+   * scrubbed, because redacting inside a container corrupts it, and §3.4's scan
+   * reads every byte of it anyway — a credential in an image fails the run
+   * rather than being silently rewritten.
+   */
+  stored: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('verbatim') }),
+    z.strictObject({
+      kind: z.literal('redacted'),
+      /** Of the bytes on disk, which are not the bytes above. */
+      sha256: Sha256Schema,
+      bytes: z.int().nonnegative(),
+      /** How many redactions the scrubber made. Zero would mean `verbatim`. */
+      redactions: z.int().positive(),
+    }),
+  ]),
   referencedBy: z.array(AssetReferenceSchema),
-});
+})
+  .superRefine((entry, ctx) => {
+    // The claim the index made for a year without anything checking it: the
+    // path is derived from the identity, so it is recomputed rather than
+    // trusted (§13).
+    if (!entry.localPath.startsWith(`assets/files/${entry.sha256}.`)) {
+      ctx.addIssue({
+        code: 'custom', path: ['localPath'],
+        message: `${entry.localPath} is not the path of an asset content-addressed as ${entry.sha256}`,
+      });
+    }
+    // A redaction that changed nothing is `verbatim`, and saying otherwise
+    // would make the two states indistinguishable to anyone counting them.
+    if (entry.stored.kind === 'redacted' && entry.stored.sha256 === entry.sha256) {
+      ctx.addIssue({
+        code: 'custom', path: ['stored', 'sha256'],
+        message: 'the stored bytes hash to the wire bytes, so nothing was redacted',
+      });
+    }
+  });
 
 export const AssetIndexSchema = z.strictObject({
   ...artifactEnvelope('asset-index'),
