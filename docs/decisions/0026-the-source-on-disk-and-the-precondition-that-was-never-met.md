@@ -138,9 +138,16 @@ attempt index     4-7 27 · 8-11 25 · 20-23 8 · 16-19 5 · 12-15 3 · 0-3 2
 **49 of 51 timed-out clicks are on an element whose centre point is outside the
 viewport.** Visible, stable and enabled the entire time — and off-screen, so it
 cannot receive a pointer event, which is the condition `click` is waiting on.
-`elementFromPoint` returns null there because the point is not on the screen at
-all, which is why that case is tallied separately from a real occluder rather
-than with it.
+
+**That is one observation, not two.** The `in viewport` row and the
+`centre is outside the viewport` row both read 49, and they agree because the
+second is *derived from* the first — `elementFromPoint` returns null when the
+point is off-screen, so the occlusion field reports which of the two reasons for
+null applies rather than measuring anything independently. Reading the matching
+counts as corroboration would be the §13 failure about an invariant whose two
+sides share a code path, committed in the write-up of a tool built to avoid
+guessing. The finding does not need the inflation: one measurement of 49 of 51
+is enough.
 
 Three claims are now **excluded by observation** rather than by argument:
 
@@ -222,9 +229,28 @@ written for. Applying it:
 | `synthesized-endpoint` | **unimplemented stage** | `flows/skipped-controls.json` holds 79 controls and `packages/infer` still has no code path emitting `bound-from-control`. Input full, output empty |
 | `narrowing.precision` | **target limitation** | the document contains zero occurrences of `format` |
 | `entity-relation.*` | **target limitation**, plus a SiteModel gap | Swagger 2.0 declares no scalar foreign keys, and the one association it does declare is an array `RelationSchema` cannot express |
-| `entity-narrowing.precision` | **unimplemented stage** — the model emits no enum on a paired entity field | recall is now `0/1`, so the truth side is present and the model side is empty |
+| `entity-narrowing.precision` | **none of the three** — see below | recall is now `0/1`, so the truth side is present; the model side is empty because the ladder *ran and declined* |
 
 Only the two marked *target limitation* are permanent.
+
+### The taxonomy has a fourth case, and applying it is what found the gap
+
+All three causes §13 names are about **work not done** — by the target, by the
+driver, or by the product. `entity-narrowing.precision` is none of them: §7.5's
+enum ladder ran over the merged entity's fields and emitted no narrowing, which
+is a stage that worked and produced no claim.
+
+That is a real distinction and not a quibble, because the two states demand
+opposite responses. Work not done is a thing to go and do. A producer that
+declined is only a problem if the decline was *wrong* — and §7.5's whole design
+is that declining is the free direction, so a category empty because nothing met
+the evidence bar may be the ladder working exactly as specified. 0025's Open
+section leaves that question open for `models.Task.repeat_mode` specifically,
+and this row must not quietly answer it by filing the category under a cause
+that implies missing code.
+
+**So: when a category is vacuous, first ask whether the producer never ran or
+ran and declined.** Only the first three causes apply to the former.
 
 ---
 
@@ -238,3 +264,12 @@ Only the two marked *target limitation* are permanent.
   cannot say which route pulled which chunk.
 - 659 budget-declined candidates, almost all of them one settings route's 668.
   A better candidate filter, not a bigger number.
+- **`locate/not-found` read 16 on one run and 19 on the next, against an
+  unchanged pinned digest.** Small, and it is a non-determinism in a pipeline
+  whose §8 acceptance test is a byte-identical state hash. Not chased here; the
+  probable cause is which controls the SPA has rendered by the time the fresh
+  page is queried, which is the same family as the timeouts above.
+- `mergedFrom.sources` puts the container's endpoints first, and `entityNameFor`
+  reads the first one — so the ordering is load-bearing and pinned only for the
+  two-row case. A third row folding into one container would keep the name and
+  reorder the record.
