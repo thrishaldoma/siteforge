@@ -16,7 +16,11 @@
 
 /** One thing wrong, phrased as the sentence the operator has to act on. */
 export interface HygieneFinding {
-  readonly rule: 'unanchored-pattern' | 'package-untracked' | 'package-ignored' | 'binary-source';
+  readonly rule:
+    | 'unanchored-pattern'
+    | 'package-untracked'
+    | 'package-ignored'
+    | ToolingHostileRule;
   readonly subject: string;
   readonly message: string;
 }
@@ -90,30 +94,93 @@ export function assessTrackedPackages(entries: readonly PackageTracking[]): Hygi
 }
 
 /**
- * A source file git will treat as binary.
+ * Source that resists the practice's own tooling.
  *
- * A single NUL byte is enough, and the consequences are not cosmetic: `git diff`
- * prints "Binary files differ" instead of the change, so a review sees nothing —
- * and `git diff > sabotage/x.patch` produces a patch that carries no hunks and
- * can never be applied. A gate whose sabotage cannot be *authored* is the
- * vacuity mode one step earlier than the ones §13 already names.
+ * **The fourth vacuity mode.** Alongside never-fires, fires-on-everything and
+ * unreachable-state, there is: *the sabotage cannot be written.* A gate whose
+ * subject file cannot be diffed or patched is one nobody can prove fires, for a
+ * reason one step earlier than the other three — the machinery for proving it
+ * does not exist rather than failing to discriminate.
  *
  * Found the day it happened: a stray NUL inside a template literal in
- * `grade.ts`, which compiled, tested and committed perfectly happily. Nothing
- * would have said so until someone tried to read the diff.
+ * `grade.ts`. It compiled, typechecked, tested and committed without a murmur.
+ * `git diff` then printed "Binary files differ", and `git diff > sabotage/x.patch`
+ * produced a patch with no hunks. Nothing else in the repo would ever have said
+ * so.
  *
- * Takes the bytes, so a file nobody has committed can be tested.
+ * The rules are the ways a text file stops behaving like one, each with the
+ * specific tool it breaks — not a taste checklist:
+ *
+ *   `nul-byte`             git calls the file binary: no diff, no patch.
+ *   `not-utf8`             the same, plus every scanner here decodes as UTF-8.
+ *   `mixed-line-endings`   a hunk generated against one convention will not
+ *                          apply against the other, so a committed patch rots
+ *                          silently the next time an editor rewrites the file.
+ *   `lone-cr`              every tool here counts lines by `\n`, so a bare CR
+ *                          makes reported line numbers point somewhere else.
+ *
+ * Considered and rejected: a missing final newline. It degrades a diff (a
+ * one-line append becomes a two-line hunk) but never prevents one, and the mode
+ * is prevention. A rule with no motivating instance and no tool it breaks is
+ * padding, and padding is what makes the next reader stop believing the list.
  */
-export function assessSourceBytes(file: string, bytes: Uint8Array): HygieneFinding[] {
-  const at = bytes.indexOf(0);
-  if (at === -1) return [];
+export type ToolingHostileRule = 'nul-byte' | 'not-utf8' | 'mixed-line-endings' | 'lone-cr';
+
+const lineAt = (bytes: Uint8Array, index: number): number => {
   let line = 1;
-  for (let i = 0; i < at; i += 1) if (bytes[i] === 0x0a) line += 1;
-  return [
-    {
-      rule: 'binary-source',
-      subject: `${file}:${line}`,
-      message: `${file} contains a NUL byte at line ${line}, so git treats it as binary: its diffs are unreadable in review and no sabotage patch can be generated against it.`,
-    },
-  ];
+  for (let i = 0; i < index && i < bytes.length; i += 1) if (bytes[i] === 0x0a) line += 1;
+  return line;
+};
+
+/**
+ * Every way this file resists being diffed, patched or scanned.
+ *
+ * Takes the bytes, so a file nobody has committed can be tested — and the
+ * repo-wide caller is one of two, which is the rule this session established.
+ */
+export function assessToolingHostileSource(file: string, bytes: Uint8Array): HygieneFinding[] {
+  const findings: HygieneFinding[] = [];
+  const at = (rule: ToolingHostileRule, index: number, why: string): void => {
+    findings.push({
+      rule,
+      subject: `${file}:${lineAt(bytes, index)}`,
+      message: `${file}:${lineAt(bytes, index)} — ${why} No sabotage patch can be written against a file the tooling cannot read.`,
+    });
+  };
+
+  const nul = bytes.indexOf(0);
+  if (nul !== -1) {
+    at('nul-byte', nul, 'a NUL byte, so git treats this file as binary: its diffs print "Binary files differ" and a generated patch carries no hunks.');
+  }
+
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    // operational: an invalid byte sequence is the finding, not a failure to run
+    findings.push({
+      rule: 'not-utf8',
+      subject: file,
+      message: `${file} is not valid UTF-8, so git may treat it as binary and every scanner here decodes it wrongly. No sabotage patch can be written against a file the tooling cannot read.`,
+    });
+  }
+
+  let crlf = 0;
+  let bareLf = 0;
+  let loneCr = -1;
+  for (let i = 0; i < bytes.length; i += 1) {
+    if (bytes[i] === 0x0d) {
+      if (bytes[i + 1] === 0x0a) crlf += 1;
+      else if (loneCr === -1) loneCr = i;
+    } else if (bytes[i] === 0x0a && bytes[i - 1] !== 0x0d) {
+      bareLf += 1;
+    }
+  }
+  if (crlf > 0 && bareLf > 0) {
+    at('mixed-line-endings', 0, `${crlf} CRLF and ${bareLf} LF line endings in one file: a hunk generated against either convention fails to apply against the other.`);
+  }
+  if (loneCr !== -1) {
+    at('lone-cr', loneCr, 'a carriage return with no newline after it; every scanner here counts lines by \n, so reported line numbers point at the wrong place.');
+  }
+
+  return findings;
 }

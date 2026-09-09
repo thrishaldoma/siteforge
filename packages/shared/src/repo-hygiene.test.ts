@@ -33,7 +33,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   assessGitignoreAnchoring,
-  assessSourceBytes,
+  assessToolingHostileSource,
   assessTrackedPackages,
   type PackageTracking,
 } from './repo-hygiene.js';
@@ -106,9 +106,35 @@ describe('the rules, driven by inputs that break them', () => {
   });
 
   it('finds a NUL byte, and says which line it is on', () => {
-    const findings = assessSourceBytes('x.ts', Buffer.from('const a = 1;\nconst b = `x\0y`;\n'));
-    expect(findings.map((f) => f.rule)).toEqual(['binary-source']);
+    const findings = assessToolingHostileSource('x.ts', Buffer.from('const a = 1;\nconst b = `x\0y`;\n'));
+    expect(findings.map((f) => f.rule)).toEqual(['nul-byte']);
     expect(findings[0]?.subject).toBe('x.ts:2');
+  });
+
+  it('finds mixed line endings, which rot a committed patch silently', () => {
+    const findings = assessToolingHostileSource('x.ts', Buffer.from('a\r\nb\nc\r\n'));
+    expect(findings.map((f) => f.rule)).toEqual(['mixed-line-endings']);
+  });
+
+  it('says nothing about a file that is consistently CRLF', () => {
+    // Consistent is not hostile: a patch generated against it applies. Only the
+    // mixture defeats `git apply`.
+    expect(assessToolingHostileSource('x.ts', Buffer.from('a\r\nb\r\n'))).toEqual([]);
+  });
+
+  it('finds a lone carriage return, which moves every reported line number', () => {
+    const findings = assessToolingHostileSource('x.ts', Buffer.from('a\rb\nc\n'));
+    expect(findings.map((f) => f.rule)).toEqual(['lone-cr']);
+  });
+
+  it('finds bytes that are not UTF-8', () => {
+    const findings = assessToolingHostileSource('x.ts', Uint8Array.from([0x61, 0xff, 0xfe, 0x0a]));
+    expect(findings.map((f) => f.rule)).toEqual(['not-utf8']);
+  });
+
+  it('reports every hostile property, not the first', () => {
+    const findings = assessToolingHostileSource('x.ts', Buffer.from('a\0b\r\nc\nd\re\n'));
+    expect(findings.map((f) => f.rule).sort()).toEqual(['lone-cr', 'mixed-line-endings', 'nul-byte']);
   });
 
   it('says nothing about a healthy repository', () => {
@@ -116,7 +142,7 @@ describe('the rules, driven by inputs that break them', () => {
     expect(
       assessTrackedPackages([{ package: 'packages/cli', trackedFiles: 3, manifestIgnoredBy: '' }]),
     ).toEqual([]);
-    expect(assessSourceBytes('x.ts', Buffer.from('const a = `x y`;\n'))).toEqual([]);
+    expect(assessToolingHostileSource('x.ts', Buffer.from('const a = `x y`;\n'))).toEqual([]);
   });
 });
 
@@ -145,7 +171,7 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
     expect(assessGitignoreAnchoring(text).map((f) => f.message)).toEqual([]);
   });
 
-  it('no source file is binary to git', () => {
+  it('no source file resists the tooling this repo runs on it', () => {
     // A NUL in a template literal in `grade.ts` compiled, tested and committed
     // without complaint, and made every future diff of that file unreadable.
     const { files, relative } = walkFiles({
@@ -155,7 +181,7 @@ describe.skipIf(!isRepo)('no source directory is hidden from git', () => {
       expect: REPO_SOURCE_EXPECTATION,
     });
     const findings = files.flatMap((file, i) =>
-      assessSourceBytes(relative[i]!, readFileSync(file)),
+      assessToolingHostileSource(relative[i]!, readFileSync(file)),
     );
     expect(findings.map((f) => f.message)).toEqual([]);
   });
