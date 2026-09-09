@@ -331,6 +331,15 @@ export const SABOTAGES = [
     expect: 'no enum-bearing response fields were enumerated',
     change: 'drop the soleAllOfRef call from deref, leaving the bare $ref branch',
   },
+  {
+    id: 'notderived-scoped-to-category',
+    bug: 'a per-metric `notDerived` entry ungrounds its whole category, so a metric that IS derivable reads vacuous',
+    reachable:
+      "the simplification anybody makes on reading two maps built from one list: `notDerived` was per-category for three decisions and the second map looks redundant. It is not — `narrowing`'s zero-formats argument grounds precision and NOT recall, and `entity-identity`'s grounds precision while recall is unbuildable. Collapsing it silently returns a real number to `vacuous`, which reads as a limitation of the ground truth rather than as a lost measurement",
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'PRECISION is not derived',
+    change: 'build notDerivedByCategory from every entry, ignoring `metric`',
+  },
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
