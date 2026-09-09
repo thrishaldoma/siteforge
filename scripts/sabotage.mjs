@@ -349,6 +349,23 @@ export const SABOTAGES = [
     expect: 'walked-but-untracked',
     change: 'consult `excused` in the walked-but-untracked loop too',
   },
+  {
+    id: 'merge-container-ambiguity-ignored',
+    bug: 'a narrow row is folded into the FIRST wider row that contains it, rather than only into a unique one',
+    reachable: 'the obvious way to make the containment pass merge more, and the shape someone reaches for when a projection they expected to fold did not. `containers[0]` is already on the next line, so the edit is deleting the only thing standing between it and a guess',
+    gate: ['pnpm', '-s', 'test', '--project', 'infer'],
+    expect: 'REFUSES to merge when two wider rows could each be the container',
+    change: 'accept any container instead of exactly one',
+  },
+  {
+    id: 'merge-floor-tuned',
+    bug: 'MERGE_MIN_SHARED_FIELDS is lowered so thinner rows merge',
+    reachable: 'the exact adjustment 0025 §2.4 forbids in writing — "if 4 over-merges on this target, that is a finding to report, not a number to move". A threshold with a score attached is the one number everyone is tempted by, which is why the gate reads the decision document rather than the constant',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: '0025 no longer states the floor it declared',
+    change: 'the declared floor moved from 4 to 1, with the document left alone',
+  },
+
   // ---- controls: the gate must NOT fire ------------------------------------
 
   {
@@ -384,6 +401,14 @@ export const SABOTAGES = [
       'the ordinary re-spelling of a two-branch lookup as a `??` chain, on the exact line the defect rewrites. Equivalent on every node either committed document contains — none carries both spellings — so it differs only on a node neither has, which is what makes it meaning-preserving here and not merely tidier',
     change: 'check the allOf alias first and fall back to the bare $ref, instead of the reverse',
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+  },
+  {
+    kind: 'control',
+    id: 'merge-uniqueness-destructured',
+    controlFor: 'merge-container-ambiguity-ignored',
+    reachable: 'destructuring a list whose first element is about to be used is an ordinary tidy-up, and it lands on the exact line the defect rewrites',
+    change: 'the uniqueness test spelled as a destructure — `only === undefined || rest.length > 0` — instead of a length comparison',
+    gate: ['pnpm', '-s', 'test', '--project', 'infer'],
   },
 ];
 
