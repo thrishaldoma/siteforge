@@ -45,6 +45,7 @@ import {
   allowedOrigins as deriveAllowedOrigins,
   assessAssetBodies,
   assessProbeContamination,
+  assessWriteAttribution,
   DIAGNOSTICS_TREE_EXPECTATION,
   countOptionSetsInDom,
   scalarKindsInBodies,
@@ -242,7 +243,7 @@ async function boot() {
 
 const observations = [];
 /**
- * Which probe's window each observation belongs to, aligned index-for-index.
+ * Which probe each observation belongs to, aligned index-for-index.
  *
  * Attribution by array slice is unsound here and the reason is structural: an
  * observation is pushed from an async handler *after* the response body
@@ -251,16 +252,21 @@ const observations = [];
  * makes a drift point look explained, which turns "the reading is confounded"
  * into a confident wrong answer about reset granularity.
  *
- * The window is therefore read **when the response event fires**, which is the
- * moment that actually says whose traffic this is, and kept beside the
- * observation rather than on it — `observations` feeds `endpoints.json`, and a
- * new field there would change an artifact this same series is measuring.
- * Pushed adjacent to its observation, so alignment is a property of the two
- * statements rather than an assumption about ordering.
+ * Nor is it a global "current probe". A probe abandoned on the deadline **keeps
+ * running**: its tail would clear a window that now belongs to its successor,
+ * and the page it still holds would have its traffic tagged to whichever probe
+ * happened to be open. Both are silent, and conservation cannot catch either —
+ * the calls still have *an* owner, just the wrong one.
+ *
+ * So the owner is the **page**, which is the thing that actually knows: each
+ * probe opens exactly one, and a recorder attached to it carries that probe's
+ * key for as long as it lives. Kept beside the observation rather than on it —
+ * `observations` feeds `endpoints.json`, and a new field there would change an
+ * artifact this same series is measuring. Pushed adjacent to its observation,
+ * so alignment is a property of the two statements rather than an assumption
+ * about ordering.
  */
 const observationProbeKeys = [];
-/** The probe whose window is open, or null between probes. Read at event time. */
-let currentProbeKey = null;
 const pendingResponses = [];
 const allAssets = new Map();
 
@@ -301,11 +307,8 @@ let lostObservations = 0;
  */
 const undriveable = [];
 
-const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
+const attachRecorders = (page, routeIdRef, { anonymousProbe = false, probeKey = null } = {}) => {
   page.on('response', (response) => {
-    // Synchronously, before any await: this is the only point at which the
-    // open probe window is the one this response actually belongs to.
-    const probeKey = currentProbeKey;
     pendingResponses.push((async () => {
       const request = response.request();
       const url = response.url();
@@ -1037,7 +1040,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
   // unguarded: guarded on the next line
   const page = await ctx.newPage();
   installEscapeGuards(page, { onBlocked });
-  attachRecorders(page, { current: routeId });
+  attachRecorders(page, { current: routeId }, { probeKey });
   if (state === undefined) throw new Error('runProbe needs a probe state: the deadline handler reads it synchronously and cannot ask the page.');
   watchProbeState(page, state);
   /**
@@ -1052,6 +1055,8 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     preStructureHash: null, preTextHash: null, mutated: false,
     /** Calls attributed to this probe, so `mutated: false` can be told from "saw nothing". */
     calls: 0, methods: [], writes: 0,
+    /** Calls this page made loading the route, netted out of `calls`. */
+    pageLoadCalls: 0,
   };
   probePass.probes.push(observed);
   /** `step`, plus the field the deadline handler reads. One place, so they cannot disagree. */
@@ -1138,9 +1143,9 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     observed.preStructureHash = S.shortHash(before.structure);
     observed.preTextHash = S.shortHash(before.html);
     netBefore = observations.length;
-    // The window opens here rather than at `goto`, so the route's own page-load
-    // traffic is not credited to the control being fired.
-    currentProbeKey = probeKey;
+    // Everything from here is the control being fired rather than the route
+    // loading, and `pageLoadCalls` is what separates the two after the fact.
+    observed.pageLoadCalls = observations.filter((_, i) => observationProbeKeys[i] === probeKey).length;
     await at('reveal', () => revealInScrollableAncestor(locator));
     await at('click', () => locator.click({ timeout: 5000 }));
     // §6 says network idle or 2s. `networkidle` alone is not enough: on an
@@ -1283,12 +1288,20 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
    * After `settle`, so responses the page was still delivering are counted;
    * `methods` and `calls` go alongside so a zero can be told from a silence.
    */
+  /**
+   * Everything this page ever sent, page load included.
+   *
+   * The load is a route's own traffic rather than the control's, so `calls`
+   * and `writes` net it out — but a page load cannot write, and a probe
+   * abandoned before it snapshotted has `pageLoadCalls` at its initial 0, so
+   * netting can never hide a write. `mutated` reads the whole page either way:
+   * a write is this probe's whichever side of the snapshot it fell on.
+   */
   const sent = observations.filter((_, i) => observationProbeKeys[i] === probeKey);
-  observed.calls = sent.length;
+  observed.calls = Math.max(0, sent.length - observed.pageLoadCalls);
   observed.methods = [...new Set(sent.map((o) => o.method))].sort();
   observed.writes = sent.filter((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method)).length;
   observed.mutated = observed.writes > 0;
-  currentProbeKey = null;
   await page.close();
   return ran;
 }
@@ -2171,12 +2184,15 @@ const attributedWrites = probePass.probes.reduce((n, p) => n + p.writes, 0);
  * allowance to argue about.
  */
 const outsideProbeWrites = observations.filter((o, i) => isWrite(o) && observationProbeKeys[i] === null).length;
-const conserved = attributedWrites + outsideProbeWrites === crawlWide.writes;
+const attribution = assessWriteAttribution({
+  crawlWideWrites: crawlWide.writes, attributedWrites, outsideProbeWrites, lost: lostObservations,
+});
+const conserved = attribution === null;
 writeFileSync(
   join(DIAGNOSTICS, 'probe-pass.json'),
   `${JSON.stringify({
     runId: RUN_ID, crawlWide, attributed, attributedWrites, outsideProbeWrites, conserved,
-    ...probePass, contamination,
+    attribution, ...probePass, contamination,
   }, null, 2)}\n`,
 );
 console.log(
@@ -2185,8 +2201,8 @@ console.log(
   ` ${conserved ? '✓ conserved' : '✗ NOT CONSERVED — a write was credited to the wrong owner'}` +
   `${crawlWide.lost > 0 ? ` · ${crawlWide.lost} exchange(s) lost to a closing page` : ''}`,
 );
-if (!conserved) {
-  finding('write-attribution-lost', `${crawlWide.writes} write(s) observed, ${attributedWrites} attributed to probes and ${outsideProbeWrites} outside them — the contamination reading rests on this and must not be used.`);
+if (attribution !== null) {
+  finding('write-attribution-broken', `${attribution.problem}: ${attribution.detail}`);
 }
 console.log(
   `\n  probe pass: ${probePass.probes.length} probe(s) · ${contamination.comparedPairs} adjacent pair(s) compared` +
