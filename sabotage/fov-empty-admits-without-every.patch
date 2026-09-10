@@ -1,0 +1,16 @@
+diff --git a/packages/shared/src/crawl-scope.ts b/packages/shared/src/crawl-scope.ts
+index 14f893e..f0cba4f 100644
+--- a/packages/shared/src/crawl-scope.ts
++++ b/packages/shared/src/crawl-scope.ts
+@@ -79,6 +79,11 @@ export function sameOrigin(url: string, origin: string): boolean {
+  * The prefix is compared by **path segment**, so `/api` matches `/api/todos`
+  * and not `/api-docs` — the same delimiter blindness one level down.
+  */
++/** An empty container admitting, written without .every() — the lint sees nothing. */
++export function allOriginsAllowed(origins: readonly string[], url: string): boolean {
++  return origins.filter((o) => !url.startsWith(o)).length === 0;
++}
++
+ export function isUnder(url: string, scope: { origin: string; pathPrefix?: string }): boolean {
+   if (!sameOrigin(url, scope.origin)) return false;
+   if (scope.pathPrefix === undefined) return true;

@@ -1,0 +1,19 @@
+diff --git a/packages/shared/src/scan-walker.ts b/packages/shared/src/scan-walker.ts
+index 8904e81..1e565ad 100644
+--- a/packages/shared/src/scan-walker.ts
++++ b/packages/shared/src/scan-walker.ts
+@@ -44,7 +44,13 @@ export const SOURCE_EXTENSIONS = ['.ts', '.mts', '.cts', '.mjs', '.cjs', '.js']
+  * name is the same latent bug as "capture" was: the day someone writes
+  * `src/fixtures/*.ts` containing real code, a name match silently hides it.
+  */
+-export const SOURCE_IGNORE = [
++export /*
++ * A source file living where both views are blind: ignored by the walker and
++ * untracked by git, so neither side of assessScopeAgreement can name it.
++ */
++const SHADOW_MODULE_PATH = '/dist/shadow-rule.ts';
++
++const SOURCE_IGNORE = [
+   '**/node_modules',
+   '**/dist',
+   '/.git',

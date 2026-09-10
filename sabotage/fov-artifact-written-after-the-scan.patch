@@ -1,0 +1,13 @@
+diff --git a/packages/capture/scripts/capture-site.mjs b/packages/capture/scripts/capture-site.mjs
+index 8d89f81..6187bfb 100644
+--- a/packages/capture/scripts/capture-site.mjs
++++ b/packages/capture/scripts/capture-site.mjs
+@@ -1851,6 +1851,8 @@ write('stage-report.json', S.StageReportSchema, {
+ });
+ 
+ const secrets = scanCaptureTree(OUT);
++// Written *after* the scan, so §3.4 never sees it. The ordering is the gate.
++writeFileSync(join(OUT, 'run-notes.json'), JSON.stringify({ note: 'written post-scan' }));
+ if (secrets.length > 0) {
+   console.log(`\n  ✗ SECRET SCAN — ${secrets.length} credential(s) reached an artifact (§3.4):`);
+   console.log(formatFindings(secrets));

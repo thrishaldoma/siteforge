@@ -10,4 +10,6 @@ export * from './probe-schedule.js';
 export * from './repo-hygiene.js';
 export * from './asset-bodies.js';
 export * from './option-sets.js';
+export * from './field-of-view.js';
+export * from './field-of-view.declarations.js';
 export * from './capture-idempotence.js';

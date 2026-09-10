@@ -1,0 +1,14 @@
+diff --git a/packages/verify/src/grade/vocabulary.ts b/packages/verify/src/grade/vocabulary.ts
+index c3d7247..be4466b 100644
+--- a/packages/verify/src/grade/vocabulary.ts
++++ b/packages/verify/src/grade/vocabulary.ts
+@@ -75,6 +75,9 @@ export const isExpressibleFormat = (format: string): boolean => EXPRESSIBLE_FORM
+  * all. The second direction is the one that matters: it is what stops an
+  * exclusion list from quietly becoming a list of inconvenient misses.
+  */
++/** Residue written outside dist/, where the build signature cannot see it. */
++export const CACHE_ARTEFACT_PATH = '.siteforge-cache/vocabulary.json';
++
+ export function assessFormatVocabulary(
+   declaredFormats: readonly string[],
+   /**

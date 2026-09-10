@@ -1,0 +1,10 @@
+diff --git a/packages/verify/src/grade/baseline/gitea.ts b/packages/verify/src/grade/baseline/gitea.ts
+index 59a7478..2c65f8b 100644
+--- a/packages/verify/src/grade/baseline/gitea.ts
++++ b/packages/verify/src/grade/baseline/gitea.ts
+@@ -1,4 +1,5 @@
+ /**
++ * A scoring-relevant edit inside baseline/, which the freeze does not walk.
+  * The known-correct model: a `SiteModel` transcribed by hand from Gitea's spec.
+  *
+  * 0015 §7. Its near-1.0 score is **not** evidence the grader works — it was

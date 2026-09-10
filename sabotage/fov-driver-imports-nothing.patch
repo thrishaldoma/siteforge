@@ -1,0 +1,12 @@
+diff --git a/packages/capture/scripts/undriveable-ancestors.mjs b/packages/capture/scripts/undriveable-ancestors.mjs
+index abf366a..6f95d1a 100644
+--- a/packages/capture/scripts/undriveable-ancestors.mjs
++++ b/packages/capture/scripts/undriveable-ancestors.mjs
+@@ -25,6 +25,7 @@
+  * looks like confirmation and is not.
+  */
+ import { readFileSync, readdirSync } from 'node:fs';
++import { thisDoesNotExist } from './no-such-module.mjs';
+ import { dirname, join } from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ 

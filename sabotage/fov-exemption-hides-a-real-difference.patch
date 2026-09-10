@@ -1,0 +1,15 @@
+diff --git a/packages/capture/scripts/capture-idempotence.mjs b/packages/capture/scripts/capture-idempotence.mjs
+index 42d3b6d..64b86f1 100644
+--- a/packages/capture/scripts/capture-idempotence.mjs
++++ b/packages/capture/scripts/capture-idempotence.mjs
+@@ -66,6 +66,10 @@ const EXEMPT = [
+     path: 'auth-desktop.har',
+     reason: 'as above — one HAR per capture context',
+   },
++  {
++    path: 'coverage.json',
++    reason: 'counts move between runs',
++  },
+   {
+     path: 'auth',
+     reason: 'holds the live session cookie (§3.4, mode 0600). A token that repeated between crawls would be the finding',

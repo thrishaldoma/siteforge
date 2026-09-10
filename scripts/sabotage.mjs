@@ -446,6 +446,113 @@ export const SABOTAGES = [
 
   // ---- controls: the gate must NOT fire ------------------------------------
 
+  /*
+   * Field-of-view controls (0037). Each puts a real defect in a region a gate
+   * cannot see and asserts the gate stays **green** — which is the only way to
+   * tell "cannot see it" from "there was nothing to see". `controlFor` names the
+   * gate whose blind spot is being pinned, and `field-of-view.declarations.ts`
+   * points back here, so neither list can drift from the other.
+   */
+  {
+    kind: 'field-of-view',
+    id: 'fov-false-operational-reason',
+    controlFor: 'lint-catch',
+    change: 'a swallow whose `// operational:` reason is false',
+    gate: ['pnpm', '-s', 'lint'],
+    reachable: "the reason is prose and the linter accepts it on its face. Anyone writing a catch under time pressure writes the reason that makes the linter pass, which is the one failure mode a textual gate for this cannot have.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-page-without-newpage',
+    controlFor: 'lint-guarded-pages',
+    change: 'a page obtained from context.pages() rather than newPage()',
+    gate: ['pnpm', '-s', 'lint'],
+    reachable: "`installEscapeGuards` is required at every page, and the linter matches the *call*. A page arriving by any other route is not a call it can match, and §13 already records that a page-level guard is one you can forget at the next newPage().",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-runtime-built-comparison',
+    controlFor: 'lint-identifiers',
+    change: 'an identifier comparison assembled from variables at runtime',
+    gate: ['pnpm', '-s', 'lint'],
+    reachable: "the grammar it enforces is a source grammar. `path.slice(0, built.length) === built` is a prefix test the linter cannot see, and prefix-instead-of-segment is the exact defect it exists to stop.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-empty-admits-without-every',
+    controlFor: 'lint-empty-admits',
+    change: 'an empty container admitting via .filter().length === 0 instead of .every()',
+    gate: ['pnpm', '-s', 'lint'],
+    reachable: "§13 argues `.some()` out of scope on the operator; every other spelling is simply unchecked. `filter(...).length === 0` is `every` with different words and returns the permissive answer on empty — which is how `inUniverse` admitted every path in existence.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-untracked-and-ignored-file',
+    controlFor: 'assessScopeAgreement',
+    change: 'a source path that is both walker-ignored and untracked',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    reachable: "the gate reconciles two views and cannot see outside their union. A file under a gitignored directory that is also never committed is in neither, which is the one place a set difference between them is blind.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-driver-imports-nothing',
+    controlFor: 'scripts-parse',
+    change: 'a driver importing a module that does not exist',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    reachable: "`node --check` parses and does not execute, deliberately — these drivers need Docker to do anything else. So a syntactically perfect file with an unresolvable import passes, and fails at the first line of a real run, which is exactly how the paren was found.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-baseline-changed-under-the-freeze',
+    controlFor: 'assessGraderFreeze',
+    change: 'a scoring-relevant edit inside baseline/, which the freeze does not walk',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    reachable: "the carve-out is argued and correct — a new target adds a baseline and that must not read as the grader moving — but it is still a region where a scoring input can change without the freeze noticing. 0018 states the carve-out; nothing proved it was a real hole.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-residue-outside-dist',
+    controlFor: 'assessBuildResidue',
+    change: 'residue written outside dist/, where the build signature does not look',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    reachable: "the signature was built over dist/ because dist/ is where two wrong scores came from. `.siteforge-cache/` is written by the pipeline by design (§13 caches LLM calls by input hash) and no cleanliness check observes it.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-artifact-written-after-the-scan',
+    controlFor: 'scanCaptureTree',
+    change: 'an artifact written after the §3.4 scan line',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    reachable: "the scan is a line near the end of a 1700-line driver, and being last is an ordering nobody enforces. One careless append below it is a file under `capture/` that no gate ever reads — and §3.4 is the gate whose failure is a leaked credential rather than a bad score.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-extraction-with-no-invariant',
+    controlFor: 'evaluateCoverage',
+    change: 'an extraction counted in coverage.json with no invariant reading it',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    reachable: "§6 says the list is meant to grow one silent drop at a time, so a new count landing without an invariant is the normal way this happens — `controlsFired` and `controlsUndriveable` were both added exactly like this, deliberately and with the reason written down.",
+  },
+
+  {
+    kind: 'field-of-view',
+    id: 'fov-exemption-hides-a-real-difference',
+    controlFor: 'assessCaptureIdempotence',
+    change: 'an EXEMPT entry covering a path that genuinely should reproduce',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    reachable: "the tool's own docstring names this as the list's failure mode: 'the tempting way to use this tool is to add whatever turns up different until the report comes out clean.' `exemptedAndStable` catches an exemption that never varies; it cannot catch one that varies for a real reason.",
+  },
+
+
   {
     kind: 'control',
     id: 'sitemodel-declared-share',
@@ -490,7 +597,21 @@ export const SABOTAGES = [
   },
 ];
 
-export const isControl = (s) => s.kind === 'control';
+/**
+ * Two kinds of entry assert a gate stays **green**, and they pair with different
+ * things.
+ *
+ * A `control` pairs with a **defect**: the same code touched in a benign way, so
+ * a gate that fires on any edit at all is told apart from one that discriminates.
+ *
+ * A `field-of-view` control pairs with a **gate**: a real defect placed in a
+ * region that gate cannot see, asserting it stays green. That is the only way to
+ * tell "cannot see it" from "there was nothing to see", and `controlFor` would
+ * be the wrong field — there is no sibling defect, and demanding one would force
+ * a fiction (0037).
+ */
+export const isControl = (s) => s.kind === 'control' || s.kind === 'field-of-view';
+export const isFieldOfView = (s) => s.kind === 'field-of-view';
 const DEFECTS = SABOTAGES.filter((s) => !isControl(s));
 const CONTROLS = SABOTAGES.filter(isControl);
 
@@ -546,6 +667,14 @@ export function assessSabotageTable(entries, patchIds) {
   }
   const defectIds = new Set(defects.map((e) => e.id));
   for (const control of controls) {
+    // A field-of-view control names a gate, and `field-of-view.declarations.ts`
+    // is what reconciles that name — both directions, so neither list drifts.
+    if (isFieldOfView(control)) {
+      if (!control.controlFor) {
+        problems.push(`field-of-view control ${control.id} names no gate.`);
+      }
+      continue;
+    }
     if (!defectIds.has(control.controlFor)) {
       problems.push(`control ${control.id} names ${control.controlFor}, which is not a declared defect.`);
     }

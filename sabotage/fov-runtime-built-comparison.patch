@@ -1,0 +1,17 @@
+diff --git a/packages/shared/src/identifiers.ts b/packages/shared/src/identifiers.ts
+index ff6dc52..6d2dc86 100644
+--- a/packages/shared/src/identifiers.ts
++++ b/packages/shared/src/identifiers.ts
+@@ -226,6 +226,12 @@ export function assetKind(contentType: string): AssetKind {
+  * artifact; failing is what we do everywhere else. Deciding by kind rather than
+  * by sniffing the bytes keeps the choice visible in the index.
+  */
++/** An identifier comparison assembled at runtime, invisible to a source grammar. */
++export function matchesBuiltPrefix(path, head, tail) {
++  const built = head + tail;
++  return path.slice(0, built.length) === built;
++}
++
+ export function isTextualAsset(contentType: string): boolean {
+   const mime = parseMime(contentType);
+   if (mime === null) return false;
