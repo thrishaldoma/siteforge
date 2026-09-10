@@ -18,3 +18,4 @@ export * from './control-binding.js';
 export * from './semantic-edit.js';
 export * from './probe-contamination.js';
 export * from './write-attribution.js';
+export * from './probe-storage.js';

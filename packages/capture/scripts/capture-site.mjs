@@ -47,6 +47,8 @@ import {
   assessProbeContamination,
   assessWriteAttribution,
   isContaminatingWrite,
+  SESSION_STORAGE_KEYS as S_SESSION_KEYS,
+  sessionOnlyStorageState,
   DIAGNOSTICS_TREE_EXPECTATION,
   countOptionSetsInDom,
   scalarKindsInBodies,
@@ -550,6 +552,16 @@ let deadlineDeclined = 0;
  * alongside each run instead.
  */
 const probePass = { probes: [], abandoned: [] };
+/**
+ * Client storage the probes reset, and the probes that could not.
+ *
+ * Counted rather than assumed: a reset that silently stopped running would
+ * put the contamination back with nothing to show for it, and "no keys ever
+ * cleared" reads exactly like "there was nothing to clear".
+ */
+const storageKeysCleared = new Set();
+let storageResetsMissed = 0;
+const SESSION_STORAGE_KEY_NAMES = [...S_SESSION_KEYS.keys()];
 
 /**
  * A probe's live state, readable **without awaiting anything**.
@@ -1325,6 +1337,29 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     .map((o) => `${o.method} ${new URL(o.url).pathname}`);
   observed.writes = observed.actionWritePaths.length;
   observed.mutated = observed.actionWritePaths.some(isContaminatingWrite);
+  /**
+   * Leave the context as this probe found it (0044 §3.3).
+   *
+   * The context is shared across a route's probes on purpose — a cold one
+   * costs nine tenths of the fired probes — so the *storage* is what gets
+   * reset. Done at the end rather than the start because `localStorage` needs
+   * an origin, and at the end the page is already on one; the next probe then
+   * opens onto a clean slate with a warm cache.
+   *
+   * `.catch` and not `rethrowIfDefect`: the page may already be gone if this
+   * probe was abandoned on the deadline, and a closed page is the expected
+   * end of the one case this cannot run in.
+   */
+  const cleared = await page.evaluate((keep) => {
+    const dropped = Object.keys(localStorage).filter((k) => !keep.includes(k));
+    for (const k of dropped) localStorage.removeItem(k);
+    sessionStorage.clear();
+    return dropped;
+  }, [...SESSION_STORAGE_KEY_NAMES])
+    // operational: an abandoned probe's page may already be closed; a reset it could not perform is counted, not thrown
+    .catch(() => null);
+  if (cleared === null) storageResetsMissed += 1;
+  else for (const k of cleared) storageKeysCleared.add(k);
   await page.close();
   return ran;
 }
@@ -1389,7 +1424,10 @@ async function probeRoute({ browser, storageState, routeId, record }) {
    * keys while keeping the token (which lives in `localStorage`, so a blanket
    * clear signs the crawl out).
    */
-  const ctx = await newGuardedContext(browser, { storageState });
+  // Session only: the sign-in that produced this state browsed pages of its
+  // own and may have left preferences in it, which the first probe on a route
+  // would inherit and no later probe would share.
+  const ctx = await newGuardedContext(browser, { storageState: sessionOnlyStorageState(storageState) });
   let fired = 0;
   let attempted = 0;
   let sessionFired = 0;
@@ -2254,9 +2292,15 @@ const conserved = attribution === null;
 writeFileSync(
   join(DIAGNOSTICS, 'probe-pass.json'),
   `${JSON.stringify({
-    runId: RUN_ID, crawlWide, attributed, attributedWrites, actionWrites, contaminatingWrites,
+    runId: RUN_ID,
+    storage: { cleared: [...storageKeysCleared].sort(), resetsMissed: storageResetsMissed },
+    crawlWide, attributed, attributedWrites, actionWrites, contaminatingWrites,
     outsideProbeWrites, conserved, attribution, ...probePass, contamination,
   }, null, 2)}\n`,
+);
+console.log(
+  `  client storage: cleared ${[...storageKeysCleared].sort().join(', ') || '(nothing — no probe ever found a non-session key)'}` +
+  `${storageResetsMissed > 0 ? ` · ${storageResetsMissed} probe(s) could not reset (page already gone)` : ''}`,
 );
 console.log(
   `\n  calls: ${attributed} attributed to probes of ${crawlWide.apiCalls} the crawl saw` +
