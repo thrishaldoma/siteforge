@@ -104,6 +104,30 @@ cause, now no longer averaged with this one. The value of the exclusion is that
 the denominator stops claiming nine gradeable slots when four of them are not
 gradeable.
 
+## 4.1 `narrowing` reports failed for a different reason, and they must not merge
+
+The category appears in `failedCategories`, and **not because of the
+divergence.**
+
+- `narrowing.recall` has `gate: null`. It is *reported*, never gated, and it is
+  the metric the four exclusions touch. Ungated on Vikunja, which is where the
+  ruling leaves it.
+- `narrowing.precision` is gated `≥ 0.98 structural` and reads **vacuous 0/55**,
+  because the document contains zero occurrences of the string `format` in
+  368KB. Scoring 43 correct `date-time` narrowings against that silence would
+  mark every one a false positive for the document's reticence.
+
+Two different failures of one document — it says nothing about formats, and it
+says something wrong about two enums — and the category line shows only the
+first. Written down because the next reader will see `✗ narrowing` next to a
+divergence entry and join them, and that would file a document's *silence* under
+a document's *contradiction*: different causes, different fixes, and only one of
+them is registered here.
+
+**Narrowing stays ungradeable on this target until a document that agrees with
+its own wire is available**, and that is the honest state. A category honestly
+ungradeable is better than one graded against a server the document contradicts.
+
 ## 5. What is frozen
 
 The committed list is asserted as a **complete set**, not by an absence claim:
