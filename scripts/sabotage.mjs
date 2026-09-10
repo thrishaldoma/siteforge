@@ -402,6 +402,20 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'attribution-admits-double-counting',
+    bug: 'conservation accepts a total that overshoots, so a write counted both inside a probe and outside every probe passes as owned',
+    reachable: "the two populations are computed in different places and it is easy to make them overlap — 'outside' means outside *every* probe window, and the natural mis-reading is 'not attributed to this probe', which double-counts every write on every crawl. `>=` is also how defensive coding is spelled: a sum that came out too large looks like slack rather than like the populations overlapping.",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    // The overshoot, not the shortfall. Under the bug a *missing* write still
+    // fails, so a row asserting only 'no owner' passes in both states — the
+    // assertion has to exclude what the broken version also outputs (§13).
+    // It is also the direction that matters: a lost write reports `confounded`,
+    // which is cautious and honest, while a double-counted one makes a drift
+    // point look explained and reports a confident wrong answer.
+    expect: 'catches a write claimed twice, which is the misattribution case',
+  },
+
+  {
     id: 'rung-picks-the-first-candidate',
     bug: 'a rung matching two candidates with no declared tiebreak binds the first instead of declining, so iteration order decides',
     reachable: "it is what the code did until 0042, in the rung written the same turn the rule was: §7.6's rank 5 took the first path-like `data-*` and nobody noticed, because `Object.entries` order is stable enough that the binding looks deterministic from outside. The patch is also the shape of an ordinary simplification — an ambiguous decline reads like a refusal to do the obvious thing, and `candidates[0]` reads like handling the common case",

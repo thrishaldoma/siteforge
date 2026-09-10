@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/write-attribution.ts",
+    "find": "  if (owned === crawlWideWrites) return null;",
+    "replace": "  if (owned >= crawlWideWrites) return null;"
+  }
+]
