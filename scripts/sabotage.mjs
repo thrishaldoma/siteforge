@@ -292,12 +292,7 @@ export const SABOTAGES = [
     reachable:
       'the shape of every metric that ever got tuned. Infer scores 0.94 on narrowing precision, 0.98 looks harsh in the moment, and one character makes the run green. Nothing about the edit says it happened during a scoring run rather than a year earlier — which is the whole reason the pin exists, since "it did not move" is checkable and "I did not read it" is not',
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
-    // The lookup's own assertion, not the freeze's. `changed after the freeze`
-    // is what *every* edit to grade.ts produces, so it cannot tell this bug
-    // from a rename — §13's rule that the assertion must exclude what the
-    // broken version outputs. `slotsForEndpoint` is extracted so there is
-    // something to assert against.
-    expect: 'covers only the endpoint whose exchange the entry recorded',
+    expect: 'changed after the freeze',
     change: 'lower narrowing.precision from 0.98 to 0.9 in the frozen contract',
   },
   {
@@ -385,7 +380,12 @@ export const SABOTAGES = [
     bug: 'a field-scope divergence entry excludes its slot on every endpoint, not just the one whose exchange it recorded',
     reachable: "the simplification anyone reaches for once two entries name the same pointer — Vikunja's four are `view_kind` and `bucket_configuration_mode` twice each, so keying on the pointer alone looks like deduplication rather than a widening. It makes one recorded exchange justify an exclusion everywhere the field name appears, which is exactly what 0015's per-entry evidence rule forbids: `view_kind` being wrong on `/projects` is not evidence about any other endpoint",
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
-    expect: 'changed after the freeze',
+    // The lookup's own assertion, not the freeze's. `changed after the freeze`
+    // is what *every* edit to grade.ts produces, so it could not tell this bug
+    // from a rename — §13's rule that an assertion must exclude what the broken
+    // version also outputs. `slotsForEndpoint` is extracted so there is
+    // something to assert against.
+    expect: 'covers only the endpoint whose exchange the entry recorded',
     change: 'the slot exclusion is looked up by pointer alone, dropping the endpoint from the key',
   },
 
