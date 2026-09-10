@@ -322,10 +322,92 @@ distinguishes them, so nothing is claimed; it is listed as open.
 
 ---
 
+## 5. The remedy landed, and it was the larger half
+
+§3.8's second candidate — keep the context warm, reset the storage — built and
+measured. `SESSION_STORAGE_KEYS` declares what survives (`token`, `API_URL`)
+with the reason each must; everything else is cleared at the end of each
+probe, so the next one opens onto a clean slate with a warm cache.
+
+**The direction is the argument.** An unknown key is *cleared*, because a UI
+preference nobody has seen is the case this exists to catch — and the run
+proved it: two keys nobody had listed, `tableViewColumns` and
+`tableViewSortBy`, turned up and were cleared without anyone editing a list.
+
+### 5.1 What it bought
+
+| | baseline (N=4) | storage reset | + raised budget |
+|---|---|---|---|
+| structural drift | 3–4 | **0** | **0** |
+| text-only drift | 7 | **0** | **0** |
+| undriveable | 74–75 | 12 | 33 |
+| behaviour ceiling | **41%** | 87% | **77%** |
+| completed flows | 53 | 81 | **113** |
+| endpoints | 22 | 16 | **21** |
+
+**All drift is gone, structural and text-only alike.** The text-only drift was
+client state too — `lastVisited` and `projectHistory` render recently-visited
+items — which is why 7 per run became 0.
+
+### 5.2 The prediction was scored, and one part of it was wrong in a useful way
+
+Predicted: fired probes return to roughly baseline, the `projects-id` drift
+points disappear, `tasks-id` #4 → #5 **remains** because it is a server write,
+and the verdict moves to `per-probe-required`.
+
+The first two held. The last two did not, together: **`POST /api/v1/tasks/1`
+stopped happening**, so there is no contaminating write left and the verdict is
+`instrument-silent` rather than `per-probe-required`.
+
+That write was an auto-save of dirty form state. With storage cleared the form
+is not dirty, so it never fires. **The single "contaminating write" measured
+identically in four runs was itself an artifact of the contamination** — the
+one server-side drift point had a client-side cause. 0044 §3.5 says the target
+reset can reach 1 of 4 contamination points; on this evidence it reaches 0 of
+4, and 0043's ruling (a) has no measured instance left on this target. §6 still
+requires it, and it is still owed.
+
+### 5.3 The budget had to move, and why that is a finding rather than a tweak
+
+At 41% success the *attempt* cap bound; at 87% the *fire* cap did, and the pass
+stopped early on every route. Endpoints fell 22 → 16, and the loss was
+specific: five of the six were `/user/settings/*`. The scheduler offers the
+seven sidebar links first on **every** route, so twelve successes went to
+controls common to all seven before one route-specific control was tried.
+**A budget that binds on success is spent in scheduler order, and scheduler
+order is not coverage order.**
+
+Raised to 24 fires / 32 attempts, endpoints came back to 21. The one still
+missing is `POST /api/v1/tasks/:task` — §5.2's artifact. Deduplicating controls
+that appear on every route is the better fix and is not done.
+
+### 5.4 Two hang samples, and a label that cannot be trusted
+
+The storage-reset crawl abandoned **2** probes, the first samples in nine
+crawls. Both identical: `banner "main navigation"`, attempt #0, step `goto`,
+with exactly two requests outstanding — a background image
+(`llama-nightscape-*.jpg`) and `xhr /api/v1/user/token`.
+
+**The step label is not trustworthy here and that is worth more than the
+sample.** `state.step` is only updated by the `at()` wrapper, and the region
+between `goto` returning and `snap-before` starting — a 900ms wait,
+`getByRole`, `locator.count()` — is not wrapped. So `goto` means "anywhere from
+the start of `goto` to the start of `snap-before`". Two samples, no mechanism
+claimed, and the instrument needs that gap closed before a third is worth
+reading.
+
+The budget crawl abandoned **0**, so the rate is still under one per crawl.
+
+---
+
 ## 4. Open
 
-- **The client-state remedy.** One of §3.8's two, chosen by measuring. This is
-  the larger half of the contamination and it is the cheap half to fix.
+- ~~**The client-state remedy.**~~ **Landed — §5.** Structural and text-only
+  drift both 0.
+- **Wrap the un-instrumented region between `goto` and `snap-before`** so an
+  abandoned probe's step label means something (§5.4).
+- **Deduplicate controls common to every route**, so the probe budget buys
+  route-specific coverage instead of re-probing the sidebar seven times (§5.3).
 - **0043's target reset.** Still owed, still required by §6, and now with its
   return measured: **1 of 4** contamination points, one write per 128 probes.
 - **The client-state fingerprint and the settledness precondition** (§3.7),
