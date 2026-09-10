@@ -51,6 +51,23 @@ export type OperationalKind =
 const OPERATIONAL_SIGNATURES: readonly (readonly [RegExp, OperationalKind])[] = [
   [/\bTimeout\b|\bexceeded\b.*\bms\b|\btimeout\b/i, 'timeout'],
   [/net::ERR_ABORTED|navigation (?:was )?(?:aborted|interrupted)|frame was detached/i, 'navigation-aborted'],
+  /**
+   * Playwright's wording when a navigation invalidates a running `evaluate`.
+   *
+   * The same event as `navigation-aborted` above and none of that row's
+   * spellings: the message is "Execution context was destroyed, most likely
+   * because of a navigation". **It killed a nine-minute crawl** — the
+   * classifier called an aborted navigation a defect, `rethrowIfDefect`
+   * rethrew, and the run died on a probe whose click navigated while
+   * `page.evaluate` was mid-snapshot.
+   *
+   * Found only because a richer seed (0051) made the task page big enough
+   * for the race to open; the same probe had run clean on a thinner
+   * instance. Deliberately narrow — it matches the destroyed-context wording
+   * and nothing else, because widening this row is how a real defect gets
+   * absorbed into a gap.
+   */
+  [/execution context was destroyed|execution context is not available/i, 'navigation-aborted'],
   [/element is not attached|node is detached|element handle is disposed/i, 'element-detached'],
   [/net::ERR_CONNECTION_REFUSED|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|socket hang up/i, 'network-refused'],
   [/target (?:page, context or browser has been )?closed|browser has been closed/i, 'target-closed'],

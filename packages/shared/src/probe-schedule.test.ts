@@ -180,6 +180,16 @@ describe('the catch taxonomy distinguishes a bad site from a bad program', () =>
     ['a closed target', new Error('Target page, context or browser has been closed')],
     ['our own policy block', new Error('net::ERR_BLOCKED_BY_CLIENT')],
     ['an explicit OperationalError', new OperationalError('nope', { kind: 'timeout' })],
+    /**
+     * The message that killed a nine-minute crawl (0051). Playwright's
+     * wording for a navigation invalidating a running `evaluate` — the same
+     * event as `navigation-aborted` and none of that row's spellings — so
+     * the classifier called it a defect and `rethrowIfDefect` rethrew.
+     */
+    [
+      'a navigation destroying the execution context',
+      new Error('page.evaluate: Execution context was destroyed, most likely because of a navigation'),
+    ],
   ])('treats %s as operational', (_label, err) => {
     expect(isOperationalError(err)).toBe(true);
     expect(operationalKind(err)).not.toBeNull();
@@ -190,6 +200,12 @@ describe('the catch taxonomy distinguishes a bad site from a bad program', () =>
     ['a ReferenceError — the exact defect that hid', new ReferenceError('probed is not defined')],
     ['a TypeError', new TypeError('Cannot read properties of undefined')],
     ['a plain Error', new Error('something unexpected')],
+    /**
+     * The control for the row above (§13). A destroyed *object* is not a
+     * destroyed execution context, and a row widened to "destroyed" would
+     * absorb it — which is how a real defect becomes a gap.
+     */
+    ['an error merely mentioning destruction', new Error('destroyed the widget registry')],
     ['a thrown string', 'not even an error'],
   ])('never treats %s as operational', (_label, err) => {
     expect(isOperationalError(err)).toBe(false);
