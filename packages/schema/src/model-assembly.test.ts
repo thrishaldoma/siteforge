@@ -1,134 +1,146 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MODEL_ASSEMBLY_GAPS,
-  type ModelAssemblyGap,
+  MODEL_COLLECTIONS,
+  SCAFFOLD_STAGES,
+  type ModelCollectionDeclaration,
   assessModelAssembly,
+  collectionsOf,
 } from './model-assembly.js';
+import { SiteModelSchema } from './site-model/index.js';
 
-/** The measured Vikunja state: the three declared holes, and nothing else. */
-const VIKUNJA_INPUTS = { fonts: 70, assets: 46, flows: 122, components: 0, entities: 4, operations: 21 };
-const VIKUNJA_PARTS = { fonts: 0, assets: 0, behaviours: 0, components: 0, entities: 4, operations: 26 };
-
-describe('MODEL_ASSEMBLY_GAPS', () => {
-  it('agrees with the model infer actually produces today', () => {
-    expect(assessModelAssembly({
-      declared: MODEL_ASSEMBLY_GAPS,
-      inputs: VIKUNJA_INPUTS,
-      parts: VIKUNJA_PARTS,
-    })).toEqual([]);
+/** The measured Vikunja state. */
+const INPUTS = { fonts: 70, assets: 46, flows: 113, endpoints: 21 };
+const PARTS = {
+  fonts: 0, assets: 0, behaviours: 0, components: 0,
+  layouts: 1, routes: 7, entities: 4, operations: 26,
+};
+const collections = () => collectionsOf(SiteModelSchema);
+const assess = (over: Partial<Parameters<typeof assessModelAssembly>[0]> = {}) =>
+  assessModelAssembly({
+    declared: MODEL_COLLECTIONS, collections: collections(), inputs: INPUTS, parts: PARTS, ...over,
   });
 
-  it('declares the three measured holes and nothing speculative', () => {
-    expect(MODEL_ASSEMBLY_GAPS.map((g) => g.part)).toEqual(['fonts', 'assets', 'behaviours']);
+describe('collectionsOf reads the schema, not a hand list', () => {
+  it('finds every array-valued member of SiteModel', () => {
+    // A complete set, never "contains the ones I thought of" (§13).
+    expect(collectionsOf(SiteModelSchema).sort()).toEqual(
+      ['assets', 'behaviours', 'components', 'entities', 'fonts', 'layouts', 'operations', 'routes'],
+    );
   });
 
-  /**
-   * `components` is the row that must NOT be here. `inferComponents` runs and
-   * returns nothing, which is a producer applying its rule — §13's fourth
-   * cause, where nothing may be missing. Declaring it would claim work is
-   * undone that nobody has shown is undone.
-   */
-  it('excludes components, whose producer runs', () => {
-    expect(MODEL_ASSEMBLY_GAPS.map((g) => g.part)).not.toContain('components');
+  it('throws rather than reading nothing, which would pass for a complete gate', () => {
+    expect(() => collectionsOf({})).toThrow(/could not read/);
+  });
+});
+
+describe('MODEL_COLLECTIONS describes the model infer produces today', () => {
+  it('is clean against the measured state', () => {
+    expect(assess()).toEqual([]);
   });
 
-  it('names a spec section and a capture input on every row', () => {
-    for (const gap of MODEL_ASSEMBLY_GAPS) {
-      expect(gap.spec).toMatch(/§/);
-      expect(gap.input.length).toBeGreaterThan(0);
-      expect(gap.reason.length).toBeGreaterThan(40);
-    }
+  it('declares every collection the schema defines', () => {
+    expect(MODEL_COLLECTIONS.map((d) => d.part).sort()).toEqual(collections().sort());
   });
 });
 
 describe('assessModelAssembly', () => {
   /**
-   * The sweep's own finding, driven to a failing verdict: a part the capture
-   * fills and the model leaves empty, with nobody having written it down.
-   * This is the state `fonts`, `assets` and `behaviours` were in before the
-   * table existed, and it is what finds the fourth one.
+   * The structural half, and the reason this replaced three declared rows: a
+   * collection added tomorrow arrives undeclared, which is exactly how fonts,
+   * assets and behaviours arrived.
    */
-  it('FAILS an undeclared part whose capture input is full', () => {
+  it('FAILS a schema collection nobody declared', () => {
     const findings = assessModelAssembly({
-      declared: [],
-      inputs: { fonts: 70 },
-      parts: { fonts: 0 },
+      declared: [], collections: ['fonts'], inputs: INPUTS, parts: { fonts: 0 },
     });
-    expect(findings).toHaveLength(1);
-    expect(findings[0]).toMatchObject({ part: 'fonts', problem: 'undeclared-empty' });
-    expect(findings[0]?.detail).toContain('70');
+    expect(findings).toEqual([
+      expect.objectContaining({ part: 'fonts', problem: 'undeclared-collection' }),
+    ]);
   });
 
-  /**
-   * The transition, and the reason this is a gate rather than a comment: the
-   * work lands, the record does not move, and the file goes on claiming a
-   * hole that was filled. Exactly the deferral table's `class-changed`.
-   */
-  it('FAILS a declared gap that has started assembling', () => {
-    const findings = assessModelAssembly({
-      declared: MODEL_ASSEMBLY_GAPS,
-      inputs: VIKUNJA_INPUTS,
-      parts: { ...VIKUNJA_PARTS, fonts: 2 },
-    });
-    expect(findings).toHaveLength(1);
-    expect(findings[0]).toMatchObject({ part: 'fonts', problem: 'declared-but-assembled' });
-  });
-
-  /**
-   * §13's vacuity table made checkable. An empty output with an empty input is
-   * a target or driver limitation; filing it as an unassembled artifact sends
-   * the next reader to a package with nothing wrong in it.
-   */
-  it('FAILS a row declared against a capture input that is empty', () => {
-    const findings = assessModelAssembly({
-      declared: MODEL_ASSEMBLY_GAPS,
-      inputs: { ...VIKUNJA_INPUTS, fonts: 0 },
-      parts: VIKUNJA_PARTS,
-    });
-    expect(findings).toHaveLength(1);
-    expect(findings[0]).toMatchObject({ part: 'fonts', problem: 'declared-without-input' });
-  });
-
-  /**
-   * The negative control (§13): a change the check could plausibly key on and
-   * must not. An unrelated part growing is ordinary progress, and a gate that
-   * fired on it would be a gate that fires on everything.
-   */
-  it('does NOT fire when an undeclared, assembling part changes size', () => {
+  it('FAILS a declaration for a collection the schema no longer has', () => {
+    const stale: ModelCollectionDeclaration = {
+      part: 'widgets', producer: 'x', stage: 'infer', input: 'fonts', assembles: true,
+    };
     expect(assessModelAssembly({
-      declared: MODEL_ASSEMBLY_GAPS,
-      inputs: VIKUNJA_INPUTS,
-      parts: { ...VIKUNJA_PARTS, operations: 40 },
+      declared: [stale], collections: ['widgets'].filter(() => false), inputs: {}, parts: {},
+    }).map((f) => f.problem)).toEqual(['stale-declaration']);
+  });
+
+  /** The transition: the work lands and the record does not move. */
+  it('FAILS a declared gap that has started assembling', () => {
+    expect(assess({ parts: { ...PARTS, fonts: 2 } }).map((f) => f.problem))
+      .toEqual(['declared-but-assembles']);
+  });
+
+  /** §13's vacuity table made checkable. */
+  it('FAILS a gap declared against an input that is also empty', () => {
+    expect(assess({ inputs: { ...INPUTS, fonts: 0 } }).map((f) => f.problem))
+      .toEqual(['declared-without-input']);
+  });
+
+  /** The other direction: a producer that stops producing. */
+  it('FAILS a collection declared as assembling that has gone empty', () => {
+    expect(assess({ parts: { ...PARTS, entities: 0 } }).map((f) => f.problem))
+      .toEqual(['assembles-but-empty']);
+  });
+
+  it('FAILS a non-assembling collection with no reason given', () => {
+    const bare: ModelCollectionDeclaration = {
+      part: 'fonts', producer: 'nothing', stage: 'infer', input: 'fonts', assembles: false,
+    };
+    expect(assessModelAssembly({
+      declared: [bare], collections: ['fonts'], inputs: INPUTS, parts: PARTS,
+    }).map((f) => f.problem)).toEqual(['undeclared-reason']);
+  });
+
+  it('FAILS a null input with no reason, so a blind spot is never silent', () => {
+    const bare: ModelCollectionDeclaration = {
+      part: 'layouts', producer: 'inferLayout', stage: 'infer', input: null, assembles: true,
+    };
+    expect(assessModelAssembly({
+      declared: [bare], collections: ['layouts'], inputs: INPUTS, parts: PARTS,
+    }).map((f) => f.problem)).toEqual(['undeclared-reason']);
+  });
+
+  /**
+   * The scope exclusion, in the gate. A stage nobody built is not a producer
+   * without a consumer — but the exemption is checked, so it cannot outlive
+   * the scaffold.
+   */
+  it('exempts a scaffold stage from the empty check', () => {
+    const scaffolded: ModelCollectionDeclaration = {
+      part: 'fonts', producer: 'emitFonts', stage: 'codegen', input: 'fonts', assembles: false,
+      reason: 'codegen is a three-line scaffold; this collection has no producer yet at all.',
+    };
+    expect(assessModelAssembly({
+      declared: [scaffolded], collections: ['fonts'], inputs: INPUTS, parts: PARTS,
     })).toEqual([]);
   });
 
-  /**
-   * Both directions of the empty case, because `0 and 0` is the reading that
-   * makes the check vacuous: it must stay silent where nothing was captured
-   * and speak where something was.
-   */
-  it('is silent on a part with no input and no output', () => {
-    expect(assessModelAssembly({ declared: [], inputs: { fonts: 0 }, parts: { fonts: 0 } })).toEqual([]);
-  });
-
-  it('reports every undeclared hole rather than the first', () => {
-    const findings = assessModelAssembly({
-      declared: [],
-      inputs: { fonts: 70, assets: 46 },
-      parts: { fonts: 0, assets: 0 },
-    });
-    expect(findings.map((f) => f.part).sort()).toEqual(['assets', 'fonts']);
-  });
-
-  it('reads the declared input name, not the part name', () => {
-    // `behaviours` is assembled from `flows`, so a check keyed on the part
-    // name would read `inputs.behaviours` — undefined — and go silent.
-    const gap: ModelAssemblyGap = MODEL_ASSEMBLY_GAPS.find((g) => g.part === 'behaviours')!;
-    expect(gap.input).toBe('flows');
+  it('FAILS a scaffold that turns out to be producing — the exemption is then stale', () => {
+    const scaffolded: ModelCollectionDeclaration = {
+      part: 'fonts', producer: 'emitFonts', stage: 'codegen', input: 'fonts', assembles: false,
+      reason: 'codegen is a three-line scaffold; this collection has no producer yet at all.',
+    };
     expect(assessModelAssembly({
-      declared: [gap],
-      inputs: { flows: 0 },
-      parts: { behaviours: 0 },
-    }).map((f) => f.problem)).toEqual(['declared-without-input']);
+      declared: [scaffolded], collections: ['fonts'], inputs: INPUTS, parts: { fonts: 3 },
+    }).map((f) => f.problem)).toEqual(['scaffold-is-producing']);
+  });
+
+  it('names the three scaffolds and no stage that exists', () => {
+    expect([...SCAFFOLD_STAGES].sort()).toEqual(['cli', 'codegen', 'envkit']);
+    expect(SCAFFOLD_STAGES).not.toContain('infer');
+    expect(SCAFFOLD_STAGES).not.toContain('capture');
+  });
+
+  /** Negative control (§13): ordinary growth is not a finding. */
+  it('does NOT fire when an assembling collection changes size', () => {
+    expect(assess({ parts: { ...PARTS, operations: 40 } })).toEqual([]);
+  });
+
+  it('is silent on a declared gap whose input nothing counts', () => {
+    // `components` — the producer runs and the gate has no counter to judge it.
+    expect(assess({ parts: { ...PARTS, components: 0 } })).toEqual([]);
   });
 });

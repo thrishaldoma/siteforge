@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/model-assembly.ts",
+    "find": "    if (byPart.has(part)) continue;",
+    "replace": "    if (true || byPart.has(part)) continue;"
+  }
+]

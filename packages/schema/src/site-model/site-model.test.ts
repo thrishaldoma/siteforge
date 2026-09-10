@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { MODEL_COLLECTIONS } from '../model-assembly.js';
 import {
   CAPTURE_MODEL_VERSION,
   CODEGEN_NEEDS,
@@ -339,5 +340,62 @@ describe('SiteModel is not a capture artifact', () => {
       'artifact', 'auth', 'controls', 'gap', 'grade-contract', 'identity',
       'json-schema', 'primitives', 'version',
     ]);
+  });
+});
+
+/**
+ * The unchecked-surface counts, pinned (0050 §2).
+ *
+ * 0045 §1 quoted 421 leaves / 384 consumed / 267 consumed-and-never-scored and
+ * built M2's scope argument on them. Nothing pinned those numbers — the only
+ * assertion was `> 100` — and none of the three reproduces. A floor cannot
+ * catch a count that drifts downward, and a load-bearing figure with no gate
+ * behind it is prose.
+ *
+ * Exact, so the next change to `MODEL_NEEDS` or to the schema has to restate
+ * what it did to the surface rather than moving it quietly.
+ */
+describe('the unchecked surface is a pinned number, not a remembered one', () => {
+  const leafJoin = () => {
+    const { leaves } = assessModelCoverage(SiteModelSchema);
+    const covers = (claim: string, leaf: string): boolean =>
+      leaf === claim || leaf.startsWith(`${claim}.`) || leaf.startsWith(`${claim}[]`);
+    const consumed = new Set<string>();
+    const scored = new Set<string>();
+    for (const c of modelClaims()) {
+      for (const leaf of leaves) {
+        if (!covers(c.path, leaf)) continue;
+        if (c.by.startsWith('need:')) consumed.add(leaf);
+        if (c.by.startsWith('scored:')) scored.add(leaf);
+      }
+    }
+    return { leaves, consumed, scored };
+  };
+
+  it('counts 318 leaves, 290 consumed, 96 scored, 207 consumed and never scored', () => {
+    const { leaves, consumed, scored } = leafJoin();
+    const neverScored = [...consumed].filter((l) => !scored.has(l));
+    expect({
+      leaves: leaves.length,
+      consumed: consumed.size,
+      scored: scored.size,
+      consumedNeverScored: neverScored.length,
+    }).toEqual({ leaves: 318, consumed: 290, scored: 96, consumedNeverScored: 207 });
+  });
+
+  /**
+   * The split that matters: a leaf under a collection nothing produces is not
+   * an unscored surface, it is an absent one, and no category could score it.
+   */
+  it('splits the 207 into 141 produced-and-unscored and 66 never produced', () => {
+    const { consumed, scored } = leafJoin();
+    const empty = new Set(
+      MODEL_COLLECTIONS.filter((d) => !d.assembles).map((d) => d.part),
+    );
+    const neverScored = [...consumed].filter((l) => !scored.has(l));
+    const partOf = (p: string): string => p.split(/\[\]|\./)[0] ?? p;
+    const absent = neverScored.filter((l) => empty.has(partOf(l)));
+    expect(absent.length).toBe(66);
+    expect(neverScored.length - absent.length).toBe(141);
   });
 });

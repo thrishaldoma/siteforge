@@ -433,6 +433,14 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'assembly-collection-undeclared-admitted',
+    bug: 'a SiteModel collection with no declaration passes, so the next collection added arrives unexamined — which is exactly how fonts, assets and behaviours arrived',
+    reachable: 'it is the state the repository was in for the whole project, and the structural half is the only part that catches the NEXT one. A per-row table fixes the rows it names and nothing else; dropping the schema-driven loop restores that, and it produces no error and a green gate.',
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: 'FAILS a schema collection nobody declared',
+  },
+
+  {
     id: 'assembly-gap-reads-the-part-name',
     bug: "the model-assembly check looks up a part's capture input by the part's own name, so `behaviours` reads `inputs.behaviours` — undefined — and every declaration whose input is named differently reports as having no input at all",
     reachable: "it is the bug that was in the grader's own print line an hour after the check was written: `behaviours` is assembled from `flows`, the display read `coverage.extracted[g.input]` against a counter called `controlsFired`, and it printed `capture holds 0` beside a capture holding 113. Reading the part name is the obvious thing to write and produces a number in both states, so nothing throws and nothing looks wrong.",

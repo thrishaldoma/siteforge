@@ -22,8 +22,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  DEFERRALS, GRADE_SUITES, MODEL_ASSEMBLY_GAPS, SiteModelSchema, assessDeferrals,
-  assessModelAssembly, assessSeedExpiry, countEmissions,
+  DEFERRALS, GRADE_SUITES, MODEL_COLLECTIONS, SiteModelSchema, assessDeferrals,
+  assessModelAssembly, assessSeedExpiry, collectionsOf, countEmissions,
 } from '../../schema/dist/index.js';
 import { gradeSiteModel } from '../dist/grade/grade.js';
 import { loadVikunjaTruth } from '../dist/grade/truth/vikunja.js';
@@ -240,25 +240,24 @@ const assemblyInputs = {
   fonts: coverage.extracted.fonts,
   assets: coverage.extracted.assets,
   flows: coverage.extracted.controlsFired,
-  entities: coverage.extracted.endpoints,
-  operations: coverage.extracted.endpoints,
+  endpoints: coverage.extracted.endpoints,
 };
+const collections = collectionsOf(SiteModelSchema);
 const assembly = assessModelAssembly({
-  declared: MODEL_ASSEMBLY_GAPS,
+  declared: MODEL_COLLECTIONS,
+  collections,
   inputs: assemblyInputs,
-  parts: {
-    fonts: model.fonts.length, assets: model.assets.length,
-    behaviours: model.behaviours.length,
-    entities: model.entities.length, operations: model.operations.length,
-  },
+  parts: Object.fromEntries(collections.map((c) => [c, model[c].length])),
 });
-console.log('\n  model assembly (0047) — what capture filled and infer leaves empty:');
+console.log('\n  model assembly (0050) — every SiteModel collection, its producer and its input:');
 // Printed from the same map the assessment reads. Printing from
-// `coverage.extracted[g.input]` instead put a 0 beside `behaviours`, whose
+// `coverage.extracted[d.input]` instead put a 0 beside `behaviours`, whose
 // input is `flows` and whose counter is `controlsFired` — a display that
 // reads exactly like the empty-input case the check is built to reject.
-for (const g of MODEL_ASSEMBLY_GAPS) {
-  console.log(`    ! ${g.part.padEnd(12)} capture holds ${String(assemblyInputs[g.input] ?? 0).padStart(4)}  ·  model carries ${model[g.part].length}`);
+for (const d of MODEL_COLLECTIONS) {
+  const held = model[d.part].length;
+  const input = d.input === null ? '  (uncounted)' : String(assemblyInputs[d.input] ?? 0).padStart(13);
+  console.log(`    ${d.assembles ? ' ' : '!'} ${d.part.padEnd(12)} capture ${input}  ·  model carries ${held}`);
 }
 if (assembly.length > 0) {
   console.log(`\n  ✗ ${assembly.length} model part(s) no longer match their declaration:`);
