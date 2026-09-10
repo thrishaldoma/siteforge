@@ -22,11 +22,21 @@ one that does not fails.
 shape. A gate that silently reads no collections reports exactly what it
 reports when every collection is declared.
 
+The input counts above are read live from `coverage.json` at grade time, not
+stored. One of them is a **draw**: `flows` is
+`coverage.extracted.controlsFired`, written by the probe pass, and it read
+113 and then 114 within a single turn on an unchanged capture. The gate only
+ever asks whether it is **non-zero**, which is a property the draw has in
+every run; the tests use synthetic counts for the same reason, since a test
+pinning 114 would fail on the next crawl for a reason about the target
+(§13: a number from a non-deterministic pass is reported with its spread or
+with its run, never as a bare figure).
+
 | collection | producer | input | assembles |
 |---|---|---|---|
 | `fonts` | *nothing — a literal `[]`* | `fonts` 70 | **no** |
 | `assets` | *nothing — a literal `[]`* | `assets` 46 | **no** |
-| `behaviours` | *nothing — a literal `[]`* | `flows` 114 | **no** |
+| `behaviours` | *nothing — a literal `[]`* | `flows` **114 — a draw** | **no** |
 | `components` | `inferComponents` | **uncounted** | no |
 | `layouts` | `inferLayout` | uncounted | yes |
 | `routes` | `routeTemplates` | `endpoints` 21 | yes |
@@ -81,12 +91,17 @@ resolves `MODEL_NEEDS` against `schemaLeafPaths`:
 | claimed by a scored category | 139 | **96** |
 | **consumed and never scored** | **267** | **207** |
 
-Nothing pins these: `site-model.test.ts` asserts only `leaves.length > 100`,
-so 421 was a hand measurement with no gate behind it and it drifted or was
-counted by a looser rule. This turn *added* leaves (`MapRecord`'s six), so the
-schema has not shrunk — the original count was too high when it was written.
+**How 421 was produced is not recoverable, and that is the point.** Nothing
+pinned it: `site-model.test.ts` asserted only `leaves.length > 100`, which a
+count falling from 421 to 318 satisfies the whole way down. So a miscount and
+a drift are indistinguishable from here, and no reconstruction is offered
+rather than a plausible one being invented. What can be said: this turn
+*added* leaves (`MapRecord`'s six), so the schema has not shrunk, and the
+original figure was therefore too high when it was written.
+
 **Pinned now**, as an exact triple, so the next reader inherits a number
-something checks.
+something checks — and a floor is what failed here, because a floor cannot
+catch a count that moves downward.
 
 ### 2.1 And a third of what is left describes a surface that is not produced
 

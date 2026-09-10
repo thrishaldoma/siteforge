@@ -8,8 +8,19 @@ import {
 } from './model-assembly.js';
 import { SiteModelSchema } from './site-model/index.js';
 
-/** The measured Vikunja state. */
-const INPUTS = { fonts: 70, assets: 46, flows: 113, endpoints: 21 };
+/**
+ * Synthetic inputs, deliberately not the target's numbers.
+ *
+ * `flows` comes from `coverage.extracted.controlsFired`, which the probe pass
+ * writes — and the probe pass produces **draws, not figures** (0040 §3, §13).
+ * It read 113 and then 114 within one turn on an unchanged capture, and a
+ * test pinning either would fail on the next crawl for a reason that is
+ * about the target rather than about this predicate. The counts belong in
+ * the run report, beside the run that produced them; what a test may assert
+ * is the predicate's behaviour, so these are round numbers chosen to
+ * exercise it.
+ */
+const INPUTS = { fonts: 10, assets: 10, flows: 10, endpoints: 10 };
 const PARTS = {
   fonts: 0, assets: 0, behaviours: 0, components: 0,
   layouts: 1, routes: 7, entities: 4, operations: 26,
@@ -149,7 +160,7 @@ describe('assessModelAssembly', () => {
     expect(behaviours.input).toBe('flows');
     expect(assessModelAssembly({
       declared: [behaviours], collections: ['behaviours'],
-      inputs: { flows: 113 }, parts: { behaviours: 0 },
+      inputs: { flows: 10 }, parts: { behaviours: 0 },
     })).toEqual([]);
     // And the same row against an input that really is empty must fire, so
     // the assertion above is not passing for want of any check at all.
