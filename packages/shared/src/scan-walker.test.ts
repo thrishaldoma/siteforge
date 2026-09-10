@@ -17,6 +17,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   assessScanCoverage,
   CAPTURE_TREE_EXPECTATION,
+  DIAGNOSTICS_TREE_EXPECTATION,
   REPO_SOURCE_EXPECTATION,
   SOURCE_IGNORE,
   VacuousScanError,
@@ -53,6 +54,44 @@ const makeTree = (): string => {
 };
 
 const NOTHING_EXPECTED = { minFiles: 0, mustReach: [] };
+
+describe("the probe-pass diagnostics tree's own floor", () => {
+  /**
+   * The floor exists because `CAPTURE_TREE_EXPECTATION` requires `routes/` and
+   * `network/`, which this tree correctly has neither of — and `mustReach: []`
+   * would be the empty-container shape §13 forbids, a floor admitting a walk
+   * that reached nothing.
+   *
+   * It names a **file** where every other expectation names a directory, and
+   * that works only because `mustReach` compiles to `/<prefix>/**` and `**`
+   * matches zero segments. Asserted rather than left to be rediscovered: the
+   * shortfall message says "probe-pass.json/" with a trailing slash, which is
+   * exactly the sort of thing a later reader tidies into a real directory and
+   * silently turns the floor off.
+   */
+  const diagnosticsTree = (withFile: boolean): string => {
+    const root = mkdtempSync(join(tmpdir(), 'sf-diag-'));
+    roots.push(root);
+    if (withFile) writeFileSync(join(root, 'probe-pass.json'), '{"probes":[]}');
+    else writeFileSync(join(root, 'something-else.txt'), 'x');
+    return root;
+  };
+
+  it('admits the tree the capture driver writes', () => {
+    const { relative } = walkFiles({
+      root: diagnosticsTree(true), profile: 'tree', expect: DIAGNOSTICS_TREE_EXPECTATION,
+    });
+    expect(relative).toEqual(['probe-pass.json']);
+  });
+
+  it('refuses a diagnostics tree with no probe-pass.json, rather than reporting clean', () => {
+    // The failing verdict, driven on synthetic input. A scan that reached
+    // nothing must not be indistinguishable from a scan that found nothing.
+    expect(() => walkFiles({
+      root: diagnosticsTree(false), profile: 'tree', expect: DIAGNOSTICS_TREE_EXPECTATION,
+    })).toThrow(VacuousScanError);
+  });
+});
 
 describe('one walker, and the anti-vacuity lives in it', () => {
   it('finds source and skips vendored and built output', () => {
