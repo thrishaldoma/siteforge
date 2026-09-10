@@ -841,6 +841,11 @@ const manifest = {
     auth: { mode: 'anonymous' }, viewport: VIEWPORT,
     locale: { language: 'en-US', timezone: 'UTC' }, variant: null,
   }],
+  /** A one-page spike against whatever URL was passed. Nothing of ours seeded it (0053). */
+  seedState: {
+    source: 'unseeded',
+    reason: 'a single arbitrary URL passed on the command line; siteforge neither owns nor seeds it.',
+  },
   userAgent: UA,
   determinism: {
     seed: SEED, frozenEpochMs: FROZEN_EPOCH_MS, frozenTimezone: 'UTC', frozenLocale: 'en-US',

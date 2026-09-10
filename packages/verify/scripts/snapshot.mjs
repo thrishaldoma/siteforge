@@ -193,6 +193,45 @@ export const PINS = {
     }, token);
     await call('/api/v1/tasks/1/labels', 'PUT', { label_id: 1 }, token);
 
+    /**
+     * The fourth collection-valued field, and the one 0051 left out (§8's seed
+     * requirement, decision 0053).
+     *
+     * 0051 deferred it because "it needs multipart and a real file on disk,
+     * which adds a surface §3.4 would have to reason about", and measured what
+     * that cost: **46 of the 82 remaining recall misses sit under
+     * `attachments`** — it got *worse* than the 29 it started at, because the
+     * newly-matched task-update endpoint declares the field too. A field left
+     * out of the seed is not a field left alone.
+     *
+     * There is no file on disk. A `Blob` in a `FormData` is a multipart body
+     * built in memory, so §3.4's scanner has nothing new to reason about and
+     * the crawl has no fixture file to clean up.
+     *
+     * **Last, and measured rather than assumed.** The task update at
+     * `/tasks/1` above *replaces*, so the ordering question is real: probed
+     * against a booted container, an update issued after an upload leaves
+     * `attachments` intact — all four collections populated at once. That also
+     * settles a crawl-time worry, since the SPA fires that same update from a
+     * probe: it will not empty the field mid-crawl.
+     */
+    const attachment = new FormData();
+    attachment.append(
+      'files',
+      new Blob(['siteforge fixture attachment\n'], { type: 'text/plain' }),
+      'notes.txt',
+    );
+    const uploaded = await api('/api/v1/tasks/1/attachments', {
+      method: 'PUT',
+      // No Content-Type: `fetch` writes the multipart boundary itself, and one
+      // set by hand is a boundary that does not match the body.
+      headers: { Authorization: `Bearer ${token}` },
+      body: attachment,
+    });
+    if (!uploaded.ok) {
+      throw new Error(`seed /tasks/1/attachments → ${uploaded.status}: ${(await uploaded.text()).slice(0, 200)}`);
+    }
+
     return token;
   },
 

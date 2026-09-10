@@ -126,6 +126,35 @@ const UA =
   'Chrome/153.0.0.0 Safari/537.36 siteforge/0.1.0';
 const CONTAINER = `siteforge-capture-${TARGET.siteId}`;
 
+/**
+ * Which instance this crawl ran against (0053).
+ *
+ * Derived from the pin, never declared: 0051 changed three fields on one task
+ * and moved every denominator the prediction had called fixed, because the seed
+ * changed what the crawl could *reach*. Nothing recorded which seed produced a
+ * capture, so nothing could refuse the comparison that followed.
+ *
+ * `PIN.seed.toString()` is the program, comments and all — so editing a comment
+ * inside `seed()` marks two captures incomparable. That is the safe direction
+ * on purpose: an over-sensitive id costs a re-measure, an under-sensitive one
+ * renders a delta across two different targets and says nothing.
+ *
+ * The password is not an input (§3.3) and is not a seed variable either:
+ * changing it changes who signs in, not what exists.
+ */
+const SEED_STATE = {
+  source: 'fixture-seed',
+  imageDigest: PIN.image,
+  programHash: S.seedProgramHash(PIN.seed.toString()),
+  account: PIN.login.username,
+  id: S.computeSeedStateId({
+    imageDigest: PIN.image,
+    program: PIN.seed.toString(),
+    account: PIN.login.username,
+  }),
+  label: `${TARGET_ID} ${PIN.tagAtPull} fixture seed`,
+};
+
 const gapId = (label) => `gap_${S.shortHash(label).slice(0, 12)}`;
 
 const findings = [];
@@ -2209,6 +2238,7 @@ write('manifest.json', S.CaptureManifestSchema, {
   target: { entryUrl: `${ORIGIN}/`, origin: ORIGIN },
   permission: { source: 'allowlist', matchedEntry: '127.0.0.1' },
   contexts: CONTEXTS,
+  seedState: SEED_STATE,
   userAgent: UA,
   determinism: {
     // Both halves from the constants the shim itself uses. A hand-written list

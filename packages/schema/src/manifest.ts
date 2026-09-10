@@ -26,6 +26,7 @@ import {
   deriveSessionProbePolicy,
 } from './context.js';
 import { UrlPatternSchema } from './route.js';
+import { SeedStateSchema, seedStateIdFrom } from './seed-state.js';
 
 /**
  * The determinism shim §6 injects before any page script.
@@ -143,6 +144,16 @@ export const CaptureManifestSchema = z.strictObject({
    * `RouteIdSchema`. See docs/decisions/0004.
    */
   contexts: z.array(CaptureContextSchema).min(1),
+
+  /**
+   * The instance the crawl ran against, not the content it produced (0053).
+   *
+   * §5 lists `seed` among the manifest's inputs and `determinism.seed` is that
+   * one — the shim's PRNG seed, which is *ours*. This is the target's: which
+   * rows existed before the crawl started. They are two different seeds and
+   * conflating them is how a capture came to record one and not the other.
+   */
+  seedState: SeedStateSchema,
   userAgent: z.string().min(1),
   determinism: DeterminismShimSchema,
   crawl: CrawlConfigSchema,
@@ -195,6 +206,21 @@ export const CaptureManifestSchema = z.strictObject({
       message:
         `claims '${manifest.crawl.sessionProbePolicy}' but the declared contexts imply '${derived}'`,
     });
+  }
+  // Derived, recomputed (0053). The id is what a comparison across two grade
+  // reports refuses on, so a manifest free to declare an id its own inputs do
+  // not produce would let a hand-edited artifact re-open exactly the comparison
+  // the id exists to close.
+  if (manifest.seedState.source === 'fixture-seed') {
+    const { imageDigest, programHash, account, id } = manifest.seedState;
+    const expected = seedStateIdFrom({ imageDigest, programHash, account });
+    if (expected !== id) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['seedState', 'id'],
+        message: `claims '${id.slice(0, 12)}…' but its own inputs produce '${expected.slice(0, 12)}…'`,
+      });
+    }
   }
   // The crawl's own origin is always navigable; a manifest that omits it is
   // describing a boundary the crawl could not have run inside.

@@ -984,6 +984,15 @@ write('manifest.json', S.CaptureManifestSchema, {
   target: { entryUrl: 'http://example.com/', origin: ORIGIN },
   permission: { source: 'allowlist', matchedEntry: 'example.com' },
   contexts: CONTEXTS,
+  /**
+   * The fixture stands for a crawl of somebody else's site, so there is no seed
+   * of ours (0053). Declared rather than omitted: an absent field reads the same
+   * as a run that forgot to record one, which is the whole defect this replaces.
+   */
+  seedState: {
+    source: 'unseeded',
+    reason: 'a public site siteforge does not own — its rows are whatever the operator of example.com put there, and no program of ours produced them.',
+  },
   userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 siteforge/0.1.0',
   determinism: {
     seed: SEED,

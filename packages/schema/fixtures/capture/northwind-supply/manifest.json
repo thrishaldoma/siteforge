@@ -89,6 +89,10 @@
       "variant": null
     }
   ],
+  "seedState": {
+    "source": "unseeded",
+    "reason": "a public site siteforge does not own — its rows are whatever the operator of example.com put there, and no program of ours produced them."
+  },
   "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 siteforge/0.1.0",
   "determinism": {
     "seed": 42,

@@ -189,8 +189,8 @@
     },
     {
       "path": "manifest.json",
-      "sha256": "f6b8db569f972718d31d8fa78e23e43dd08cec40288b0f95eeae72dac98d134f",
-      "bytes": 4677
+      "sha256": "553ce9f5deeba6c2ac372cbea1ae88019362f6a010d36dbca44815548f13ae19",
+      "bytes": 4881
     },
     {
       "path": "coverage.json",

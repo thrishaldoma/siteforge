@@ -111,6 +111,40 @@ const CLAIMS: ManifestClaim[] = [
     readBy: [], unreadReason: 'as above.',
   },
 
+  // ---- the instance the crawl ran against (0053) --------------------------
+  //
+  // A discriminated union, so both arms are leaves and both are classified. The
+  // `unseeded` arm is the declared-absence half: a target nobody seeded still
+  // has to say so, or an omitted field reads the same as a run that forgot.
+  {
+    path: 'seedState.source', kind: 'configured', backedBy: 'the capture driver',
+    readBy: ['CaptureManifestSchema superRefine', 'sameSeedState', 'seedStateLabel'],
+  },
+  {
+    path: 'seedState.imageDigest', kind: 'configured', backedBy: 'PIN.image',
+    readBy: ['seedStateIdFrom', 'CaptureManifestSchema superRefine'],
+  },
+  {
+    path: 'seedState.programHash', kind: 'derived', backedBy: 'seedProgramHash(PIN.seed)',
+    readBy: ['seedStateIdFrom', 'CaptureManifestSchema superRefine'],
+  },
+  {
+    path: 'seedState.account', kind: 'configured', backedBy: 'PIN.login.username',
+    readBy: ['seedStateIdFrom', 'CaptureManifestSchema superRefine'],
+  },
+  {
+    path: 'seedState.id', kind: 'derived', backedBy: 'computeSeedStateId',
+    readBy: ['CaptureManifestSchema superRefine', 'assessGradeComparability'],
+  },
+  {
+    path: 'seedState.label', kind: 'configured', backedBy: 'the capture driver',
+    readBy: ['seedStateLabel'],
+  },
+  {
+    path: 'seedState.reason', kind: 'configured', backedBy: 'the capture driver',
+    readBy: ['seedStateLabel'],
+  },
+
   // ---- determinism: the two that were fiction ----------------------------
   { path: 'userAgent', kind: 'configured', backedBy: 'CONTEXT_DEFAULTS.userAgent', readBy: ['newGuardedContext'] },
   { path: 'determinism.seed', kind: 'configured', backedBy: 'SEED', readBy: ['freezeClocks', 'determinism.test.mjs'] },

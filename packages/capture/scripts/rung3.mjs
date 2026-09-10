@@ -1060,6 +1060,16 @@ const manifest = write('manifest.json', S.CaptureManifestSchema, {
   target: { entryUrl: `${ORIGIN}/`, origin: ORIGIN },
   permission: { source: 'allowlist', matchedEntry: '127.0.0.1' },
   contexts: CONTEXTS,
+  /**
+   * The rung fixture's rows are authored in `crud-app.mjs` and ship in the same
+   * commit as the crawler, so its instance identity *is* the commit — there is
+   * no separate seed program to hash (0053). Declared rather than omitted, and
+   * nothing compares two rung-3 captures: no grade report is produced from one.
+   */
+  seedState: {
+    source: 'unseeded',
+    reason: 'the fixture app boots from rows authored in crud-app.mjs, versioned with the crawler rather than seeded into it; no grade report is produced from this capture.',
+  },
   userAgent: UA,
   determinism: {
     seed: SEED, frozenEpochMs: Date.parse('2026-01-01T00:00:00.000Z'),
