@@ -152,6 +152,16 @@ reading it that way mis-filed the category's deferral class in 0045.*
 ## 4. Open
 
 - **Reset target state between probes.** M1, next, unblocked by §2.3.
+  *Amended ([[0053]] §6): the granularity is decided and the measurement that
+  decided it is on record. One probe on `tasks-id` — the due-date quick-set
+  widget, which exists only on a seeded-rich task — issued `POST /tasks/1` and
+  moved the pre-state of **all fourteen probes after it on that route**, none of
+  which recovered. Within-route, so a route-boundary reset is refuted rather
+  than merely unsupported; and the negative control held over sixteen
+  consecutive read-only pairs. **Per-probe**, with the undo scoped to match the
+  do: a database snapshot taken immediately **before each probe**, never a
+  container recreate and never a snapshot at seed time, both of which restore
+  more than the probe changed. Not built; the remaining work is the mechanism.*
 - **Where the hang actually is.** Bounded, not diagnosed. The event loop was
   idle with a promise pending; `waitForLoadState` at the login path carries no
   explicit timeout but Playwright's 30s default applies, so it is not that.
