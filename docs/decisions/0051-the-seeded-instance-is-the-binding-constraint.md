@@ -113,3 +113,134 @@ Stated rather than left implicit. The pinned digest is unchanged, but the
 through 0050 describes an instance that no longer exists. They are not
 invalidated — they were correct about what they measured — but a later
 reader comparing across this line is comparing two targets.
+
+---
+
+## 4. Measured — and the seed changed more than the field values
+
+| metric | before | after | predicted |
+|---|---|---|---|
+| `observed-body-recall` | 0.6519 (236/362) | **0.8153 (362/444)** | value ✓, **denominator ✗** |
+| `field-type.accuracy` | 0.9000 (225/250) | **0.9433 (416/441)** | rate ✓, denominator ✓, **miss count ✗** |
+| `response-field-presence.precision` | 1.0000 (236/236) | **1.0000 (362/362)** | ✓ |
+| `seed-coverage` | 0.7904 (362/458) | **0.8147 (444/545)** | **✗** |
+| `entity-field-presence.recall` | 0.9355 (58/62) | **0.9032 (56/62)** | **✗ — it fell** |
+| `request-field-presence.precision` | 0.7368 (14/19) | **0.5267 (79/150)** | not predicted at all |
+
+**Two of five predictions held. Three failed, and they failed for one root
+cause I did not anticipate: the seed changed *what the crawl could reach*,
+not only what the fields contained.**
+
+A task with an assignee, a label and a reminder has interactive widgets a
+bare task does not. Probes fired them, the browser issued
+`POST /api/v1/tasks/{id}`, and a **new endpoint matched** — 21 matched
+against 20, 22 observed against 21. Every denominator I predicted as fixed
+moved because of that, and my stated falsifier for the recall denominator
+("a denominator that moves means the seed changed which statuses were
+observed") named the wrong mechanism: it was which *endpoints* matched.
+
+### 4.1 What the seed actually bought, per field
+
+The clean measurement, because it is per-field rather than per-metric:
+
+| owning field | recall misses before | after |
+|---|---|---|
+| `labels` | 30 | **2** |
+| `assignees` | 21 | **4** |
+| `reminders` | 12 | **0** |
+| **the three seeded** | **63** | **6** |
+| `attachments` (left out) | 29 | 46 |
+| everything else | 34 | 30 |
+
+**57 of 63 misses under the three seeded fields resolved.** That is the
+answer to the ruling's question, and it is unambiguous. `attachments` grew
+from 29 to 46 because the new matched endpoint declares it too — the field
+left out of the seed got *worse*, which is the cost of leaving it out,
+measured.
+
+### 4.2 The field-type miss count did not fall, and that is two effects cancelling
+
+Predicted 25 → 16 ± 3. Measured **25 → 25**, byte-identical, which §13 says
+to disbelieve first. It is not non-movement; it is two movements:
+
+- **response-side misses 25 → 19.** The nine under `assignees`, `labels` and
+  `reminders` resolved exactly as predicted. `attachments` went 3 → 4 and
+  everything else 13 → 15, both from the wider matched surface.
+- **request-side misses 0 → 6.** These did not exist before, because the
+  request surface did not exist before.
+
+So the rate rising from 0.9000 to 0.9433 is **entirely denominator growth**,
+250 → 441. The prediction warned that the rate alone would not be the
+result, and it was right to; it was wrong about the miss count because it
+only counted the response side. **`field-type` is off its boundary and
+nothing about it improved.**
+
+### 4.3 `entity-field-presence.recall` fell, and the fall is correct
+
+`models.Task` now misses `assignees`, `labels` and `reminders` — the exact
+three that were seeded. It missed only `subscription` before.
+
+The mechanism: when those fields were `null`, infer recorded them as
+ordinary scalar entity fields. Populated, they are arrays of objects, which
+are not columns, so the entity extractor correctly stops emitting them —
+while the document still declares them as properties, so they count as
+misses.
+
+**The metric was benefiting from the degenerate instance.** A null field
+looked like a column; a real one is a relation. 0.9355 was the better score
+and 0.9032 is the truer one, which is the sharpest possible illustration of
+the ruling's premise.
+
+### 4.4 A request surface nobody had ever seen
+
+`request-field-presence.precision` fell from 0.7368 to **0.5267**, on a
+denominator that went 19 → 150. Not a regression: there was almost no
+request surface to be wrong about before.
+
+The 71 false positives are almost all one operation. The SPA's task update
+**sends the whole task object back** — `created_by`, `subscription`, nested
+`settings`, `max_right` — where the document declares 82 request fields and
+the model emits 131. Infer is recording what was on the wire.
+
+Whether that is the client over-sending or the document under-declaring is
+**not diagnosed here**, per the standing rule. It is the same shape as
+[[0049]]'s document omission pointed at the request side, and it is now the
+category's largest open question where before it had 19 fields and nothing
+to say.
+
+### 4.5 Two findings outside the metrics
+
+- **The contamination verdict flipped.** `instrument-silent` before —
+  0 of 148 probes caused a write that could contaminate — and
+  **`per-probe-required`** now, with one structural drift point downstream of
+  a write. 0043 §4's granularity question was answered "moot on this target"
+  against an instance where nothing could be mutated because nothing was
+  there. It is not moot any more.
+- **A crawl-killing defect, found only because of the seed.** The richer task
+  page took a probe's click into a navigation while `page.evaluate` was
+  mid-snapshot. Playwright says *"Execution context was destroyed, most
+  likely because of a navigation"* — the same event as `navigation-aborted`
+  and none of that row's spellings — so the classifier called an operational
+  error a defect and the run died at nine minutes. Fixed, narrowly, with a
+  control.
+
+## 5. The answer to the ruling
+
+**Seed richness is worth a design decision.** 57 of 63 targeted misses
+resolved, one metric was shown to have been scoring a degenerate instance
+favourably, an entire request surface appeared, a contamination question
+un-mooted itself, and a real defect surfaced — from adding three fields to
+one task.
+
+Per the ruling that decision belongs to §10, and this measurement gives it
+its first requirement: **the seed must populate every collection-valued field
+of every entity the environment poses tasks about**, because until it does,
+inference numbers on those fields describe the fixture rather than the
+inference. `attachments` is the immediate instance and its cost is measured —
+46 of the remaining 82 recall misses.
+
+**Not proposed here, per the standing rule:** the request-side divergence
+(§4.4), and the subtree denominator, which the ruling parked pending exactly
+this measurement. The measurement now says the subtree question is smaller
+than it looked: 82 misses remain, not 126, and 46 of those are one unseeded
+field rather than an inference limit.
