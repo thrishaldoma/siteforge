@@ -653,7 +653,16 @@ async function revealInScrollableAncestor(locator) {
   // that could not run leaves the click to fail on its own terms, which is the
   // behaviour before this existed.
   try {
-    await locator.evaluate((el) => {
+    // The viewport is passed as the **argument**, which is also what puts the
+    // options object in the right position. `locator.evaluate(fn, arg, options)`
+    // — with a one-parameter page function, `{ timeout: 1000 }` is silently
+    // taken as `arg` and no timeout is applied at all. That is what this call
+    // did on its first run: every reveal fell back to the default actionability
+    // wait, the crawl went from 8 minutes to over 40, and it had to be killed.
+    // The other two `locator.evaluate` calls here are correct by accident of
+    // shape — they happen to need a `vp` — which is why the arity is now
+    // asserted in `determinism.test.mjs` rather than left to the next reader.
+    await locator.evaluate((el, vp) => {
       const scrollable = (node) => {
         const cs = getComputedStyle(node);
         const scrolls = (v) => v === 'auto' || v === 'scroll' || v === 'overlay';
@@ -666,6 +675,16 @@ async function revealInScrollableAncestor(locator) {
       // document one is what `scrollIntoViewIfNeeded` already handles, and it
       // is the one that works — re-driving it here would be a second policy for
       // the case that never failed.
+      // Already clickable where it is: do nothing. A scroll is not a neutral
+      // act — §6 names lazy loading, infinite scroll and IntersectionObserver
+      // reveals as things scrolling causes — so revealing before every probe
+      // spends the settle budget on pages that had no problem, and perturbs
+      // pages that were fine.
+      const here = el.getBoundingClientRect();
+      const cx = here.left + here.width / 2;
+      const cy = here.top + here.height / 2;
+      if (cx >= 0 && cy >= 0 && cx <= vp.width && cy <= vp.height) return;
+
       let node = el.parentElement;
       while (node !== null && node !== document.body && node !== document.documentElement) {
         if (scrollable(node)) {
@@ -681,7 +700,7 @@ async function revealInScrollableAncestor(locator) {
         }
         node = node.parentElement;
       }
-    }, { timeout: 1000 });
+    }, VIEWPORT, { timeout: 1000 });
   } catch (err) {
     rethrowIfDefect(err);
   }

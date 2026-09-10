@@ -74,6 +74,33 @@ describe('the manifest claims exactly the clocks the shim freezes', () => {
     expect(manifest).toContain('prefersReducedMotion: CONTEXT_DEFAULTS.reducedMotion');
   });
 
+  it('never hands an options object to evaluate as its argument', () => {
+    /*
+     * `locator.evaluate(pageFunction, arg, options)`. With a one-parameter page
+     * function, `locator.evaluate(fn, { timeout: 1000 })` puts the options in
+     * the `arg` slot: no error, no warning, and **no timeout applied**. The
+     * reveal step shipped that way for one run — every call fell back to the
+     * default actionability wait and the crawl went from 8 minutes to over 40.
+     *
+     * Asserted on the arity, which is the property: a page function taking one
+     * parameter has nowhere to put an argument, so any call passing two things
+     * after it is fine and any call passing one thing that looks like options is
+     * the bug. The two calls that were already correct were correct by accident
+     * of shape — they happen to need a `vp` — and nothing said so.
+     */
+    for (const m of source.matchAll(/locator\.evaluate\(\((\w+)(?:,\s*(\w+))?\)\s*=>/g)) {
+      const [, , second] = m;
+      const call = source.slice(m.index, m.index + 4000);
+      // Everything between this page function and the call's `}, …)` tail.
+      const tail = call.slice(call.indexOf('\n    }, ') === -1 ? call.length : call.indexOf('\n    }, '));
+      if (!tail.includes('timeout:')) continue;
+      expect(
+        second,
+        'a page function taking one parameter cannot receive an argument, so this timeout is being passed as one',
+      ).toBeDefined();
+    }
+  });
+
   it('every context carries the options the manifest asserts', () => {
     // §6's `prefers-reduced-motion: reduce` is a *newContext option*, so it
     // cannot be added by `guardContext` after the fact — which is exactly how
