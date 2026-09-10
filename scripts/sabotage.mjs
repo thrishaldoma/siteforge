@@ -402,6 +402,19 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'rung-picks-the-first-candidate',
+    bug: 'a rung matching two candidates with no declared tiebreak binds the first instead of declining, so iteration order decides',
+    reachable: "it is what the code did until 0042, in the rung written the same turn the rule was: §7.6's rank 5 took the first path-like `data-*` and nobody noticed, because `Object.entries` order is stable enough that the binding looks deterministic from outside. The patch is also the shape of an ordinary simplification — an ambiguous decline reads like a refusal to do the obvious thing, and `candidates[0]` reads like handling the common case",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    // The ambiguity, not the tiebreak. Under the bug a *declared* tiebreak
+    // still works, so any row asserting "the tiebreak chose /a" passes in
+    // both states — §13's rule that the assertion must exclude what the
+    // broken version also outputs.
+    expect: 'DECLINES as ambiguous when the rung declares no tiebreak',
+    change: 'the no-tiebreak branch binds the first candidate rather than declining',
+  },
+
+  {
     id: 'landmark-defers-to-href',
     bug: "§7.6's rank 1 yields to rank 4 when the control has an href, so a landmark binds a URL",
     reachable: "the reasoning is almost persuasive, which is what makes it the one to guard: *a <header> with an href is navigable, so why decline it?* Because rank 1 is not about whether a URL exists, it is about whether the element is a control at all — and a wrapper element carrying an href it never activates on is exactly what the 7 Vikunja `banner` entries are. Landing this is the unranked-veto bug (0033 §4.2) inverted: instead of a condition sitting above the ladder, a ranked condition quietly stops outranking the one below it, and the ranking's declared order stops describing what runs",

@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/control-binding.ts",
+    "find": "  if (rung.tiebreak === undefined) {\n    return {\n      kind: 'decline',\n      reason: 'ambiguous-candidates',",
+    "replace": "  if (rung.tiebreak === undefined) {\n    return { kind: 'bind', target: candidates[0]!.target, detail: candidates[0]!.detail };\n  }\n  if (false as boolean) {\n    return {\n      kind: 'decline',\n      reason: 'ambiguous-candidates',"
+  }
+]
