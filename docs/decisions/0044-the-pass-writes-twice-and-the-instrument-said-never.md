@@ -114,4 +114,180 @@ The commitment in §1.1 is unchanged.
 
 ## 3. What came back
 
-*(to be written from the run)*
+Four crawls, one commit (`dc58243`), identical flags, mean 474.7s.
+
+### 3.1 The predictions, scored
+
+| # | prediction | outcome |
+|---|---|---|
+| 1 | `conserved` true in all four | **✓** — and the write composition is *identical* every run: 55 crawl writes = 52 on probe pages + 3 outside, 52 action-phase, 1 contaminating |
+| 2 | 1–3 writes per crawl | **✗ as written (55), ✓ as revised.** §2.2 |
+| 3 | `mutatingProbes` 1–3 | **✓ — exactly 1, four times, spread 0** |
+| 4 | verdict `confounded` | **✓, 4 of 4** |
+| 5 | skipped controls near 83, within 79–86 | **✓ — 84 · 83 · 84 · 84** |
+| 6 | 0–1 abandoned | **✓ — 0 · 0 · 0 · 0** |
+
+### 3.2 The spread is 1, and the prior 79 was a commit-range artifact
+
+```
+skipped controls    84 · 83 · 84 · 84     N=4, range 83–84, spread 1
+probes run         128 · 128 · 128 · 128  spread 0
+contaminating       1 · 1 · 1 · 1         spread 0
+abandoned           0 · 0 · 0 · 0         spread 0
+```
+
+0043 §1.2 recorded 84 · 83 · 79 and read three distinct values in three draws
+as "the count takes a new value nearly every run". Those came from a **commit
+range**. Held at one commit with one flag set the spread is **1**, and two of
+the four runs are identical. The earlier triple was measuring us changing the
+code, which is the mechanism-versus-repeat distinction 0040 §3 drew, applied to
+a series nobody had checked for it.
+
+This does not make the count deterministic — a spread of 1 is still a spread,
+and §7.6's input still moves. It makes it a far smaller term than the ruling
+was written against.
+
+### 3.3 The verdict is `confounded`, and the reason is the finding
+
+`confounded`, 4 of 4: 3–4 structural drift points per run, 2–3 of them with no
+write to explain them. Per §1.1 that is reported as the result. But the drift
+points are *the same ones every run*, which is what made them diagnosable:
+
+| drift point | runs | after a write? |
+|---|---|---|
+| `tasks-id` #4 → #5 | **4/4** | **yes** — `POST /api/v1/tasks/1` |
+| `projects-id` #13 → #14 | **4/4** | no |
+| `projects-id` #14 → #15 | **4/4** | no |
+| `projects-id` #0 → #1 | 1/4 | no |
+
+Probes 13, 14 and 15 on `projects-id` are the project **view switches** —
+Gantt, Table, Kanban. Each made one GET and wrote nothing.
+
+**Measured directly rather than inferred** (0032 §5 is the document that spent
+itself on a mechanism read off the wrong evidence). Click Gantt, then reload
+the route:
+
+```
+baseline, fresh context                1303 tags
+after Gantt, SAME context, new page    3070 tags   ≠ changed
+after Gantt, NEW context, same server  1303 tags   = back to baseline
+```
+
+`localStorage` holds `projectView`, `lastVisited`, `projectHistory`,
+`navigation-child-projects-open`, `menuActiveDesktopPreference`.
+
+**The contamination is client-side, and the server is not involved.** A new
+context against the same server returns to baseline.
+
+### 3.4 So the granularity answer is per-probe, and it is mostly not about the target
+
+§6 says "for each candidate, in a fresh page **context**". The code called
+`newGuardedContext` once per *route* and `ctx.newPage()` per probe — a fresh
+page inside a shared context, which in Playwright differ by exactly one thing:
+client storage. The spec was right; the implementation read "page context" as
+"page".
+
+| mechanism | drift points | fix | cost |
+|---|---|---|---|
+| **client state** in a shared context | **3 of 4** | a context per probe | milliseconds |
+| **server state** — one task update | **1 of 4** | 0043's target reset | tens of seconds per probe |
+
+So the granularity question has the same shape 0043's had: **neither branch on
+offer.** The ruling asked per-probe versus per-route *for a target reset*, and
+the answer is that per-probe is required, that the cheap half was never on the
+target, and that the expensive half addresses **one write in 128 probes**.
+
+### 3.5 What this says about 0043's ruling, which is not a request to re-open it
+
+0040 §2 gives the mechanism making M1's debt structural: "firing a control on a
+task manager **creates, updates and deletes rows**". Measured, that is **one
+write per 128 probes**, identically in four crawls. It is real — `tasks-id`
+#4 → #5 is contamination, caught, four times out of four — and it is small.
+
+§6 requires non-contamination whatever the magnitude, so (a) stands on its own
+terms and 0043 §2.4 is unchanged. What changes is the expected return: a target
+reset cannot reach the client-state contamination, and it cannot be a large
+part of the residual variance when the whole residual it could touch is one
+write. The honest form of the claim is a **fraction**, and the fraction is
+1 of 4 measured contamination points.
+
+### 3.6 The hang did not recur
+
+`deadline-abandoned` is 0 in all four runs, so there is **no distribution to
+look at** — the ruling's "one instance per crawl means four samples" did not
+hold, because the rate is lower than one per crawl. Four clean crawls put it
+below roughly 1 in 4 rather than at 1 in 1. The instrument is in place and
+costs nothing when it does not fire; the sample count is 0 and no mechanism is
+claimed.
+
+### 3.7 What a better contamination instrument needs
+
+Named, per §1.1's commitment, rather than reached by relaxing the control:
+
+1. **A client-state fingerprint.** The negative control is defined over server
+   writes, so client-state contamination has no write to point at and lands as
+   "unexplained". Snapshotting `localStorage` per probe alongside the DOM would
+   let the same conjunction be tested — *storage changed **and** the next
+   pre-state moved* — and would have named this mechanism directly instead of
+   leaving the verdict at `confounded`.
+2. **A settledness precondition.** A pre-state is compared across probes
+   without ever being checked for stability against *itself*. Snapshotting
+   twice, milliseconds apart, and declining the comparison when the two differ
+   would separate "the page is still rendering" from "the page renders
+   differently now" — the same shape as `capture-route.mjs`'s sticky detector,
+   which requires the declared value **and** a runtime condition.
+
+The 1-of-4 `projects-id` #0 → #1 point is the one this would settle: it is the
+only drift point that is not reproducible, which is what an unsettled render
+looks like and what contamination does not.
+
+### 3.8 The fix was built, measured and reverted
+
+A context per probe — §6's own text — was implemented and run. It costs most
+of the pass:
+
+| route | fired before | fired with a context per probe |
+|---|---|---|
+| `root` | 9 of 18 | **1 of 18** |
+| `projects` | 3 of 14 | **1 of 14** |
+| `projects-id` | 8 of 24 | **5 of 24** |
+
+A brand-new context has no warm cache and no service worker, so the SPA
+hydrates cold on every probe and the control is not present when the probe
+looks for it. Removing the contamination by removing nine tenths of the
+transitions the pass exists to record is not a trade worth making, so it is
+reverted (`63eeb12`) and the measurement is a comment at the decision site.
+
+**The prediction committed with that change is unscored.** It said the
+`projects-id` drift points would disappear and `tasks-id` #4 → #5 would
+remain. The crawl was killed once the regression was clear, so that was never
+measured — and reporting the routes that had already come in would be reading
+a run that was stopped for a reason unrelated to what it was predicting.
+
+Two candidate remedies, named and **not** guessed between:
+
+1. **A longer post-load settle.** If the loss is cold hydration, it is a
+   timing constant, and 128 probes × a couple of seconds is a few minutes of
+   crawl. Cheap to test and it either recovers the fired count or it does not.
+2. **Clear the non-session storage keys, keeping the context warm.** Targeted
+   at the measured mechanism. The complication is that the JWT lives in
+   `localStorage` (`token`), so a blanket clear signs the crawl out — this
+   needs a declared allowlist, in the shape `NON_CONTAMINATING_WRITES` already
+   uses.
+
+Which one is right is a measurement, not an argument, and it is the same
+mistake as the one this document opens with to pick now.
+
+---
+
+## 4. Open
+
+- **The client-state remedy.** One of §3.8's two, chosen by measuring. This is
+  the larger half of the contamination and it is the cheap half to fix.
+- **0043's target reset.** Still owed, still required by §6, and now with its
+  return measured: **1 of 4** contamination points, one write per 128 probes.
+- **The client-state fingerprint and the settledness precondition** (§3.7),
+  either of which would move the verdict off `confounded`.
+- **The hang.** Zero samples in four crawls, so the rate is below 1 in 4 rather
+  than the 1 in 1 the ruling assumed. Instrument in place, nothing to look at
+  yet.
