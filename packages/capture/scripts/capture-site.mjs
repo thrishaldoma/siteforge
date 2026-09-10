@@ -648,6 +648,9 @@ function recordUndriveable({ routeId, candidate, label, kind, diagnostic }) {
  * reading a page this had already scrolled, the before/after distributions
  * would stop comparing the same thing.
  */
+const revealOutcomes = new Map();
+const tallyReveal = (outcome) => revealOutcomes.set(outcome, (revealOutcomes.get(outcome) ?? 0) + 1);
+
 async function revealInScrollableAncestor(locator) {
   // operational: the element detached or the page closed mid-probe. A reveal
   // that could not run leaves the click to fail on its own terms, which is the
@@ -662,7 +665,7 @@ async function revealInScrollableAncestor(locator) {
     // The other two `locator.evaluate` calls here are correct by accident of
     // shape — they happen to need a `vp` — which is why the arity is now
     // asserted in `determinism.test.mjs` rather than left to the next reader.
-    await locator.evaluate((el, vp) => {
+    tallyReveal(await locator.evaluate((el, vp) => {
       const scrollable = (node) => {
         const cs = getComputedStyle(node);
         const scrolls = (v) => v === 'auto' || v === 'scroll' || v === 'overlay';
@@ -680,10 +683,12 @@ async function revealInScrollableAncestor(locator) {
       // reveals as things scrolling causes — so revealing before every probe
       // spends the settle budget on pages that had no problem, and perturbs
       // pages that were fine.
-      const here = el.getBoundingClientRect();
-      const cx = here.left + here.width / 2;
-      const cy = here.top + here.height / 2;
-      if (cx >= 0 && cy >= 0 && cx <= vp.width && cy <= vp.height) return;
+      const centre = (node) => {
+        const r = node.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      };
+      const onScreen = (c) => c.x >= 0 && c.y >= 0 && c.x <= vp.width && c.y <= vp.height;
+      if (onScreen(centre(el))) return 'already in view';
 
       let node = el.parentElement;
       while (node !== null && node !== document.body && node !== document.documentElement) {
@@ -696,13 +701,21 @@ async function revealInScrollableAncestor(locator) {
           // centre outside, which is the state this exists to end.
           node.scrollTop += (box.top + box.height / 2) - (port.top + port.height / 2);
           node.scrollLeft += (box.left + box.width / 2) - (port.left + port.width / 2);
-          return;
+          // Whether it worked, from the page, before anything else can move it.
+          // The first version of this reveal returned nothing and the run came
+          // back **byte-identical** across 124 probes — which §13 reads as the
+          // change not reaching the measurement rather than failing at it. There
+          // was no way to tell "never ran", "ran and found no ancestor" and
+          // "ran, scrolled, and the element is still off-screen" apart.
+          return onScreen(centre(el)) ? 'scrolled into view' : 'scrolled, still off-screen';
         }
         node = node.parentElement;
       }
+      return 'no scrollable ancestor';
     }, VIEWPORT, { timeout: 1000 });
   } catch (err) {
     rethrowIfDefect(err);
+    tallyReveal('evaluate failed');
   }
 }
 
@@ -1166,6 +1179,10 @@ function reportUndriveableDistribution() {
       .join(' · ');
   };
 
+  if (revealOutcomes.size > 0) {
+    const rows = [...revealOutcomes].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`);
+    console.log(`\n  reveal (scroll the non-viewport ancestor, before each click): ${rows.join(' · ')}`);
+  }
   console.log(`\n  undriveable: ${undriveable.length}, by what was true when the action gave up`);
   console.log(`    step              ${tally((d) => d.step)}`);
   console.log(`    visible           ${tally((d) => d.visible)}`);
