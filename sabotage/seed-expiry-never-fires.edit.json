@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/deferral.ts",
+    "find": "  if (input.seedFiles.length === 0) return null;",
+    "replace": "  if (input.seedFiles.length >= 0) return null;"
+  }
+]

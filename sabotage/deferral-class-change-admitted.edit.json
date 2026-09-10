@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/deferral.ts",
+    "find": "    if (deferral.kind === 'emits-nothing' && emitted > 0) {",
+    "replace": "    if (false && deferral.kind === 'emits-nothing' && emitted > 0) {"
+  }
+]

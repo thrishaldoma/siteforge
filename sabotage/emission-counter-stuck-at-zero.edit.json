@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/deferral.ts",
+    "find": "    if (node.narrowing !== undefined && node.narrowing !== null) narrowing += 1;",
+    "replace": "    if (false) narrowing += 1;"
+  }
+]

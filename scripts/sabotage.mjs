@@ -402,6 +402,34 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'deferral-class-change-admitted',
+    bug: 'a category declared emits-nothing that starts emitting passes the gate, so unchecked claims reach codegen under a declaration saying they cannot',
+    reachable: "it is the state the repository was in until this table existed, and the drift is silent by construction — nobody edits a deferral when infer starts emitting, because nothing tells them it did. It already happened once: 43 narrowings arrived under a deferral that predated them. The patch is also the shape of a debugging line left in.",
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    // The transition, not the reason-and-expiry checks, which still fire
+    // under the bug and would let a weaker row pass in both states.
+    expect: 'fails a category that starts emitting while declared emits-nothing',
+  },
+
+  {
+    id: 'emission-counter-stuck-at-zero',
+    bug: 'the narrowing emission counter never increments, so the category reads emits-nothing forever and the transition guard can never fire',
+    reachable: "a counter reading zero is indistinguishable from a category that emits nothing, which is the whole difficulty — this is the FAIL-OPEN direction and it produces no error, no warning and a green gate. A refactor of the node walk that misses the `narrowing` key, or a rename of the field, gets here without anyone writing `false`.",
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    // Asserted on the non-zero case. A test that only ever sees 0 passes in
+    // both states, which is why the counters are driven upward (§13).
+    expect: 'counts every deferred category to a non-zero value',
+  },
+
+  {
+    id: 'seed-expiry-never-fires',
+    bug: 'the seed expiry returns null whatever it is handed, so narrowing stays deferred after codegen begins seeding the store from response schemas',
+    reachable: "an expiry that never fires looks exactly like an expiry whose event has not happened, and this one is designed to sit silent for months before its single moment. `>= 0` is also how an off-by-one is spelled — the guard reads as an emptiness check either way.",
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    expect: 'fires the moment a seed exists while narrowing is unscored',
+  },
+
+  {
     id: 'attribution-admits-double-counting',
     bug: 'conservation accepts a total that overshoots, so a write counted both inside a probe and outside every probe passes as owned',
     reachable: "the two populations are computed in different places and it is easy to make them overlap — 'outside' means outside *every* probe window, and the natural mis-reading is 'not attributed to this probe', which double-counts every write on every crawl. `>=` is also how defensive coding is spelled: a sum that came out too large looks like slack rather than like the populations overlapping.",
