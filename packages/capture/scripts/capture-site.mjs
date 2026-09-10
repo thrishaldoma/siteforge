@@ -241,6 +241,26 @@ async function boot() {
 // ---------------------------------------------------------------------------
 
 const observations = [];
+/**
+ * Which probe's window each observation belongs to, aligned index-for-index.
+ *
+ * Attribution by array slice is unsound here and the reason is structural: an
+ * observation is pushed from an async handler *after* the response body
+ * resolves, so a slow body lands at an index belonging to a later probe. That
+ * failure is worse than losing the call — a write credited to the wrong probe
+ * makes a drift point look explained, which turns "the reading is confounded"
+ * into a confident wrong answer about reset granularity.
+ *
+ * The window is therefore read **when the response event fires**, which is the
+ * moment that actually says whose traffic this is, and kept beside the
+ * observation rather than on it — `observations` feeds `endpoints.json`, and a
+ * new field there would change an artifact this same series is measuring.
+ * Pushed adjacent to its observation, so alignment is a property of the two
+ * statements rather than an assumption about ordering.
+ */
+const observationProbeKeys = [];
+/** The probe whose window is open, or null between probes. Read at event time. */
+let currentProbeKey = null;
 const pendingResponses = [];
 const allAssets = new Map();
 
@@ -283,6 +303,9 @@ const undriveable = [];
 
 const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
   page.on('response', (response) => {
+    // Synchronously, before any await: this is the only point at which the
+    // open probe window is the one this response actually belongs to.
+    const probeKey = currentProbeKey;
     pendingResponses.push((async () => {
       const request = response.request();
       const url = response.url();
@@ -324,6 +347,7 @@ const attachRecorders = (page, routeIdRef, { anonymousProbe = false } = {}) => {
         contextId: (routeIdRef.current ?? '').split('--')[1] ?? null,
         anonymousProbe,
       });
+      observationProbeKeys.push(probeKey);
     })().catch((err) => {
       // operational: the page closed while its body was still arriving, which
       // is what the end of every probe looks like. The exchange is lost, and
@@ -1022,11 +1046,12 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
    * return early and the one that never returns at all. Building it at the end
    * would silently omit precisely the probes the measurement is about.
    */
+  const probeKey = `${routeId}#${attemptIndex}`;
   const observed = {
     routeId, attemptIndex, label,
     preStructureHash: null, preTextHash: null, mutated: false,
     /** Calls attributed to this probe, so `mutated: false` can be told from "saw nothing". */
-    calls: 0, methods: [],
+    calls: 0, methods: [], writes: 0,
   };
   probePass.probes.push(observed);
   /** `step`, plus the field the deadline handler reads. One place, so they cannot disagree. */
@@ -1048,12 +1073,12 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
   });
   let locator = null;
   /**
-   * Where this probe's own calls begin in the crawl-wide record.
+   * Where this probe's own calls begin, for the flow's `networkCalls`.
    *
-   * Function-scoped rather than local to the `try`, because what the probe
-   * *sent* has to be recorded however it leaves — see the tail. `-1` means it
-   * never got as far as snapshotting, which is a different statement from
-   * "it sent nothing".
+   * The *diagnostics* no longer attribute by this index — see
+   * `observationProbeKeys` for why a slice cannot be trusted. Kept for the
+   * flow trace, whose shape is part of the artifact being measured and is not
+   * changing in the middle of a measurement.
    */
   let netBefore = -1;
   try {
@@ -1113,6 +1138,9 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     observed.preStructureHash = S.shortHash(before.structure);
     observed.preTextHash = S.shortHash(before.html);
     netBefore = observations.length;
+    // The window opens here rather than at `goto`, so the route's own page-load
+    // traffic is not credited to the control being fired.
+    currentProbeKey = probeKey;
     await at('reveal', () => revealInScrollableAncestor(locator));
     await at('click', () => locator.click({ timeout: 5000 }));
     // §6 says network idle or 2s. `networkidle` alone is not enough: on an
@@ -1255,12 +1283,12 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
    * After `settle`, so responses the page was still delivering are counted;
    * `methods` and `calls` go alongside so a zero can be told from a silence.
    */
-  if (netBefore >= 0) {
-    const sent = observations.slice(netBefore);
-    observed.calls = sent.length;
-    observed.methods = [...new Set(sent.map((o) => o.method))].sort();
-    observed.mutated = sent.some((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method));
-  }
+  const sent = observations.filter((_, i) => observationProbeKeys[i] === probeKey);
+  observed.calls = sent.length;
+  observed.methods = [...new Set(sent.map((o) => o.method))].sort();
+  observed.writes = sent.filter((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method)).length;
+  observed.mutated = observed.writes > 0;
+  currentProbeKey = null;
   await page.close();
   return ran;
 }
@@ -2123,20 +2151,43 @@ const contamination = assessProbeContamination({ probes: probePass.probes });
  * here rather than inferred later from an endpoint list. This is the comparison
  * that caught the zero.
  */
+const isWrite = (o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method);
 const crawlWide = {
   apiCalls: observations.length,
   methods: [...new Set(observations.map((o) => o.method))].sort(),
-  writes: observations.filter((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method)).length,
+  writes: observations.filter(isWrite).length,
+  /** Recorded exchanges whose body never arrived because the page closed under them. */
+  lost: lostObservations,
 };
 const attributed = probePass.probes.reduce((n, p) => n + p.calls, 0);
+const attributedWrites = probePass.probes.reduce((n, p) => n + p.writes, 0);
+/**
+ * Writes seen while no probe window was open — sign-in, the anonymous sweep.
+ *
+ * With these, the check is a **conservation law rather than a threshold**:
+ * every write the crawl saw is either a probe's or outside every probe, so
+ * `attributedWrites + outsideProbeWrites` must equal `crawlWide.writes`
+ * exactly. A shortfall means a write went to the wrong owner, and there is no
+ * allowance to argue about.
+ */
+const outsideProbeWrites = observations.filter((o, i) => isWrite(o) && observationProbeKeys[i] === null).length;
+const conserved = attributedWrites + outsideProbeWrites === crawlWide.writes;
 writeFileSync(
   join(DIAGNOSTICS, 'probe-pass.json'),
-  `${JSON.stringify({ runId: RUN_ID, crawlWide, attributed, ...probePass, contamination }, null, 2)}\n`,
+  `${JSON.stringify({
+    runId: RUN_ID, crawlWide, attributed, attributedWrites, outsideProbeWrites, conserved,
+    ...probePass, contamination,
+  }, null, 2)}\n`,
 );
 console.log(
   `\n  calls: ${attributed} attributed to probes of ${crawlWide.apiCalls} the crawl saw` +
-  ` · crawl-wide writes ${crawlWide.writes} (${crawlWide.methods.join(', ')})`,
+  ` · writes ${attributedWrites} by probes + ${outsideProbeWrites} outside = ${crawlWide.writes}` +
+  ` ${conserved ? '✓ conserved' : '✗ NOT CONSERVED — a write was credited to the wrong owner'}` +
+  `${crawlWide.lost > 0 ? ` · ${crawlWide.lost} exchange(s) lost to a closing page` : ''}`,
 );
+if (!conserved) {
+  finding('write-attribution-lost', `${crawlWide.writes} write(s) observed, ${attributedWrites} attributed to probes and ${outsideProbeWrites} outside them — the contamination reading rests on this and must not be used.`);
+}
 console.log(
   `\n  probe pass: ${probePass.probes.length} probe(s) · ${contamination.comparedPairs} adjacent pair(s) compared` +
   ` · ${contamination.mutatingProbes} wrote · ${probePass.abandoned.length} abandoned`,
