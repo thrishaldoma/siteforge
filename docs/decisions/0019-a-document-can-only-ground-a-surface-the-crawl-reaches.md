@@ -228,3 +228,16 @@ workaround above. All three are in the target table.
 The decision is still the operator's — it re-points §13's nominated M3 target —
 but the measurement now names one candidate that passes both criteria rather
 than one that passes the stated one and fails the unstated one.
+
+---
+
+## Addendum — a third criterion, of a different kind (0041 §8)
+
+The two criteria above decide whether a target can be graded **at all**. A
+third decides whether **one category** — `synthesized-endpoint` — can produce a
+number, so it never disqualifies a target by itself and sits beside them on the
+checklist rather than above them: *do the skipped controls carry an `href` or
+`<form action>` that resolves inside the graded universe?* Measured on Vikunja:
+**0 of 84**, which is why that category is honestly vacuous there whatever
+infer does. Stated in full at 0041 §8, and it wants running at the same time as
+`browser-surface.mjs`.

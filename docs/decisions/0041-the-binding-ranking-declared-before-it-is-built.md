@@ -339,3 +339,46 @@ target whose controls carry API URLs in the DOM — a server-rendered app with
   reported and never resolved by picking one. Fires zero times on this target,
   so no number moved; caught by review, not by a gate, which is worth noting
   since it is a latent instance of the very rule this turn implemented.
+
+---
+
+## 8. What a target needs before `synthesized-endpoint` can produce a number
+
+Accepted that it stays vacuous on Vikunja, and **no more work is done toward it
+on this target** — 0039's ruling, corrected by §5.1 and confirmed by §7.2.
+What is recorded instead is the selection criterion, so the next target is
+chosen knowing what this category costs and buys.
+
+0019 measured two criteria that decide whether a target can be graded **at
+all**. This is a third and it is a different kind: it decides whether **one
+category** can produce a number, so it never disqualifies a target on its own.
+It goes on the checklist beside the other two rather than above them.
+
+A target produces a first `synthesized-endpoint` number when all three hold:
+
+1. **Controls carry their target in the DOM.** A `<form action>` or an `href`
+   that names an API path — which in practice means **server-rendered**, or a
+   progressively-enhanced app, rather than a client-side router. Vikunja fails
+   here and it is the whole story: 65 of 84 skipped controls have an `href` and
+   every one is an SPA route.
+2. **That path is inside the graded universe.** Not merely present: the
+   universe is a path prefix (0019's second criterion), so a control pointing
+   at `/projects/2` is excluded whatever else is true. A server-rendered app
+   whose forms post to `/api/...` satisfies both; one whose forms post to
+   `/projects/2/edit` satisfies the first and not the second.
+3. **Some controls are genuinely unfired.** The category scores *bindings for
+   controls capture never drove*, so a target the crawler drives completely has
+   nothing for it either — correctly, and that is a **good** outcome rather
+   than a coverage gap.
+
+The measurable form, runnable before a target is adopted: over
+`flows/skipped-controls.json`, the count of controls whose node carries an
+`href` or a `<form action>` resolving under the universe prefix. On Vikunja
+that is **0 of 84**. A candidate wants it comfortably above zero, and a
+one-line script over a trial capture answers it — the same shape as
+`browser-surface.mjs`, and it should be run at the same time.
+
+**What is deliberately not on this list:** anything about how *well* the
+target's markup is written. The category exists to score a risky claim, and a
+target chosen because it makes the claim easy is 0015 §0's circularity in the
+target-selection step.
