@@ -111,11 +111,27 @@ denominator is not a result to lean on.
 *Amended after 0047 and 0048.* A fresh crawl of the same pinned digest, with
 the map fix changing the model, reports **`0.9000` on `225/250` again —
 numerator and denominator both byte-identical.** §13 says exact
-non-movement is the first thing to disbelieve, so it was checked rather than
-noted: `field-type` is scored over fields present on *both* sides, and every
-field 0047 removed was model-only, so none of them was ever in this
-denominator. The stability is real and it is a statement about the crawl's
-determinism in this region, not about the metric. **The gate is still met
+non-movement is the first thing to disbelieve, and **two** changes landed in
+the same turn, so both had to be separated before the stability could be
+called real.
+
+- **0047 (the map fix)** cannot reach it: `field-type` is scored over fields
+  present on *both* sides, and every field the map representation removed was
+  model-only — they had no spec counterpart, which is why they were
+  false positives. None was ever in this denominator.
+- **0048 (the per-status recall filter)** cannot reach it either, and this
+  one needed checking rather than assuming, because `fieldType` is
+  incremented inside the same `score()` call whose `truth` argument the
+  filter replaced. It is safe **by construction**: the filter keeps truth
+  keys whose status appears in `statusesWithBody`, and that set is derived
+  *from the model's own keys*. So a truth key at a filtered status has no
+  model counterpart by definition, and `score()` increments `fieldType` only
+  for keys the model has. Confirmed empirically as well — the grader read
+  `225/250` both before and after the filter changed, on the same capture.
+
+So the stability is a statement about the crawl's determinism in this region,
+not about the metric, and not an artifact of a denominator that moved with
+it. **The gate is still met
 with zero margin and is still not a result to lean on** — and per the
 ruling, the threshold is not being tuned to move it off the line. The next
 real change to matched-field types will move it, and that is when it becomes
