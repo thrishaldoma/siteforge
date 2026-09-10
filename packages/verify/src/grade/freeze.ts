@@ -127,7 +127,7 @@ export const GRADER_FREEZE: Readonly<Record<string, string>> = {
   // narrowing is tallied twice so the budget's denominator is the population
   // *before* exclusion.
   'packages/verify/src/grade/grade.ts':
-    'e38ac9191f306a51ea0bbaec07912b63c1c70a1d3635f834afbdd45ef233e294',
+    '973df43982030fff32fcece0cbd17fc783382a12dd289a8c4ea6e796845b20a1',
   'packages/verify/src/grade/match.ts':
     'c9d5ebbfde9d804e18f2e2e793121759c9920f9fd6b9a6c53be1c16193eff2ab',
   'packages/verify/src/grade/fields.ts':

@@ -155,6 +155,24 @@ if (report.divergence.total > 0) {
   for (const message of d.messages) console.log(`    · ${message}`);
 }
 
+/**
+ * 0049's reach, printed every run.
+ *
+ * "One judgement, N instances" is the right shape for a systematic document
+ * omission and is also the shape of an escape from a cap. What separates
+ * them is that this scope is checkable independently of N — but N still has
+ * to be visible, or the exclusion grows and nobody sees it.
+ */
+const omissions = report.documentOmissions;
+if (omissions.ofModelFields > 0) {
+  const share = omissions.excused / omissions.ofModelFields;
+  console.log(
+    `\n  document omissions (0049) — ${omissions.excused} of ${omissions.ofModelFields} model ` +
+    `response field(s) excused, ${(share * 100).toFixed(1)}%: the document declares no response ` +
+    'at a status the crawl observed.',
+  );
+}
+
 console.log('');
 /**
  * The deferrals still describing the model they defer (0045).

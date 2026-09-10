@@ -108,6 +108,14 @@ export interface GradeReport {
    * numbers, two subjects.
    */
   readonly crawlCoverage: { readonly observed: number; readonly specTotal: number };
+  /**
+   * How far 0049's document-omission exclusion reaches, this run.
+   *
+   * Reported every run rather than on request: a rule with one judgement and
+   * N instances has to have its N visible, or a systematic exclusion grows
+   * without anyone seeing it.
+   */
+  readonly documentOmissions: { readonly excused: number; readonly ofModelFields: number };
   readonly auth: {
     readonly observedRequired: number;
     readonly observedNotRequired: number;
@@ -176,6 +184,35 @@ const responseKey = (status: string | number, pointer: string): string => `${sta
 
 /** The status half of a `responseKey`. One reader, so the two cannot drift. */
 const statusOf = (key: string): string => key.slice(0, key.indexOf(' '));
+
+/**
+ * Is this slot a **document omission** rather than an inference defect (0049)?
+ *
+ * The scope is a property of *the document*: it declares no response at this
+ * `(operation, status)`, and the crawl observed one. Vikunja's server answers
+ * `401 {"message": …}` everywhere and its Swagger declares 401 response
+ * fields twice in 368KB.
+ *
+ * **The signature is the assertion.** This takes the statuses the document
+ * declares and the statuses the crawl observed, and nothing else — it cannot
+ * see the model, so it cannot excuse a claim for being infer's. That matters
+ * because "one judgement, N instances" is also the shape of an escape from a
+ * cap; what distinguishes this one is that the scope is checkable
+ * **independently of N**. Two tests do the discriminating and neither counts
+ * anything: a status the document *does* declare is not excused, and a
+ * status the crawl never saw is not excused — the second being the
+ * hallucination this category exists to catch.
+ *
+ * Its reach is reported as a count on every run, so a systematic exclusion
+ * can be watched growing rather than discovered.
+ */
+export function isDocumentOmission(input: {
+  readonly status: string;
+  readonly declaredByDocument: ReadonlySet<string>;
+  readonly observedByCrawl: ReadonlySet<string>;
+}): boolean {
+  return !input.declaredByDocument.has(input.status) && input.observedByCrawl.has(input.status);
+}
 
 /** The reserved `status` on a field-scope divergence naming the request body. */
 const REQUEST_SLOT = 'request';
@@ -321,6 +358,14 @@ interface FieldTallies {
   responseRecall: Tally;
   /** Matched endpoints whose response body the crawl actually observed (0048). */
   seedCoverage: Tally;
+  /**
+   * Slots excused as document omissions (0049), reported as a reach count.
+   *
+   * `denominator` is every model response field before the exclusion, so the
+   * report can say what share of the category the exclusion covers — a
+   * systematic exclusion should be visible growing.
+   */
+  documentOmissions: Tally;
   fieldType: Tally;
   narrowingPrecision: Tally;
   narrowingRecall: Tally;
@@ -337,6 +382,7 @@ function fieldCategories(
     responsePrecision: { numerator: 0, denominator: 0 },
     responseRecall: { numerator: 0, denominator: 0 },
     seedCoverage: { numerator: 0, denominator: 0 },
+    documentOmissions: { numerator: 0, denominator: 0 },
     fieldType: { numerator: 0, denominator: 0 },
     narrowingPrecision: { numerator: 0, denominator: 0 },
     narrowingRecall: { numerator: 0, denominator: 0 },
@@ -435,11 +481,18 @@ function fieldCategories(
      */
     const declaredStatuses = new Set([...truthResponseFields(pair).keys()].map(statusOf));
     const observedStatuses = new Set(pair.observedStatuses ?? []);
-    const undeclaredButObserved = (key: string): boolean =>
-      !declaredStatuses.has(statusOf(key)) && observedStatuses.has(statusOf(key));
-
+    const excusedHere = [...modelResponseFields(pair)].filter(([key]) =>
+      isDocumentOmission({
+        status: statusOf(key),
+        declaredByDocument: declaredStatuses,
+        observedByCrawl: observedStatuses,
+      }),
+    );
+    t.documentOmissions.numerator += excusedHere.length;
+    const excused = new Set(excusedHere.map(([key]) => key));
+    t.documentOmissions.denominator += modelResponseFields(pair).size;
     const modelResponses = new Map(
-      [...modelResponseFields(pair)].filter(([key]) => !undeclaredButObserved(key)),
+      [...modelResponseFields(pair)].filter(([key]) => !excused.has(key)),
     );
     const statusesWithBody = new Set([...modelResponses.keys()].map(statusOf));
     const truthResponses = truthResponseFields(pair);
@@ -785,6 +838,10 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
       arityMismatches: all.arityMismatches.length,
     },
     crawlCoverage: { observed: all.observedInUniverse, specTotal: all.truthInUniverse },
+    documentOmissions: {
+      excused: responseFields.documentOmissions.numerator,
+      ofModelFields: responseFields.documentOmissions.denominator,
+    },
     entities: {
       paired: entityMatching.pairs.length,
       inScope: entityMatching.inScope.length,

@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { GRADE_METRICS, type JsonSchemaNode } from '@siteforge/schema';
 import { GITEA_BASELINE, GITEA_OBSERVED } from './baseline/gitea.js';
-import { gradeSiteModel, type GradeInput } from './grade.js';
+import { gradeSiteModel, isDocumentOmission, type GradeInput } from './grade.js';
 import { inUniverse, matchEndpoints } from './match.js';
 import { modelFieldPointers, typeAgrees } from './fields.js';
 import { loadGiteaTruth } from './truth/gitea.js';
@@ -211,6 +211,59 @@ describe('a zero denominator is a scored outcome (§6)', () => {
     const coverage = report.metrics.find((m) => m.id === 'auth.truth-coverage');
     expect(coverage?.gate).toBeNull();
     expect(coverage?.passed).toBe(true);
+  });
+});
+
+describe('the document-omission scope is checkable independently of N', () => {
+  /**
+   * The ruling's condition. "One judgement, N instances" is the right shape
+   * for a systematic omission and is also the shape of an escape from a cap;
+   * what separates them is that this scope can be checked without counting.
+   * So these assert the predicate, never the eighteen — a test enumerating
+   * the current instances would pass an exclusion that grew to four hundred
+   * for a bad reason.
+   */
+  const declared = (...s: string[]) => new Set(s);
+
+  it('excuses only where the document is silent AND the crawl saw it', () => {
+    expect(isDocumentOmission({
+      status: '401', declaredByDocument: declared('200', '500'), observedByCrawl: declared('200', '401'),
+    })).toBe(true);
+  });
+
+  it('does not excuse a status the document declares', () => {
+    expect(isDocumentOmission({
+      status: '200', declaredByDocument: declared('200'), observedByCrawl: declared('200'),
+    })).toBe(false);
+  });
+
+  /** The hallucination direction, and the reason the crawl side is required. */
+  it('does not excuse a status the crawl never saw', () => {
+    expect(isDocumentOmission({
+      status: '599', declaredByDocument: declared('200'), observedByCrawl: declared('200'),
+    })).toBe(false);
+  });
+
+  it('excuses nothing when the crawl side is empty, so an absent input is not consent', () => {
+    expect(isDocumentOmission({
+      status: '401', declaredByDocument: declared('200'), observedByCrawl: declared(),
+    })).toBe(false);
+  });
+
+  /**
+   * The signature is the assertion: the predicate takes the document's
+   * statuses and the crawl's, and has no parameter through which a model
+   * could reach it. Asserted here as arity so a third input cannot be added
+   * without this failing.
+   */
+  it('takes one argument and reads two inputs, neither of them the model', () => {
+    expect(isDocumentOmission.length).toBe(1);
+  });
+
+  it('reports its reach every run, beside the metrics rather than as the assertion', () => {
+    const report = gradeSiteModel(input);
+    expect(report.documentOmissions.ofModelFields).toBeGreaterThan(0);
+    expect(report.documentOmissions.excused).toBeGreaterThanOrEqual(0);
   });
 });
 
