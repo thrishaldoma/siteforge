@@ -210,7 +210,12 @@ export function scanCaptureTree(
   root: string,
   options: {
     env?: Record<string, string | undefined>;
-    /** Overridable only to let unit tests scan a deliberately minimal tree. */
+    /**
+     * The floor this walk must reach, so a scan that reached nothing cannot
+     * report clean. Defaults to the capture tree's; the probe-pass diagnostics
+     * tree beside it passes `DIAGNOSTICS_TREE_EXPECTATION`, and unit tests
+     * pass a deliberately minimal one.
+     */
     expect?: ScanExpectation;
   } = {},
 ): SecretFinding[] {

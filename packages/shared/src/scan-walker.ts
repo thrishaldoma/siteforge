@@ -217,6 +217,26 @@ export const CAPTURE_TREE_EXPECTATION: ScanExpectation = {
   mustReach: ['routes', 'network'],
 };
 
+/**
+ * The floor for the probe-pass diagnostics tree, which sits beside the capture
+ * rather than inside it.
+ *
+ * §3.4 says every file written under `capture/` is scanned, and
+ * `capture/<site-id>-diagnostics/` is under `capture/` while being outside the
+ * root `scanCaptureTree(OUT)` walks — the chokepoint-reach failure §13 keeps
+ * finding, created the moment that directory was added. It holds target URLs,
+ * so it is not a tree the gate may skip.
+ *
+ * It needs its own floor because `CAPTURE_TREE_EXPECTATION` requires `routes`
+ * and `network`, which this tree correctly does not have. `mustReach: []`
+ * would be the empty-container shape §13 forbids — a floor that admits a walk
+ * reaching nothing — so it names the file that must be there.
+ */
+export const DIAGNOSTICS_TREE_EXPECTATION: ScanExpectation = {
+  minFiles: 1,
+  mustReach: ['probe-pass.json'],
+};
+
 /** Workspace package directories, from `pnpm-workspace.yaml`'s own globs. */
 export function workspacePackageDirs(repo: string, yaml: string): string[] {
   const globs = [...yaml.matchAll(/^\s*-\s*['"]?([^'"\n]+)['"]?\s*$/gm)]

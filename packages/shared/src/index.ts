@@ -16,3 +16,4 @@ export * from './capture-idempotence.js';
 export * from './path-pattern.js';
 export * from './control-binding.js';
 export * from './semantic-edit.js';
+export * from './probe-contamination.js';
