@@ -175,3 +175,91 @@ contract acquires metrics nobody needed exactly that way.
 needed splitting**, and that is a result rather than an absence of one. The
 prediction going in was that `entity-field-presence` would split too; it was
 measured instead of assumed, and the measurement said no.
+
+---
+
+## 5. `observed-body-recall` characterized — the honest fix is already in place
+
+Measured after [[0049]], on the current capture. **126 misses**, and the
+ruling's two categories separate cleanly:
+
+| | misses |
+|---|---|
+| the **field itself** — infer reached the parent and omitted the key | **26** |
+| the **subtree beneath** a missing field | **100** |
+
+So the bulk is subtree, as 0046 found — the proportion is 79%, and the
+absolute number fell from 146 to 100 because [[0049]] and the status split
+removed unreachable slots from the denominator rather than because anything
+was fixed.
+
+### 5.1 The 26 are not what the ruling expected, and this is the finding
+
+The ruling's first category was: *"`assignees: null` IS observed — infer
+should emit it as nullable-unknown rather than omitting it. That's recall
+infer can legitimately win."*
+
+**Infer already emits it.** Measured on `GET /api/v1/tasks/all`'s item schema:
+
+```
+assignees     inSchema=true   inRequired=true    type "null"
+attachments   inSchema=true   inRequired=true    type "null"
+labels        inSchema=true   inRequired=true    type "null"
+reminders     inSchema=true   inRequired=true    type "null"
+subscription  inSchema=false  inRequired=false   —
+```
+
+`inRequired` is the discriminator, and it is decisive: a key is in `required`
+only when it was present in **every** observed record. So `assignees` was
+present in every body with the value `null`, and `inferSchema` emitted
+`{type: 'null'}` for it — the nullable-unknown the ruling asked for, under a
+different spelling. It is a **hit** for recall, not a miss.
+
+`subscription` is the opposite case and the code path says which: a key that
+is `undefined` in every observation makes `inferSchema` return `null` and the
+key is dropped. It was never in any body, so there is nothing to emit and
+nothing observed to emit it from.
+
+So the 26 break down as:
+
+| | count | is this recall infer can win? |
+|---|---|---|
+| `[]` item pointers under an always-null array | 14 | **no** — no element ever existed |
+| fields **never present in any body** (`email` 7, `subscription` 5) | 12 | **no** — nothing was observed |
+| fields observed as null and omitted | **0** | — already emitted |
+
+**The honest fix closes nothing, because it is already done.** That is the
+measurement the ruling asked for before anything touches the denominator, and
+it is the answer: 0 of 126.
+
+### 5.2 The always-null fields are a `field-type` cost, not a recall one
+
+Where they *do* show up is the other metric, and it explains a number flagged
+twice already. Of `field-type`'s **25** disagreements on matched response
+fields, **21** are the model saying `null` against a document saying
+`array` (15) or `object` (6):
+
+```
+"null" vs array    15
+"null" vs object    6
+"string" vs integer 4
+```
+
+So `field-type.accuracy` reading exactly `0.9000` (225/250) at its gate is
+**five sixths a statement about the seeded instance** — a Vikunja with no
+assignee, attachment, label or reminder on any task. Emitting `array` there
+would be inventing a type from an observation that never happened, which §7.5
+forbids; emitting `null` is correct and is scored as wrong.
+
+Recorded, not fixed. It is the same class as `seed-coverage` — a ceiling that
+belongs beside a metric rather than inside it — and whether `field-type`
+wants the same treatment is a separate decision nobody has asked for.
+
+### 5.3 The denominator question stays untouched, as ruled
+
+The 100 subtree misses are pointers under a value that was never anything but
+null or never present at all. Not inferable from any observation, and the
+ruling was explicit that the exclusion waits until the first half is measured.
+It is measured, and it closed nothing — so the subtree question is now the
+*whole* of the remaining gap rather than most of it, which is worth knowing
+before anyone designs the predicate.
