@@ -134,6 +134,31 @@ describe('assessModelAssembly', () => {
     expect(SCAFFOLD_STAGES).not.toContain('capture');
   });
 
+  /**
+   * The input is looked up by its DECLARED name, never by the part's.
+   *
+   * `behaviours` is assembled from `flows`, so a lookup keyed on the part
+   * reads `inputs.behaviours` — undefined — and reports a capture holding
+   * 113 traces as having no input at all. It produces a number in both
+   * states, so nothing throws and nothing looks wrong. Asserted where the
+   * two names differ, because a row whose part and input share a name
+   * passes under the bug.
+   */
+  it('reads the declared input name, not the part name', () => {
+    const behaviours = MODEL_COLLECTIONS.find((d) => d.part === 'behaviours')!;
+    expect(behaviours.input).toBe('flows');
+    expect(assessModelAssembly({
+      declared: [behaviours], collections: ['behaviours'],
+      inputs: { flows: 113 }, parts: { behaviours: 0 },
+    })).toEqual([]);
+    // And the same row against an input that really is empty must fire, so
+    // the assertion above is not passing for want of any check at all.
+    expect(assessModelAssembly({
+      declared: [behaviours], collections: ['behaviours'],
+      inputs: { flows: 0 }, parts: { behaviours: 0 },
+    }).map((f) => f.problem)).toEqual(['declared-without-input']);
+  });
+
   /** Negative control (§13): ordinary growth is not a finding. */
   it('does NOT fire when an assembling collection changes size', () => {
     expect(assess({ parts: { ...PARTS, operations: 40 } })).toEqual([]);
