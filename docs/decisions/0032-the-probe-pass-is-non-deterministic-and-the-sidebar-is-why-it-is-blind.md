@@ -170,16 +170,47 @@ The 45 are the *same seven* sidebar links re-encountered on all seven routes
 **7** is how much distinct behaviour a fix would recover. Both are true and they
 answer different questions; quoting only the larger one would oversell it.
 
-## 6. The fix, named and not built
+## 6. The fix — `revealInScrollableAncestor`
 
-Scroll the *ancestor* rather than the element: find the nearest scrollable
-ancestor and drive its `scrollTop`, instead of relying on
-`scrollIntoViewIfNeeded` to find a scrollport it will not move.
+Scroll the *ancestor* rather than the element: walk up to the nearest scrollable
+ancestor that is not the document scroller, and drive its `scrollTop`/
+`scrollLeft` so the element's **centre** lands in the middle of that scrollport.
+Centre rather than edge, because the centre is what a click targets and what
+`elementFromPoint` is asked about — aligning an edge can leave the centre
+outside, which is the state this exists to end.
 
-Not built in this turn, deliberately. It changes the probe pass, which is the
-subject of §4's bound — so landing it and the bound together would leave neither
-measurable, and §2.1 is already one instance of an instrument that moved its own
-subject. The order is: hold the baseline, change the pass, re-measure against 4.
+**The justification is the class, not the count.** Seven distinct controls on
+Vikunja understates it: capture could not drive *anything* inside a
+`position: fixed` overflow container, and a fixed sidebar over a scrolling pane
+is one of the most common layouts on the web. The 45 are what one such container
+cost on one small app.
+
+### 6.1 Confined on purpose, so the baseline stays a control
+
+It is in the **probe action path** and deliberately not in a shared locator
+helper. The read-only crawl has no probe pass, so its baseline of 4 is only a
+control while the change cannot reach it — a shared helper would move both, and a
+moved read-only number could no longer tell *the change overreached* from *the
+target drifted*. §2.1 is the precedent: an instrument that perturbs its own
+subject stops being one.
+
+`diagnoseUndriveable` is untouched for the same reason. It runs after the timeout
+and calls `scrollIntoViewIfNeeded` as an instrument; if it began reading a page
+the action path had already scrolled, the before/after distributions in §5 would
+stop comparing the same thing.
+
+### 6.2 Predicted before running
+
+| | before | predicted |
+|---|---|---|
+| `click/timeout` | 51 | **falls** — this is the population the fix addresses |
+| centre off-screen after scroll | 49 | falls with it |
+| `locate/not-found` | 15 | **unchanged** — a different failure, and nothing here touches it |
+| read-only idempotence | 4 of 81 | **exactly 4** — the read-only crawl has no probe pass |
+| every graded metric | — | at risk, and reported either way: more driven controls means more observed traffic, so `endpoint-identity` and the field categories *may* legitimately move |
+
+A moved read-only number is the signal that the change reached further than
+intended, and it would be a finding rather than a nuisance.
 
 ## 7. Open
 

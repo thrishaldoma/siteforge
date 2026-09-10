@@ -619,6 +619,74 @@ function recordUndriveable({ routeId, candidate, label, kind, diagnostic }) {
  * runs after a failure, and a diagnostic that hangs turns one slow probe into a
  * stalled run.
  */
+/**
+ * Scroll the element's nearest scrollable **ancestor**, when that ancestor is
+ * not the viewport.
+ *
+ * `scrollIntoViewIfNeeded` succeeded on all 51 timeouts and left 49 centres off
+ * the screen, and 0032 §5 read the reason out of the captured layout rather
+ * than guessing it a fourth time: 45 of those 49 sit inside
+ * `aside.menu-container`, which is `position: fixed` with `overflow: auto`. Its
+ * scrollport is not the viewport, so scrolling it cannot change where its
+ * contents sit on the screen — the call succeeds and nothing moves.
+ *
+ * **The class, not the count.** Seven distinct controls on Vikunja understates
+ * this: capture currently cannot drive *anything* inside a fixed overflow
+ * container, and a fixed sidebar over a scrolling pane is one of the most common
+ * layouts on the web. The 45 are what one such container cost on one app.
+ *
+ * Deliberately confined to the probe action path, and deliberately **not** put
+ * in a shared locator helper. The read-only crawl has no probe pass, so its
+ * idempotence baseline of 4 (0032 §3) is only a control while this cannot reach
+ * it — a shared helper would move both, and a moved read-only number could no
+ * longer tell "the change overreached" from "the target drifted". The
+ * held-container measurement is the precedent: an instrument that perturbs its
+ * own subject stops being one.
+ *
+ * `diagnoseUndriveable` is untouched for the same reason. It runs *after* the
+ * timeout and calls `scrollIntoViewIfNeeded` as an instrument; if it started
+ * reading a page this had already scrolled, the before/after distributions
+ * would stop comparing the same thing.
+ */
+async function revealInScrollableAncestor(locator) {
+  // operational: the element detached or the page closed mid-probe. A reveal
+  // that could not run leaves the click to fail on its own terms, which is the
+  // behaviour before this existed.
+  try {
+    await locator.evaluate((el) => {
+      const scrollable = (node) => {
+        const cs = getComputedStyle(node);
+        const scrolls = (v) => v === 'auto' || v === 'scroll' || v === 'overlay';
+        return (
+          (scrolls(cs.overflowY) && node.scrollHeight > node.clientHeight) ||
+          (scrolls(cs.overflowX) && node.scrollWidth > node.clientWidth)
+        );
+      };
+      // Nearest scrollable ancestor that is not the document scroller. The
+      // document one is what `scrollIntoViewIfNeeded` already handles, and it
+      // is the one that works — re-driving it here would be a second policy for
+      // the case that never failed.
+      let node = el.parentElement;
+      while (node !== null && node !== document.body && node !== document.documentElement) {
+        if (scrollable(node)) {
+          const box = el.getBoundingClientRect();
+          const port = node.getBoundingClientRect();
+          // Bring the element's centre to the middle of the scrollport. Centre
+          // rather than edge because the centre is what a click targets and what
+          // `elementFromPoint` is asked about — aligning an edge can leave the
+          // centre outside, which is the state this exists to end.
+          node.scrollTop += (box.top + box.height / 2) - (port.top + port.height / 2);
+          node.scrollLeft += (box.left + box.width / 2) - (port.left + port.width / 2);
+          return;
+        }
+        node = node.parentElement;
+      }
+    }, { timeout: 1000 });
+  } catch (err) {
+    rethrowIfDefect(err);
+  }
+}
+
 async function diagnoseUndriveable({ page, locator, candidate, step, attemptIndex, navigationPending }) {
   // operational: the element detached or the page closed while we were asking about it
   const ask = async (fn) => { try { return await fn(); } catch (err) { rethrowIfDefect(err); return null; } };
@@ -812,6 +880,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     await settle(2000);
     const before = await step('snap-before', snap);
     const netBefore = observations.length;
+    await step('reveal', () => revealInScrollableAncestor(locator));
     await step('click', () => locator.click({ timeout: 5000 }));
     // §6 says network idle or 2s. `networkidle` alone is not enough: on an
     // already-idle page it resolves before the click's fetch is even issued.
