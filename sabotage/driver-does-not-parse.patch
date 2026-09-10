@@ -1,11 +1,11 @@
 diff --git a/packages/capture/scripts/capture-site.mjs b/packages/capture/scripts/capture-site.mjs
-index 8d89f81..5d50f37 100644
+index 9569833..60dcc2a 100644
 --- a/packages/capture/scripts/capture-site.mjs
 +++ b/packages/capture/scripts/capture-site.mjs
-@@ -712,7 +712,7 @@ async function revealInScrollableAncestor(locator) {
-         node = node.parentElement;
+@@ -738,7 +738,7 @@ async function revealInScrollableAncestor(locator) {
+         out = out.parentElement;
        }
-       return 'no scrollable ancestor';
+       return 'no scrollable ancestor · none out of flow';
 -    }, VIEWPORT, { timeout: 1000 }));
 +    }, VIEWPORT, { timeout: 1000 });
    } catch (err) {
