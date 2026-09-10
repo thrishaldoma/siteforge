@@ -103,6 +103,34 @@ export interface GapAggregationFinding {
   readonly gapId?: string;
 }
 
+/**
+ * The block, split into the per-run sections it is made of.
+ *
+ * Sections matter to the check, not just to the reader. `GAPS.md` aggregates
+ * **across runs** and is tracked by git, while the stage reports it is built
+ * from live under a gitignored `capture/` — so a clone of this repository has
+ * every row and not one of the runs behind them. §13's two-views rule, and it
+ * bit this check on its first `verify:clean`: comparing the file's rows
+ * against whatever runs happen to be on *this* machine reported all 50 as
+ * orphans, and a transient capture tree another gate's control created was
+ * enough to make it non-empty and fire.
+ *
+ * So a row is only ever checked against a run that was supplied. A section
+ * for a run this machine does not have is a past run, which is the file
+ * doing its job.
+ */
+function sectionsOf(body: string): Map<string, string> {
+  const out = new Map<string, string>();
+  // Split on the heading marker rather than on `###`, so prose in a summary
+  // that happens to start with hashes cannot open a phantom section.
+  const parts = body.split(/^### /m);
+  for (const part of parts.slice(1)) {
+    const heading = `### ${part.slice(0, part.indexOf('\n') === -1 ? part.length : part.indexOf('\n'))}`.trimEnd();
+    out.set(heading, part);
+  }
+  return out;
+}
+
 /** The one place the generated block is recognised, for both writing and checking. */
 function generatedBlock(markdown: string): { body: string } | null {
   const begins = markdown.split(GAPS_BEGIN).length - 1;
@@ -231,7 +259,7 @@ export function assessGapAggregation(input: {
     });
   }
 
-  const aggregated = new Set<string>();
+  const sections = sectionsOf(body);
   for (const run of input.runs) {
     if (run.manifestGapCount !== undefined && run.manifestGapCount !== run.gaps.length) {
       findings.push({
@@ -242,7 +270,8 @@ export function assessGapAggregation(input: {
           `${run.gaps.length} record(s). The records are canonical; the count references them.`,
       });
     }
-    if (!body.includes(runHeading(run))) {
+    const section = sections.get(runHeading(run));
+    if (section === undefined) {
       findings.push({
         problem: 'run-unaggregated',
         runId: run.runId,
@@ -251,12 +280,11 @@ export function assessGapAggregation(input: {
           'section for the run. §1 requires the listing; a gap recorded only in a stage report ' +
           'is not the deliverable.',
       });
-      for (const gap of run.gaps) aggregated.add(gap.gapId);
       continue;
     }
+    const mine = new Set(run.gaps.map((g) => g.gapId));
     for (const gap of run.gaps) {
-      aggregated.add(gap.gapId);
-      if (!body.includes(gap.gapId)) {
+      if (!section.includes(gap.gapId)) {
         findings.push({
           problem: 'gap-unaggregated',
           runId: run.runId,
@@ -265,20 +293,27 @@ export function assessGapAggregation(input: {
         });
       }
     }
-  }
 
-  // The other direction. A row nothing produced means the file is asserting a
-  // gap that no run behind it carries, and a check that only walked the runs
-  // would call that clean.
-  for (const rowId of body.match(/gap_[0-9a-f]{12}/g) ?? []) {
-    if (!aggregated.has(rowId)) {
-      findings.push({
-        problem: 'row-without-gap',
-        gapId: rowId,
-        detail:
-          'GAPS.md carries this gap id and no supplied stage report does. Either a run was ' +
-          'dropped from the aggregation or the file was edited by hand.',
-      });
+    /**
+     * The other direction, **scoped to this run's own section**.
+     *
+     * A row nothing produced means the file asserts a gap the run behind it
+     * does not carry — a dropped gap or a hand edit. Scoped, because the
+     * unscoped form compares against runs that are simply not on this
+     * machine and reports the whole file as orphaned.
+     */
+    for (const rowId of section.match(/gap_[0-9a-f]{12}/g) ?? []) {
+      if (!mine.has(rowId)) {
+        findings.push({
+          problem: 'row-without-gap',
+          runId: run.runId,
+          gapId: rowId,
+          detail:
+            `GAPS.md lists this gap under ${run.siteId} · ${run.stage} · ${run.runId} and that ` +
+            'run’s stage report does not carry it. Either a gap was dropped or the file was ' +
+            'edited by hand.',
+        });
+      }
     }
   }
   return findings;

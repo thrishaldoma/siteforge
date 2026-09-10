@@ -128,6 +128,39 @@ describe('assessGapAggregation', () => {
     expect(findings[0]?.gapId).toBe('gap_bbbbbbbbbbbb');
   });
 
+  /**
+   * The regression that `verify:clean` found on this check's first run.
+   *
+   * `GAPS.md` is tracked and `capture/` is gitignored, so a clone has every
+   * row and none of the runs behind them — §13's two-views rule, with the
+   * two sides of one check in different views. The unscoped comparison
+   * reported all 50 rows as orphans the moment anything put a capture tree
+   * on disk, which a *different* gate's sabotage control does.
+   */
+  it('does NOT orphan a section for a run this machine does not have', () => {
+    const past = run({ runId: 'run_gone', siteId: 'rung-three', gaps: [gap('gap_eeeeeeeeeeee')] });
+    const here = run({ runId: 'run_here' });
+    const markdown = aggregated([past, here]);
+    expect(assessGapAggregation({ runs: [here], markdown })).toEqual([]);
+  });
+
+  it('reports no-runs-supplied, not 50 orphans, on a clone with no capture tree', () => {
+    const markdown = aggregated([run(), run({ runId: 'run_0002', gaps: [gap('gap_cccccccccccc')] })]);
+    expect(assessGapAggregation({ runs: [], markdown }).map((f) => f.problem))
+      .toEqual(['no-runs-supplied']);
+  });
+
+  it('still catches a dropped gap inside a section whose run IS supplied', () => {
+    // The scoping must not turn the reverse direction off — only aim it.
+    const markdown = aggregated([run({ gaps: [gap('gap_aaaaaaaaaaaa'), gap('gap_dddddddddddd')] })]);
+    const findings = assessGapAggregation({
+      runs: [run({ gaps: [gap('gap_aaaaaaaaaaaa')] })],
+      markdown,
+    });
+    expect(findings.map((f) => f.problem)).toEqual(['row-without-gap']);
+    expect(findings[0]?.gapId).toBe('gap_dddddddddddd');
+  });
+
   it('FAILS unusable markers, and reports nothing else on top of it', () => {
     const doubled = `${aggregated([run()])}\n${GAPS_BEGIN}\n${GAPS_END}\n`;
     const findings = assessGapAggregation({ runs: [run()], markdown: doubled });
