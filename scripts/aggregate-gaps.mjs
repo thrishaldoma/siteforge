@@ -20,6 +20,27 @@
  * The judgement is not here. `assessGapAggregation` takes the runs and the
  * markdown as parameters so a test can drive it to a failing verdict on input
  * this script cannot produce; this file is the wiring that finds the two sides.
+ *
+ * ### Why `--check` is NOT in `pnpm lint`, said rather than omitted
+ *
+ * It was, for one commit, and `verify:clean` rejected it — correctly, and for
+ * a reason worth keeping written down. **`GAPS.md` is tracked and `capture/`
+ * is not.** So the file's committed rows come from the runs on the machine
+ * that aggregated them, while a fresh clone's `capture/` is whatever the
+ * rungs just wrote there. `verify:clean` runs rung 2 and rung 3 before the
+ * sabotage harness, and the determinism shim gives those runs the *same*
+ * `runId` as the committed section with a *different* gap set — so the check
+ * compared two unrelated crawls that happened to share an identity and
+ * reported a dropped gap.
+ *
+ * That is not a scoping bug this check can fix by narrowing further. The two
+ * sides genuinely live in different views (§13), and a lint pass is run in
+ * the one place where they cannot be reconciled. **So the gate lives where
+ * the run lives**: `capture-site.mjs` calls this script in its tail and fails
+ * the run when the aggregation does not describe it, which is exactly what
+ * the ruling asked for. The judgement itself is proved by the shared tests
+ * and by `gap-aggregation-never-appends`, neither of which needs a capture
+ * tree to exist.
  */
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

@@ -11,7 +11,7 @@
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "typecheck": "tsc --build --force && pnpm -r --parallel typecheck:tests",
-    "lint": "pnpm -s --filter @siteforge/shared build && node scripts/lint-catch.mjs && node scripts/lint-guarded-pages.mjs && node scripts/lint-identifiers.mjs && node scripts/lint-empty-admits.mjs && node scripts/aggregate-gaps.mjs --check",
+    "lint": "pnpm -s --filter @siteforge/shared build && node scripts/lint-catch.mjs && node scripts/lint-guarded-pages.mjs && node scripts/lint-identifiers.mjs && node scripts/lint-empty-admits.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "fixtures": "pnpm --filter @siteforge/schema build && node packages/schema/scripts/build-fixtures.mjs && node packages/schema/scripts/build-site-fixture.mjs",
