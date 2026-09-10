@@ -77,13 +77,28 @@ const describe = (n) => {
 };
 
 /**
- * Is this ancestor a scroll container, a clip, a transform, or out of flow?
+ * What this ancestor **declares**, in the four properties the ruling named.
  *
- * The four properties the ruling named, and nothing else. A property that is
- * merely unusual is not evidence; these four are the ones that decide which box
- * `scrollIntoViewIfNeeded` scrolls and what it can reach.
+ * **Declares, not does.** A computed value states what would happen if a
+ * condition holds, and whether it holds is a runtime measurement this file
+ * cannot take. `overflow: auto` scrolls only when `scrollHeight > clientHeight`;
+ * `position: sticky` sticks only inside a scroll container it can stick within;
+ * a `transform` changes the containing block of fixed descendants only if there
+ * are any.
+ *
+ * 0032 §5 read *capability* off these labels — "the nearest scrollable ancestor
+ * is not the viewport" — and it was wrong. `aside.menu-container` declares
+ * `overflow: auto` and holds 220px of nav in a 736px box, so it has nothing to
+ * scroll: the probe-time instrument found **no scrollable ancestor for 49 of
+ * 49**. The layout read was sound and the consequence drawn from it was not.
+ *
+ * `capture-route.mjs`'s sticky detector is how to do this properly and is the
+ * control for the same audit: it requires `position: sticky` **and** a
+ * `viewportTop` observed not to move while the document scrolled — the declared
+ * value plus the runtime condition. Nothing here can do that, so nothing here
+ * claims it.
  */
-const notable = (d) =>
+const declares = (d) =>
   [
     d['overflow-x'] !== 'visible' || d['overflow-y'] !== 'visible'
       ? `overflow ${d['overflow-x']}/${d['overflow-y']}`
@@ -109,14 +124,15 @@ for (const c of targets) {
   }
   // Strict ancestors: an element's own overflow cannot clip it out of view.
   for (const { node, style } of chain.slice(0, -1)) {
-    const flags = notable(style);
+    const flags = declares(style);
     if (flags.length === 0) continue;
     const key = `${describe(node)}  ${flags.join(' · ')}`;
     tally.set(key, (tally.get(key) ?? 0) + 1);
   }
 }
 
-console.log(`\nancestors that scroll, clip, transform, or leave the flow${missing > 0 ? `  (${missing} node(s) absent from dom.json)` : ''}:\n`);
+console.log(`\nancestors DECLARING an overflow, a transform, or a position out of flow${missing > 0 ? `  (${missing} node(s) absent from dom.json)` : ''}:`);
+console.log('whether any of them actually scrolls is a runtime measurement this cannot take —\n`overflow: auto` needs `scrollHeight > clientHeight`, and on this target it does not have it.\n');
 for (const [key, n] of [...tally].sort((a, b) => b[1] - a[1])) {
   console.log(`  ${String(n).padStart(3)}/${targets.length}  ${key}`);
 }
