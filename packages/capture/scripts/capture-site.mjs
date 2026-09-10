@@ -1037,11 +1037,13 @@ async function diagnoseUndriveable({ page, locator, candidate, step, attemptInde
  */
 async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex = 0, destructive = false, state }) {
   let ran = false;
+  if (state === undefined) throw new Error('runProbe needs a probe state: the deadline handler reads it synchronously and cannot ask the page.');
+  /** Declared before the page exists, because the recorder is attached with it. */
+  const probeKey = `${routeId}#${attemptIndex}`;
   // unguarded: guarded on the next line
   const page = await ctx.newPage();
   installEscapeGuards(page, { onBlocked });
   attachRecorders(page, { current: routeId }, { probeKey });
-  if (state === undefined) throw new Error('runProbe needs a probe state: the deadline handler reads it synchronously and cannot ask the page.');
   watchProbeState(page, state);
   /**
    * Pushed now and filled in as the probe learns things, so a probe appears in
@@ -1049,7 +1051,6 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
    * return early and the one that never returns at all. Building it at the end
    * would silently omit precisely the probes the measurement is about.
    */
-  const probeKey = `${routeId}#${attemptIndex}`;
   const observed = {
     routeId, attemptIndex, label,
     preStructureHash: null, preTextHash: null, mutated: false,

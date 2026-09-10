@@ -131,7 +131,12 @@ for (let i = 0; i < RUNS; i += 1) {
   durations.push(Number(seconds));
   if (run.status !== 0) {
     console.error(`\n✗ crawl ${i + 1} failed; idempotence cannot be measured over a failed run.`);
+    // Both streams. A crash lands on stderr and the tail of stdout is the last
+    // thing that went *right*, so printing only stdout shows the run stopping
+    // and never says why — which is what a ReferenceError in the probe loop
+    // looked like from here: seven routes captured, then silence.
     console.error((run.stdout ?? '').split('\n').slice(-25).join('\n'));
+    console.error((run.stderr ?? '').split('\n').slice(-30).join('\n'));
     process.exit(1);
   }
   const kept = join(holding, `run-${i + 1}`);
