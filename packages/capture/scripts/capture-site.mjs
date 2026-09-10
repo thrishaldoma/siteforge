@@ -462,6 +462,48 @@ const flows = new Map();
 const skippedControls = [];
 const probedStates = new Map();
 let budgetDeclined = 0;
+/**
+ * Probes abandoned because they exceeded the wall-clock cap, not the count cap.
+ *
+ * §6's budget is a *count* of attempts per route, which bounds how many probes
+ * run and says nothing about how long one may take. Measured: two probing
+ * crawls of the pinned Vikunja from the same commit, one finishing in 475.9s
+ * and the next **hung at 38:16** with an idle event loop and a page doing
+ * nothing but polling notifications (0043). A count budget cannot see that,
+ * and a pass that can fail to terminate cannot be measured at all — every
+ * statement about its variance needs N runs, and N runs need each one to end.
+ *
+ * So the cap is wall clock as well, and an expiry is a **recorded gap** rather
+ * than a crash: the crawl continues, the artifact says what was abandoned, and
+ * the number is in the run report where the next run can disagree with it.
+ */
+let deadlineDeclined = 0;
+
+/**
+ * Race a probe against a wall clock.
+ *
+ * Deliberately not `Promise.race` against a bare timer alone: the loser keeps
+ * running, and a probe still holding a page would go on mutating the target
+ * behind the next one. The context is closed by the caller either way, which is
+ * what actually stops it — the race decides when to stop waiting, the close
+ * decides when to stop running.
+ */
+const PROBE_DEADLINE_MS = Number(process.env.SITEFORGE_PROBE_DEADLINE_MS ?? 45_000);
+
+async function withDeadline(promise, ms, onExpiry) {
+  let timer;
+  const expired = Symbol('expired');
+  const result = await Promise.race([
+    promise,
+    new Promise((resolve) => {
+      timer = setTimeout(() => resolve(expired), ms);
+    }),
+  ]);
+  clearTimeout(timer);
+  if (result !== expired) return result;
+  onExpiry();
+  return null;
+}
 
 /** Flat a11y tree: a probe needs a valid root plus the addressable elements. */
 const buildA11yTree = (captured) => ({
@@ -586,6 +628,26 @@ async function acquireStorageState(browser) {
  * one undriveable control, and seven identical console lines per sidebar link
  * is what this replaced.
  */
+/**
+ * A probe that exceeded the wall clock and was abandoned.
+ *
+ * A **gap**, not a crash: the crawl continues and the artifact says what was
+ * given up on. Distinct from `recordUndriveable` — that one is a control that
+ * was fired and would not move, which is a fact about the control; this is a
+ * probe that never came back, which is a fact about the pass and is the
+ * failure a count budget structurally cannot see (0043).
+ */
+function recordAbandoned({ routeId, nodeId, label, ms, phase }) {
+  gaps.push({
+    gapId: gapId(`probe-deadline:${routeId}:${nodeId}`),
+    stage: 'capture', category: 'interaction-not-reproducible', severity: 'degraded',
+    subject: { routeId, nodeId },
+    summary: `${label} did not return within ${ms}ms and the probe was abandoned.`,
+    detail: `§6's budget is a count of attempts per route and cannot bound a probe that never returns. Measured: two probing crawls from one commit, 475.9s and then a hang at 38:16 with an idle event loop (0043). Abandoned at ${phase}; the pass continued.`,
+    stub: { kind: 'omitted', detail: 'Probe abandoned on the wall-clock deadline; its transition is not reproduced.' },
+  });
+}
+
 function recordUndriveable({ routeId, candidate, label, kind, diagnostic }) {
   const controlId = `ctl_${sha256(`${routeId}:${candidate.nodeId}`).slice(0, 12)}`;
   if (skippedControls.some((c) => c.controlId === controlId)) return;
@@ -1140,9 +1202,16 @@ async function probeRoute({ browser, storageState, routeId, record }) {
     if (phase === 'session-destructive') {
       const ownState = await acquireStorageState(browser);
       const ownCtx = await newGuardedContext(browser, { storageState: ownState });
-      const ran = await runProbe({
-        ctx: ownCtx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex: attempted,
-      });
+      const ran = await withDeadline(
+        runProbe({
+          ctx: ownCtx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex: attempted,
+        }),
+        PROBE_DEADLINE_MS,
+        () => {
+          deadlineDeclined += 1;
+          recordAbandoned({ routeId, nodeId: candidate.nodeId, label, ms: PROBE_DEADLINE_MS, phase: 'session-destructive' });
+        },
+      );
       await ownCtx.close();
       if (ran) sessionFired += 1;
       continue;
@@ -1157,7 +1226,15 @@ async function probeRoute({ browser, storageState, routeId, record }) {
     // structurally cannot vary (§13).
     const attemptIndex = attempted;
     attempted += 1;
-    if (await runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex })) fired += 1;
+    const ran = await withDeadline(
+      runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex }),
+      PROBE_DEADLINE_MS,
+      () => {
+        deadlineDeclined += 1;
+        recordAbandoned({ routeId, nodeId: candidate.nodeId, label, ms: PROBE_DEADLINE_MS, phase: `attempt ${attemptIndex}` });
+      },
+    );
+    if (ran) fired += 1;
   }
   await ctx.close();
   return { fired, attempted, sessionFired, candidates: distinct.length };
@@ -1187,7 +1264,8 @@ function reportUndriveableDistribution() {
   const pct = reachable === 0 ? 0 : Math.round((completed / reachable) * 100);
   console.log(
     `\n  behaviour ceiling: ${completed} of ${reachable} driven control(s) produced a transition (${pct}%)` +
-    ` · ${undriveable.length} would not resolve · ${budgetDeclined} declined on budget`,
+    ` · ${undriveable.length} would not resolve · ${budgetDeclined} declined on budget` +
+    ` · ${deadlineDeclined} abandoned on the ${PROBE_DEADLINE_MS}ms deadline`,
   );
   if (undriveable.length === 0) {
     console.log('  undriveable: none');
@@ -1395,6 +1473,7 @@ async function main() {
     console.log(
       `  flows: ${flows.size} (${[...flows.values()].filter((f) => f.outcome === 'skipped').length} skipped) · ` +
       `skipped controls: ${skippedControls.length} · budget-declined: ${budgetDeclined}` +
+      ` · deadline-abandoned: ${deadlineDeclined}` +
       (lostObservations > 0 ? ` · observations lost to a closing page: ${lostObservations}` : ''),
     );
 
