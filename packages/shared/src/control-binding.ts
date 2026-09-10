@@ -36,6 +36,28 @@
  * to a weaker rung and bind anyway, which is the failure the ranking exists to
  * prevent: a `<form action="https://external/">` is a rank-3 hit and still not
  * ours.
+ *
+ * ### Within a rung, iteration order never decides either (0042)
+ *
+ * Ranking fixes precedence *between* rungs and says nothing about a rung that
+ * matches two candidates. Rank 5 of §7.6 shipped taking the first path-like
+ * `data-*` attribute, so `Object.entries` order picked the binding — the same
+ * unreviewable-by-construction defect the duplicate-rank throw exists to
+ * prevent, one level down, in the turn that implemented the rule.
+ *
+ * The fix is structural rather than a patch to that rung: **a rung cannot pick,
+ * because it never holds the choice.** `run` returns *every* match, and the
+ * evaluator resolves:
+ *
+ *  - one candidate  → bind it;
+ *  - several, and the rung declares a `tiebreak` → sort and bind the first,
+ *    recording that a tiebreak was applied;
+ *  - several, and no tiebreak → an **ambiguous decline**, reported with all of
+ *    them. 0015 §2 already settled this shape for endpoint matching: an
+ *    ambiguity is reported, never resolved by picking the better one;
+ *  - several, a tiebreak is declared, and it **ties** → also ambiguous. A
+ *    comparator that returns 0 has not decided, and falling back to array
+ *    order there would reintroduce the bug through the fix.
  */
 
 /** What a URL rung binds to. Method is evidence-derived, never guessed. */
@@ -62,8 +84,14 @@ export interface BindingEvidence {
   readonly detail: string;
 }
 
+/** One thing a rung matched. A rung may match several; it may not choose. */
+export interface BindingCandidate<T extends BindingTarget> {
+  readonly target: T;
+  readonly detail: string;
+}
+
 export type RungVerdict<T extends BindingTarget> =
-  | { readonly kind: 'bind'; readonly target: T; readonly detail: string }
+  | { readonly kind: 'bind'; readonly candidates: readonly BindingCandidate<T>[] }
   | { readonly kind: 'decline'; readonly reason: string; readonly detail: string }
   | null;
 
@@ -71,14 +99,28 @@ export interface BindingRung<C, T extends BindingTarget> {
   readonly rank: number;
   readonly id: string;
   /**
-   * `null` when this rung has nothing to say about this control. Never a
-   * default — a rung that cannot decide says so, and the next rank runs.
+   * How to order several matches, when the rung has a principled way to.
+   *
+   * Optional, and its absence is the safe state: without it several matches
+   * are an ambiguous decline rather than a coin flip. Declaring one is a
+   * claim that the order is an argument, so it carries `tiebreakReason` and
+   * the evaluator refuses a comparator with no reason — the same shape as
+   * every other declared exemption in this repository.
+   */
+  readonly tiebreak?: (a: BindingCandidate<T>, b: BindingCandidate<T>) => number;
+  readonly tiebreakReason?: string;
+  /**
+   * Every match, never a chosen one. `null` when this rung has nothing to say
+   * about this control; `{kind:'bind', candidates: []}` is not a thing — a
+   * rung that matched nothing is silent.
    */
   run(control: C): RungVerdict<T>;
 }
 
 /** A control the ranking bound. */
 export interface ControlBinding<T extends BindingTarget> {
+  /** Set when several candidates matched and a declared tiebreak chose. */
+  readonly tiebrokenFrom?: number;
   readonly controlId: string;
   readonly target: T;
   /** Every rung that fired, in rank order — not only the winner. */
@@ -108,6 +150,60 @@ export interface BindingReport<T extends BindingTarget> {
   readonly silentRungs: readonly string[];
 }
 
+
+/**
+ * Turn a rung's matches into a single verdict, or refuse to.
+ *
+ * This is where "iteration order never decides" is enforced, and it is here
+ * rather than in each rung because a rung that could choose would eventually
+ * choose. The rung reports what it saw; this decides what that means.
+ */
+type Resolved<T extends BindingTarget> =
+  | { readonly kind: 'bind'; readonly target: T; readonly detail: string; readonly tiebrokenFrom?: number }
+  | { readonly kind: 'decline'; readonly reason: string; readonly detail: string };
+
+function resolveCandidates<C, T extends BindingTarget>(
+  rung: BindingRung<C, T>,
+  verdict: NonNullable<RungVerdict<T>>,
+): Resolved<T> {
+  if (verdict.kind === 'decline') return verdict;
+  const candidates = verdict.candidates;
+  if (candidates.length === 0) {
+    throw new Error(
+      `rung '${rung.id}' returned a bind with no candidates. A rung that matched nothing is ` +
+      'silent (`null`); an empty bind is the empty-container shape §13 forbids, and it would ' +
+      'record the rung as having fired.',
+    );
+  }
+  if (candidates.length === 1) {
+    return { kind: 'bind', target: candidates[0]!.target, detail: candidates[0]!.detail };
+  }
+  const listed = candidates.map((c) => c.detail).join(' · ');
+  if (rung.tiebreak === undefined) {
+    return {
+      kind: 'decline',
+      reason: 'ambiguous-candidates',
+      detail: `${rung.id} matched ${candidates.length}: ${listed}. Nothing here says which the control uses, and taking the first would make iteration order decide.`,
+    };
+  }
+  const sorted = [...candidates].sort(rung.tiebreak);
+  // A comparator that returns 0 has not decided. Falling back to array order
+  // for the tie would put the bug back in through the fix.
+  if (rung.tiebreak(sorted[0]!, sorted[1]!) === 0) {
+    return {
+      kind: 'decline',
+      reason: 'tiebreak-tied',
+      detail: `${rung.id}'s tiebreak (${rung.tiebreakReason}) does not separate ${candidates.length} matches: ${listed}`,
+    };
+  }
+  return {
+    kind: 'bind',
+    target: sorted[0]!.target,
+    detail: `${sorted[0]!.detail} (chosen from ${candidates.length} by ${rung.tiebreakReason})`,
+    tiebrokenFrom: candidates.length,
+  };
+}
+
 /**
  * Run the ranked rungs over each control.
  *
@@ -132,6 +228,16 @@ export function assessControlBindings<C extends { controlId: string; gapId: stri
   // position in a literal cannot silently outrank its declared number.
   const rungs = [...input.rungs].sort((a, b) => a.rank - b.rank);
 
+  for (const rung of input.rungs) {
+    if (rung.tiebreak !== undefined && (rung.tiebreakReason ?? '').trim().length === 0) {
+      throw new Error(
+        `rung '${rung.id}' declares a tiebreak with no reason. A tiebreak is a claim that ` +
+        'the order between two matches is an argument rather than an accident, and an ' +
+        'undeclared one is indistinguishable from taking the first.',
+      );
+    }
+  }
+
   const bound: ControlBinding<T>[] = [];
   const declined: ControlDecline[] = [];
   const unbound: string[] = [];
@@ -139,13 +245,18 @@ export function assessControlBindings<C extends { controlId: string; gapId: stri
 
   for (const control of input.controls) {
     const evidence: BindingEvidence[] = [];
-    let decision: { rung: BindingRung<C, T>; verdict: NonNullable<RungVerdict<T>> } | null = null;
+    let decision: { rung: BindingRung<C, T>; verdict: Resolved<T> } | null = null;
 
     for (const rung of rungs) {
-      const verdict = rung.run(control);
-      if (verdict === null) continue;
+      const raw = rung.run(control);
+      if (raw === null) continue;
+      const verdict = resolveCandidates(rung, raw);
       fired.add(rung.id);
-      evidence.push({ rank: rung.rank, rung: rung.id, detail: verdict.detail });
+      evidence.push({
+        rank: rung.rank,
+        rung: rung.id,
+        detail: verdict.kind === 'bind' ? verdict.detail : verdict.detail,
+      });
       // First to speak decides; the rest still run, and still record.
       if (decision === null) decision = { rung, verdict };
     }
@@ -170,6 +281,9 @@ export function assessControlBindings<C extends { controlId: string; gapId: stri
       evidence,
       rank: decision.rung.rank,
       gapId: control.gapId,
+      ...(decision.verdict.tiebrokenFrom === undefined
+        ? {}
+        : { tiebrokenFrom: decision.verdict.tiebrokenFrom }),
     });
   }
 

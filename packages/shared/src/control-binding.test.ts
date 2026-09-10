@@ -25,7 +25,10 @@ const binds = (rank: number, id: string, on: string, path: string): BindingRung<
   id,
   run: (c) =>
     c.kind === on || c.kind === `${on}+`
-      ? { kind: 'bind', target: { kind: 'url', path, method: 'GET' }, detail: `${id} fired` }
+      ? {
+          kind: 'bind',
+          candidates: [{ target: { kind: 'url', path, method: 'GET' }, detail: `${id} fired` }],
+        }
       : null,
 });
 const declines = (rank: number, id: string, on: string): BindingRung<C, UrlTarget> => ({
@@ -144,5 +147,80 @@ describe('control — adding a weaker rung does not move a decision', () => {
     expect(after.bound[0]!.target).toEqual(before.bound[0]!.target);
     // …and the weaker rung is still recorded, which is the other half.
     expect(after.bound[0]!.evidence.map((e) => e.rung)).toEqual(['strong', 'weaker']);
+  });
+});
+
+/**
+ * Within a rung: iteration order never decides either (0042).
+ *
+ * The rung reports every match and the evaluator resolves, so a rung that
+ * matched two things cannot quietly take the first — it does not hold the
+ * choice.
+ */
+describe('several candidates from one rung', () => {
+  const two = (over: Partial<BindingRung<C, UrlTarget>> = {}): BindingRung<C, UrlTarget> => ({
+    rank: 3,
+    id: 'multi',
+    run: () => ({
+      kind: 'bind',
+      candidates: [
+        { target: { kind: 'url', path: '/b', method: 'GET' }, detail: 'b-match' },
+        { target: { kind: 'url', path: '/a', method: 'GET' }, detail: 'a-match' },
+      ],
+    }),
+    ...over,
+  });
+
+  it('DECLINES as ambiguous when the rung declares no tiebreak', () => {
+    const report = assessControlBindings({ controls: [control('c1', 'x')], rungs: [two()] });
+    expect(report.bound).toEqual([]);
+    expect(report.declined[0]).toMatchObject({ rung: 'multi', reason: 'ambiguous-candidates' });
+    expect(report.declined[0]!.detail).toMatch(/b-match/);
+    expect(report.declined[0]!.detail).toMatch(/a-match/);
+  });
+
+  it('binds by a declared tiebreak, and records that one was applied', () => {
+    const report = assessControlBindings({
+      controls: [control('c1', 'x')],
+      rungs: [
+        two({
+          tiebreak: (a, b) => a.target.path.localeCompare(b.target.path),
+          tiebreakReason: 'lexical path order, for a deterministic test',
+        }),
+      ],
+    });
+    // `/a` wins although `/b` is first in the array — the comparator decided,
+    // not the order.
+    expect(report.bound[0]!.target.path).toBe('/a');
+    expect(report.bound[0]!.tiebrokenFrom).toBe(2);
+  });
+
+  it('DECLINES when a declared tiebreak ties, rather than falling back to order', () => {
+    // A comparator returning 0 has not decided. Falling back here would put
+    // the bug back in through the fix.
+    const report = assessControlBindings({
+      controls: [control('c1', 'x')],
+      rungs: [two({ tiebreak: () => 0, tiebreakReason: 'a comparator that decides nothing' })],
+    });
+    expect(report.bound).toEqual([]);
+    expect(report.declined[0]).toMatchObject({ reason: 'tiebreak-tied' });
+  });
+
+  it('THROWS on a tiebreak with no declared reason', () => {
+    expect(() =>
+      assessControlBindings({
+        controls: [control('c1', 'x')],
+        rungs: [two({ tiebreak: (a, b) => a.target.path.localeCompare(b.target.path) })],
+      }),
+    ).toThrow(/tiebreak with no reason/);
+  });
+
+  it('THROWS on a bind carrying no candidates, rather than recording a silent fire', () => {
+    expect(() =>
+      assessControlBindings({
+        controls: [control('c1', 'x')],
+        rungs: [{ rank: 1, id: 'empty', run: () => ({ kind: 'bind', candidates: [] }) }],
+      }),
+    ).toThrow(/no candidates/);
   });
 });

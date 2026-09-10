@@ -176,7 +176,10 @@ describe('rank 5 — a URL literal on the control itself', () => {
       control({ tag: 'button', attributes: { 'data-url': '/a', 'data-endpoint': '/b' } }),
     );
     expect(report.bound).toEqual([]);
-    expect(report.declined[0]).toMatchObject({ rank: 5, reason: 'ambiguous-literal' });
+    // The rung no longer has an ambiguity branch of its own — it reports both
+    // matches and the evaluator refuses (0042). One mechanism, not a rule
+    // re-implemented per rung.
+    expect(report.declined[0]).toMatchObject({ rank: 5, reason: 'ambiguous-candidates' });
   });
 
   it('IGNORES our own data-sf-* attributes', () => {

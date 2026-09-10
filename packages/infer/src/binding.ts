@@ -169,8 +169,12 @@ export function urlBindingRungs(base: string): ReadonlyArray<BindingRung<Bindabl
         const method = declared === 'post' ? 'POST' : 'GET';
         return {
           kind: 'bind',
-          target: { kind: 'url', path: normalizePath(path).pattern, method },
-          detail: `<form action="${action}" method="${declared}">`,
+          candidates: [
+            {
+              target: { kind: 'url', path: normalizePath(path).pattern, method },
+              detail: `<form action="${action}" method="${declared}">`,
+            },
+          ],
         };
       },
     },
@@ -184,9 +188,13 @@ export function urlBindingRungs(base: string): ReadonlyArray<BindingRung<Bindabl
         if (path === undefined) return null;
         return {
           kind: 'bind',
-          // A navigation is a GET. Evidence, not a default.
-          target: { kind: 'url', path: normalizePath(path).pattern, method: 'GET' },
-          detail: `href="${href}"`,
+          candidates: [
+            {
+              // A navigation is a GET. Evidence, not a default.
+              target: { kind: 'url', path: normalizePath(path).pattern, method: 'GET' },
+              detail: `href="${href}"`,
+            },
+          ],
         };
       },
     },
@@ -197,34 +205,23 @@ export function urlBindingRungs(base: string): ReadonlyArray<BindingRung<Bindabl
         // Only the control's *own* attributes. The moment this reaches past the
         // element it becomes 0041 §2.2's chunk co-occurrence, which the ranking
         // declines on a measurement.
-        const literals = Object.entries(c.attributes)
+        // Every match, never a chosen one (0042). Two path-like attributes
+        // used to mean `Object.entries` order decided; the rung no longer
+        // holds that choice, and the evaluator declines an ambiguity it
+        // cannot resolve. No tiebreak is declared here on purpose: there is
+        // no argument for `data-url` over `data-endpoint`, and inventing one
+        // to avoid a decline is how a coin flip acquires a rationale.
+        const candidates = Object.entries(c.attributes)
           // `data-sf-*` is **ours** — siteforge injects it (decision 0007).
           // Reading our own attribute back as if the site had authored it
           // would be the generated-fixture circularity, one attribute wide.
           .filter(([name]) => name.startsWith('data-') && !name.startsWith('data-sf-'))
           .filter(([, value]) => PATH_LIKE.test(value))
-          .sort(([a], [b]) => a.localeCompare(b));
-        if (literals.length === 0) return null;
-        if (literals.length > 1) {
-          // Two path-like attributes and no argument for either. Taking the
-          // first would make `Object.entries` order the decider — the same
-          // thing the evaluator throws on when two rungs share a rank, one
-          // level down, and unreviewable for the same reason. 0015 §2 already
-          // settled the shape: an ambiguity is reported, never resolved by
-          // picking one.
-          return {
-            kind: 'decline',
-            reason: 'ambiguous-literal',
-            detail: `${literals.map(([n, v]) => `${n}="${v}"`).join(' and ')} are both path-like; nothing here says which the control uses`,
-          };
-        }
-        const [name, value] = literals[0]!;
-        return {
-          kind: 'bind',
-          target: { kind: 'url', path: normalizePath(value).pattern, method: 'GET' },
-          detail: `${name}="${value}" on the control itself`,
-        };
-        return null;
+          .map(([name, value]) => ({
+            target: { kind: 'url' as const, path: normalizePath(value).pattern, method: 'GET' as const },
+            detail: `${name}="${value}" on the control itself`,
+          }));
+        return candidates.length === 0 ? null : { kind: 'bind', candidates };
       },
     },
   ];
