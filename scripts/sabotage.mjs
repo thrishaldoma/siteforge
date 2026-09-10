@@ -394,6 +394,19 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'landmark-defers-to-href',
+    bug: "§7.6's rank 1 yields to rank 4 when the control has an href, so a landmark binds a URL",
+    reachable: "the reasoning is almost persuasive, which is what makes it the one to guard: *a <header> with an href is navigable, so why decline it?* Because rank 1 is not about whether a URL exists, it is about whether the element is a control at all — and a wrapper element carrying an href it never activates on is exactly what the 7 Vikunja `banner` entries are. Landing this is the unranked-veto bug (0033 §4.2) inverted: instead of a condition sitting above the ladder, a ranked condition quietly stops outranking the one below it, and the ranking's declared order stops describing what runs",
+    gate: ['pnpm', '-s', 'test', '--project', 'infer'],
+    // The precedence, not the decline. Under the bug rank 1 still declines
+    // every landmark that has no href — which is most of them — so a test
+    // asserting "a landmark is declined" passes in both states. §13: the
+    // assertion must exclude what the broken version also outputs.
+    expect: 'a landmark with an href still binds nothing',
+    change: 'rank 1 returns null instead of declining when the control carries an href',
+  },
+
+  {
     id: 'claim-check-drops-the-conjunction',
     bug: '`claimExceeded` reports every route with a moved screenshot, instead of only the routes whose contentHash claimed to certify them',
     reachable: "the simplification the finding invites. What a reader wants out of it is *which screenshots moved*, and the `agreed` guard reads like a filter you can drop without losing any of them — dropping it does not remove a single path from the output, it only adds routes whose hash moved too. That turns the finding back into a second copy of `unstable`, which is precisely the state 0038 exists to leave: on the real trees it would report `tasks-id` alongside `user-settings-general`, and `tasks-id`'s hash did move, so the field misled nobody there",
