@@ -1,7 +1,7 @@
 [
   {
     "file": "packages/schema/src/capture-model.ts",
-    "find": "      if (model.manifest.counts.gaps !== model.stageReport.gaps.length) {\n        ctx.addIssue({\n          code: 'custom',\n          path: ['manifest', 'counts', 'gaps'],\n          message:\n            `manifest counts ${model.manifest.counts.gaps} gap(s) but the stage report carries ` +\n            `${model.stageReport.gaps.length}. One run, one number — a gap added after the ` +\n            'manifest was built is a gap the manifest does not know about.',\n        });\n      }",
-    "replace": ""
+    "find": "       */\n      if (model.manifest.counts.gaps !== model.stageReport.gaps.length) {\n        ctx.addIssue({\n          code: 'custom',\n          path: ['manifest', 'counts', 'gaps'],\n          message:\n            `manifest counts ${model.manifest.counts.gaps} gap(s) but the stage report carries ` +\n            `${model.stageReport.gaps.length}. One run, one number — a gap added after the ` +\n            'manifest was built is a gap the manifest does not know about.',\n        });\n      }\n      const defined = new Set(model.stageReport.gaps.map((g) => g.gapId));",
+    "replace": "       */\n      const defined = new Set(model.stageReport.gaps.map((g) => g.gapId));"
   }
 ]

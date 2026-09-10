@@ -1,7 +1,7 @@
 [
   {
     "file": "packages/shared/src/scan-walker.ts",
-    "find": "  for (const prefix of expect.mustReach) {\n    const under = parsePathPattern(`/${prefix}/**`);\n    if (!relativePaths.some((r) => matchPath(r, under))) {\n      shortfalls.push(\n        `the walk never reached ${prefix}/ — it is either missing, ignored, or filtered out by the ${describe.profile} profile.`,\n      );\n    }\n  }",
-    "replace": ""
+    "find": "  }\n  for (const prefix of expect.mustReach) {\n    const under = parsePathPattern(`/${prefix}/**`);\n    if (!relativePaths.some((r) => matchPath(r, under))) {\n      shortfalls.push(\n        `the walk never reached ${prefix}/ — it is either missing, ignored, or filtered out by the ${describe.profile} profile.`,\n      );\n    }\n  }\n  return shortfalls;",
+    "replace": "  }\n  return shortfalls;"
   }
 ]

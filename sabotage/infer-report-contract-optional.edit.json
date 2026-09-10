@@ -1,7 +1,7 @@
 [
   {
     "file": "packages/schema/src/stage-report.ts",
-    "find": "    if (report.stage === 'infer' && report.detail === undefined) {\n      ctx.addIssue({\n        code: 'custom',\n        path: ['detail'],\n        message:\n          'an infer stage report carries the scored-field contract (0015 §7.1) — what is measured is reported before how it did',\n      });\n    }",
-    "replace": ""
+    "find": "    // visible before the first score.\n    if (report.stage === 'infer' && report.detail === undefined) {\n      ctx.addIssue({\n        code: 'custom',\n        path: ['detail'],\n        message:\n          'an infer stage report carries the scored-field contract (0015 §7.1) — what is measured is reported before how it did',\n      });\n    }\n    if (report.stage !== 'infer' && report.detail !== undefined) {",
+    "replace": "    // visible before the first score.\n    if (report.stage !== 'infer' && report.detail !== undefined) {"
   }
 ]

@@ -1,7 +1,7 @@
 [
   {
     "file": "packages/shared/src/capture-idempotence.ts",
-    "find": "    const agreed = new Set(claim.hashPerRun).size === 1;\n    if (!agreed) continue;",
-    "replace": ""
+    "find": "    if (claim.hashPerRun.length === 0) continue;\n    const agreed = new Set(claim.hashPerRun).size === 1;\n    if (!agreed) continue;\n    // Agreement on `null` is not agreement on a hash — it is every run failing",
+    "replace": "    if (claim.hashPerRun.length === 0) continue;\n    // Agreement on `null` is not agreement on a hash — it is every run failing"
   }
 ]
