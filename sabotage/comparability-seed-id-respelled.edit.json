@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/seed-state.ts",
+    "find": "  return a.source === 'fixture-seed' && b.source === 'fixture-seed' && a.id === b.id;",
+    "replace": "  if (a.source !== 'fixture-seed' || b.source !== 'fixture-seed') return false;\n  return a.id === b.id;"
+  }
+]

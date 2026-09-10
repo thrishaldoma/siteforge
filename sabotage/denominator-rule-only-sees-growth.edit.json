@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/src/grade/compare.ts",
+    "find": "  if (crossedIntoPassing && denominatorDelta !== 0) {",
+    "replace": "  if (crossedIntoPassing && denominatorDelta > 0) {"
+  }
+]

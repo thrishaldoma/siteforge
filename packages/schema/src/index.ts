@@ -36,6 +36,7 @@ export * from './flows.js';
 export * from './controls.js';
 export * from './coverage.js';
 export * from './grade-contract.js';
+export * from './grade-run.js';
 export * from './deferral.js';
 export * from './stage-report.js';
 export * from './capture-model.js';

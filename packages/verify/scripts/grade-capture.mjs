@@ -18,13 +18,15 @@
  * The reverse — infer importing the grader — is what 0020 forbids and
  * `assessGraderFirewall` enforces.
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  DEFERRALS, GRADE_SUITES, MODEL_COLLECTIONS, SiteModelSchema, assessDeferrals,
-  assessModelAssembly, assessSeedExpiry, collectionsOf, countEmissions,
+  CaptureManifestSchema, DEFERRALS, GRADE_SUITES, GradeRunSchema, MODEL_COLLECTIONS,
+  SiteModelSchema, assessDeferrals, assessModelAssembly, assessSeedExpiry, collectionsOf,
+  countEmissions, seedStateLabel, shortHash,
 } from '../../schema/dist/index.js';
+import { missesOf } from '../dist/grade/compare.js';
 import { gradeSiteModel } from '../dist/grade/grade.js';
 import { loadVikunjaTruth } from '../dist/grade/truth/vikunja.js';
 import { KNOWN_DIVERGENCE } from '../dist/grade/known-divergence.js';
@@ -47,6 +49,16 @@ const model = SiteModelSchema.parse(
 );
 const capture = JSON.parse(
   readFileSync(join(REPO, 'capture', siteId, 'network', 'endpoints.json'), 'utf8'),
+);
+/**
+ * Which instance the graded capture was taken against (0053).
+ *
+ * From the capture's own manifest, never from anything the grader knows: a
+ * grade report that derived this from its own inputs would be describing the
+ * grading rather than the thing graded.
+ */
+const manifest = CaptureManifestSchema.parse(
+  JSON.parse(readFileSync(join(REPO, 'capture', siteId, 'manifest.json'), 'utf8')),
 );
 /**
  * The observed side, from the capture and nothing else.
@@ -72,7 +84,10 @@ const report = gradeSiteModel({
 });
 
 console.log(`\ngrade — ${siteId}, inferred from a real capture${without === null ? '' : `  (without ${without})`}`);
-console.log(`  metrics v${report.metricsVersion}, contract ${report.contractDigest.slice(0, 16)}…\n`);
+console.log(`  metrics v${report.metricsVersion}, contract ${report.contractDigest.slice(0, 16)}…`);
+// The seed, on every report. A number read without it is a number about an
+// instance nobody named (0053 §1).
+console.log(`  seed: ${seedStateLabel(manifest.seedState)}\n`);
 const m = report.matching;
 console.log(
   `  matched ${m.matched} endpoint(s), ${m.unmatchedOperations} unmatched, ` +
@@ -113,7 +128,7 @@ for (const a of e.ambiguous) console.log(`  ambiguous: ${a}`);
 for (const suite of GRADE_SUITES) {
   const metrics = report.metrics.filter((m) => m.suite === suite);
   console.log(`  ── ${suite} ${'─'.repeat(Math.max(0, 62 - suite.length))}`);
-  console.log('  metric                                value       n/d  gate');
+  console.log('  metric                                value       n/d  misses    gate');
   for (const metric of metrics) {
     const mark = metric.vacuous ? '✗' : metric.passed === false ? '✗' : '✓';
     const value = metric.vacuous
@@ -121,8 +136,17 @@ for (const suite of GRADE_SUITES) {
       : metric.kind === 'count'
         ? String(metric.numerator)
         : metric.value.toFixed(4);
+    /**
+     * The miss count, beside every rate (0053 §3).
+     *
+     * `field-type` read 0.9000 → 0.9433 with its miss count byte-identical at
+     * 25, on a denominator that went 250 → 441. A table carrying only the rate
+     * could not have shown that, and did not. The absolute number of wrong
+     * answers is what a denominator cannot dilute.
+     */
+    const misses = metric.vacuous ? '' : `miss ${String(missesOf(metric)).padStart(4)}`;
     console.log(
-      `  ${mark} ${metric.id.padEnd(34)} ${value.padStart(7)}  ${`${metric.numerator}/${metric.denominator}`.padStart(8)}  ${gateOf(metric)}`,
+      `  ${mark} ${metric.id.padEnd(34)} ${value.padStart(7)}  ${`${metric.numerator}/${metric.denominator}`.padStart(8)}  ${misses.padEnd(10)}${gateOf(metric)}`,
     );
     if (metric.conservation) {
       console.log(`      conservation check, not a measurement — ${metric.conservation}`);
@@ -280,6 +304,53 @@ for (const d of MODEL_COLLECTIONS) {
 if (assembly.length > 0) {
   console.log(`\n  ✗ ${assembly.length} model part(s) no longer match their declaration:`);
   for (const f of assembly) console.log(`    ${f.part}: ${f.problem} — ${f.detail}`);
+}
+
+/**
+ * The grading, persisted (0053 §2).
+ *
+ * Until now the grader printed and nothing else, so every comparison in the
+ * record was a human reading two terminal scrollbacks — which is exactly where
+ * a seed change is invisible. `assessGradeComparability` reads two of these.
+ *
+ * A **subset** of what `gradeSiteModel` computes: the identity, and each
+ * metric's numerator and denominator. The matching, auth and entity blocks stay
+ * in the console render rather than being copied here — a derived value in two
+ * artifacts drifts, and one side referencing the other is the standing fix.
+ *
+ * Deterministic bytes on purpose: `recordedAt` is the epoch and `runId` is
+ * derived from the site and the seed, so re-grading an unchanged model twice
+ * produces an identical file and a diff of it is a real change.
+ *
+ * `--without` variants are **not** written. They are ablations of infer against
+ * one capture, and persisting one under the same name would leave the next
+ * comparison reading a deliberately crippled model as this capture's grading.
+ */
+if (without === null) {
+  const seedKey = manifest.seedState.source === 'fixture-seed' ? manifest.seedState.id : 'unseeded';
+  const gradeRun = GradeRunSchema.parse({
+    artifact: 'grade-run',
+    provenance: {
+      recordedAt: new Date(0).toISOString(),
+      runId: `run_${shortHash(`grade-${siteId}-${seedKey}`)}`,
+    },
+    siteId,
+    seedState: manifest.seedState,
+    metricsVersion: report.metricsVersion,
+    contractDigest: report.contractDigest,
+    metrics: report.metrics.map((m) => ({
+      id: m.id, suite: m.suite, category: m.category, kind: m.kind,
+      numerator: m.numerator, denominator: m.denominator, value: m.value,
+      vacuous: m.vacuous, gate: m.gate, passed: m.passed,
+      ...(m.conservation === undefined ? {} : { conservation: m.conservation }),
+    })),
+    passed: report.passed,
+    failedCategories: report.failedCategories,
+  });
+  const outDir = join(REPO, 'envs', siteId);
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, 'grade-run.json'), `${JSON.stringify(gradeRun, null, 2)}\n`);
+  console.log(`\n  wrote envs/${siteId}/grade-run.json — seed ${seedStateLabel(manifest.seedState)}`);
 }
 
 if (deferralFindings.length > 0 || seedExpiry !== null || assembly.length > 0) process.exitCode = 1;

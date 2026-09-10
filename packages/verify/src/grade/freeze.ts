@@ -88,6 +88,8 @@ export const NOT_FROZEN: Readonly<Record<string, string>> = {
     'the freeze itself. Pinning it makes every legitimate pin update a two-step edit against its own hash, and it computes no score — nothing in it can shape an inference strategy.',
   'packages/verify/src/grade/mutations.ts':
     "the mutation harness (0015 §8). It perturbs the grader's arguments and asserts on the deltas; it is a check *on* the metric side rather than part of it, and no score is computed from it.",
+  'packages/verify/src/grade/compare.ts':
+    'the run-to-run comparison (0053). It reads two already-scored reports and decomposes the movement between them; it computes no score, defines no denominator and cannot reach a number the grader produces. Freezing it would pin a reader of the metric side to the metric side — and unlike the two above, it is expected to keep growing as the record turns up more ways a rate misreports its own movement.',
 };
 
 /**

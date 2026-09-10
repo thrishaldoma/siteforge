@@ -412,6 +412,35 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'comparability-ignores-the-seed-id',
+    bug: 'sameSeedState compares only that both captures were seeded, never which seed — so two gradings of two different instances compare and render a delta',
+    reachable: "the shape the field had before it existed: a boolean 'was this seeded'. It is also the obvious simplification of a two-clause return, and it fails **open** — every comparison still renders, which is exactly what the repository did for its whole life and what 0051's before/after table was.",
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    // Asserted on the refusal KIND, never on 'no delta appeared'. Under the bug
+    // the comparison still produces a full delta table, so a test asserting
+    // that a delta was absent cannot tell the two states apart — §13's
+    // discriminating-property rule, in the gate built to enforce it.
+    expect: 'seed-state-differs',
+  },
+
+  {
+    kind: 'control',
+    id: 'comparability-seed-id-respelled',
+    controlFor: 'comparability-ignores-the-seed-id',
+    change: 'the same two conditions on the same line, written as an early return — the id comparison preserved',
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    reachable: 'an ordinary readability edit to the exact expression the defect rewrites, and the pair is the point: the gate must refuse only while the id is actually being ignored.',
+  },
+
+  {
+    id: 'denominator-rule-only-sees-growth',
+    bug: 'a gate crossed while its denominator SHRANK is reported as a clean pass, because the rule only fires on growth',
+    reachable: "the rule as anyone would first write it, from the case that motivated it: `field-type` cleared its gate on a denominator that went 250 → 441, so 'grew' is the word in the finding's own story. 0045 §1.2 holds two crossings where the denominator fell instead — 320 → 250 and 97 → 15 — and both read as clean passes under this.",
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'gate-crossed-on-a-changed-denominator',
+  },
+
+  {
     id: 'emission-counter-stuck-at-zero',
     bug: 'the narrowing emission counter never increments, so the category reads emits-nothing forever and the transition guard can never fire',
     reachable: "a counter reading zero is indistinguishable from a category that emits nothing, which is the whole difficulty — this is the FAIL-OPEN direction and it produces no error, no warning and a green gate. A refactor of the node walk that misses the `narrowing` key, or a rename of the field, gets here without anyone writing `false`.",

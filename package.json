@@ -23,7 +23,8 @@
     "gitea:snapshot": "node packages/verify/scripts/gitea-snapshot.mjs",
     "capture:site": "pnpm -s build && node packages/capture/scripts/capture-site.mjs",
     "infer": "pnpm -s build && node packages/infer/scripts/infer-run.mjs",
-    "grade:capture": "pnpm -s build && node packages/verify/scripts/grade-capture.mjs"
+    "grade:capture": "pnpm -s build && node packages/verify/scripts/grade-capture.mjs",
+    "grade:compare": "pnpm -s build && node packages/verify/scripts/compare-grades.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
