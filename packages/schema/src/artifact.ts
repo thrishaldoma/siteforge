@@ -118,25 +118,67 @@ export function stableArtifactHash(artifact: object): Sha256 {
 }
 
 /**
- * Hash of what a route actually *rendered*, independent of which route directory
- * it landed in.
+ * The artifacts this hash is computed over, named **once** and iterated by the
+ * function below — so the list is the derivation rather than a description of
+ * it, and a fourth input cannot be added to one without the other.
+ *
+ * Exported because the scope of a claim has to be checkable from outside the
+ * thing making it. `assessCaptureIdempotence` partitions a route's files
+ * against this constant to report where the hash agreed and an artifact it
+ * does not cover did not (0038).
+ */
+export const ROUTE_CONTENT_HASH_INPUTS = ['dom', 'styles', 'states'] as const;
+
+export type RouteContentHashInput = (typeof ROUTE_CONTENT_HASH_INPUTS)[number];
+
+/**
+ * Hash of a route's **structured** content: `dom.json`, `styles.json` and
+ * `states.json`, each with `provenance` and `routeId` stripped.
  *
  * `routeId` is stripped along with `provenance`, so the same page captured under
  * two contexts — the common case, since most routes are identical logged in and
  * out — produces one hash and can be stored once. See `RouteMeta.content`.
+ *
+ * ### What it does not cover, and why that is deliberate
+ *
+ * **Not the screenshots.** Not `shot.full.png`, not `scroll/NNNN.png`, and not
+ * `pageMetrics`. This used to read "what a route actually *rendered*", which was
+ * false in the direction that matters: measured at `65840f2`, three read-only
+ * crawls of the pinned Vikunja produced one identical `contentHash` for
+ * `user-settings-general` while two of that route's own scroll PNGs differed —
+ * 15 and 36 pixels, every one of them ±1 in a single channel on the rounded
+ * corner of a `<select>`. The field certifying the route's determinism could
+ * not see the artifacts that moved.
+ *
+ * Widening it to take them in was considered and rejected, on two grounds that
+ * are mechanical rather than aesthetic:
+ *
+ *  1. **It is a deduplication key**, not only a certificate.
+ *     `RouteContentSchema`'s `shared` arm points one route at another and
+ *     `CaptureModelSchema` rejects a mismatch — "or the shared-content pointer
+ *     would deduplicate pages that are not equal". Two contexts that render one
+ *     page identically must agree on it. Sub-pixel raster noise between them
+ *     would break that dedup and grow an artifact set §5 works to keep small.
+ *  2. **The two halves have different residuals.** `dom`/`styles`/`states`
+ *     reproduce **exactly** across runs, so this is a legitimate equality with
+ *     zero slack. The rasters do not. Folding them in yields a hash that never
+ *     reproduces — a gate that fires on everything, which §13 files with the
+ *     vacuous ones rather than opposite them.
+ *
+ * So the claim is narrowed to what is true, and the rasters are covered
+ * separately: `assessCaptureIdempotence` compares every file in the tree and
+ * reports `claimExceeded` for exactly this disagreement.
  */
-export function deriveRouteContentHash(artifacts: {
-  dom: object;
-  styles: object;
-  states: object;
-}): Sha256 {
+export function deriveRouteContentHash(
+  artifacts: Readonly<Record<RouteContentHashInput, object>>,
+): Sha256 {
   const strip = (artifact: object): string => {
     const copy: Record<string, unknown> = { ...(artifact as Record<string, unknown>) };
     for (const key of VOLATILE_ARTIFACT_KEYS) delete copy[key];
     delete copy['routeId'];
     return canonicalize(copy);
   };
-  return sha256Hex([strip(artifacts.dom), strip(artifacts.styles), strip(artifacts.states)].join('\n'));
+  return sha256Hex(ROUTE_CONTENT_HASH_INPUTS.map((k) => strip(artifacts[k])).join('\n'));
 }
 
 export type RunId = z.infer<typeof RunIdSchema>;

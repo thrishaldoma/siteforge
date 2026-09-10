@@ -34,6 +34,27 @@
  * entries are, and an exemption that turns out **not** to differ is reported
  * too: a declared volatility nobody can observe is a claim the artifact does
  * not support.
+ *
+ * ### `claimExceeded` — where the hash agreed and something it cannot see did not
+ *
+ * Point 2 above says `contentHash`'s scope is narrower than its name. Saying so
+ * in a docstring is prose, and 0035's ruling is that a claim and its reach get
+ * stated **beside each other**, with something comparing the difference. This is
+ * that something.
+ *
+ * Per route, the caller supplies the hash each run recorded and the partition of
+ * that route's files into the ones the hash is computed over and the ones it is
+ * not. The finding is the conjunction: **the hash was identical across every run
+ * and an uncovered file under the same route was not.** That is not a second
+ * copy of `unstable` — it is the case in which a reader trusting the field would
+ * be wrong, and it is silent in every other report this function produces.
+ *
+ * The partition is a parameter rather than a literal here, and the driver
+ * derives the covered side from `ROUTE_CONTENT_HASH_INPUTS` — the constant
+ * `deriveRouteContentHash` itself iterates. A fourth input to the hash therefore
+ * moves this check's covered side on the day it lands, not the day someone
+ * remembers. Hard-coding `['dom','styles','states']` in two packages is the
+ * duplicated-derived-value drift 0031 §2.4 ruled on.
  */
 
 /** A file whose bytes genuinely cannot repeat, declared with why. */
@@ -57,6 +78,34 @@ export interface UnstablePath {
   readonly presentIn: number;
 }
 
+/**
+ * One route's `contentHash` claim, and the partition of that route's files into
+ * what it covers and what it does not.
+ *
+ * `hashPerRun` is what each run's `meta.json` recorded, in run order — read off
+ * the artifact rather than recomputed, because the question is whether the
+ * *recorded field* misleads a reader, and `CaptureModelSchema` already asserts
+ * the recomputation separately.
+ */
+export interface ContentHashClaim {
+  readonly routeId: string;
+  /** `null` where the run did not record one — a route absent from that run. */
+  readonly hashPerRun: readonly (string | null)[];
+  /** Relative paths the hash is computed over. */
+  readonly covers: readonly string[];
+  /** Relative paths under the same route that it is not. */
+  readonly uncovered: readonly string[];
+}
+
+/** A route whose recorded `contentHash` agreed while something outside it moved. */
+export interface ClaimExceeded {
+  readonly routeId: string;
+  /** The value every run agreed on. */
+  readonly contentHash: string;
+  /** Uncovered paths under this route that did not reproduce. */
+  readonly unstableUncovered: readonly string[];
+}
+
 export interface IdempotenceReport {
   readonly runs: number;
   readonly comparedPaths: number;
@@ -68,6 +117,19 @@ export interface IdempotenceReport {
   readonly exemptedAndVarying: readonly string[];
   /** Exempt and identical every time: the exemption is not earning its place. */
   readonly exemptedAndStable: readonly string[];
+  /**
+   * Routes where `contentHash` reproduced and an artifact it does not cover did
+   * not. Empty when no claims were supplied — and the driver is required to
+   * supply them, see `claimsSupplied`.
+   */
+  readonly claimExceeded: readonly ClaimExceeded[];
+  /**
+   * How many claims were checked. Zero is reported rather than passed over: a
+   * `claimExceeded` of `[]` means "nothing exceeded its claim" only if something
+   * was checked, and otherwise means "nothing was checked" — the two render
+   * identically (0019), so the count is what tells them apart.
+   */
+  readonly claimsSupplied: number;
 }
 
 /**
@@ -85,6 +147,12 @@ function isExempt(path: string, exempt: readonly VolatileExemption[]): boolean {
 export function assessCaptureIdempotence(input: {
   readonly runs: readonly CaptureTree[];
   readonly exempt: readonly VolatileExemption[];
+  /**
+   * Optional only in the type. The driver always supplies these, and
+   * `claimsSupplied` is in the report so a caller that stopped doing so is
+   * visible rather than silently green.
+   */
+  readonly claims?: readonly ContentHashClaim[];
 }): IdempotenceReport {
   // A comparison of one run is not a comparison. Throwing rather than returning
   // a clean report, because "no runs differed" over a single run is the
@@ -132,6 +200,54 @@ export function assessCaptureIdempotence(input: {
     if (distinct > 1) unstable.push({ path, distinct, presentIn: present.length });
   }
 
+  // ---- the claim, against what it cannot see -----------------------------
+  //
+  // Derived from `unstable` rather than by a second pass over the trees: one
+  // walk decides what moved, and this reads that verdict. A second traversal
+  // here would be the shared-code-path mistake §13 names for an invariant's
+  // observed side, pointed the other way — two walks that could disagree about
+  // the same file.
+  const unstablePaths = new Set([
+    ...unstable.map((u) => u.path),
+    ...inconsistentlyPresent.map((u) => u.path),
+  ]);
+  const claims = input.claims ?? [];
+  const claimExceeded: ClaimExceeded[] = [];
+
+  for (const claim of claims) {
+    if (claim.hashPerRun.length !== input.runs.length) {
+      throw new Error(
+        `claim for ${claim.routeId} carries ${claim.hashPerRun.length} hash(es) for ` +
+        `${input.runs.length} run(s). A claim that does not span every run cannot be ` +
+        'checked against them, and defaulting it either way invents an observation.',
+      );
+    }
+    const overlap = claim.covers.filter((p) => claim.uncovered.includes(p));
+    if (overlap.length > 0) {
+      throw new Error(
+        `claim for ${claim.routeId} lists ${overlap.join(', ')} as both covered and ` +
+        'uncovered. The partition is the whole content of this check.',
+      );
+    }
+    // Length-guarded rather than left to `.every([])`, which returns `true` on
+    // empty and would report every route's hash as "agreed" for a claim that
+    // carries no hashes at all. §13's empty-container rule.
+    if (claim.hashPerRun.length === 0) continue;
+    const agreed = new Set(claim.hashPerRun).size === 1;
+    if (!agreed) continue;
+    // Agreement on `null` is not agreement on a hash — it is every run failing
+    // to record one, and treating that as "the claim held" would report a
+    // finding against a field nobody wrote. Fails closed for this category
+    // (§13): no claim, so nothing to exceed.
+    const contentHash = claim.hashPerRun[0];
+    if (contentHash === null || contentHash === undefined) continue;
+
+    const unstableUncovered = claim.uncovered.filter((p) => unstablePaths.has(p)).sort();
+    if (unstableUncovered.length > 0) {
+      claimExceeded.push({ routeId: claim.routeId, contentHash, unstableUncovered });
+    }
+  }
+
   return {
     runs: input.runs.length,
     comparedPaths,
@@ -139,5 +255,7 @@ export function assessCaptureIdempotence(input: {
     inconsistentlyPresent,
     exemptedAndVarying,
     exemptedAndStable,
+    claimExceeded,
+    claimsSupplied: claims.length,
   };
 }

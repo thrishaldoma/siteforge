@@ -170,8 +170,15 @@ const CLAIMS: ManifestClaim[] = [
   // ---- the hash the whole audit started from -----------------------------
   {
     path: 'contentHash', kind: 'derived',
-    backedBy: 'sha256 over each route\'s deriveRouteContentHash',
-    readBy: ['capture-idempotence.mjs (0028)'],
+    // The scope, stated as narrowly as it is true (0038). 0031 §2.2 recorded
+    // the docstring as overclaiming — "every *content* artifact" — and left it.
+    // It covers each route's `dom`/`styles`/`states` and nothing else: not the
+    // screenshots, not `pageMetrics`, and not `assets/`, `network/`, `flows/`
+    // or `coverage.json`. Measured: three read-only crawls agreed on
+    // `user-settings-general`'s route hash while two of its scroll PNGs moved.
+    backedBy:
+      'sha256 over each route\'s deriveRouteContentHash — ROUTE_CONTENT_HASH_INPUTS only, and the rasters are covered by assessCaptureIdempotence.claimExceeded',
+    readBy: ['capture-idempotence.mjs (0028)', 'assessCaptureIdempotence claimExceeded (0038)'],
   },
 
   // ---- counts ------------------------------------------------------------

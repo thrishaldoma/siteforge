@@ -117,3 +117,134 @@ describe('an exemption is declared, segment-wise, and stays honest', () => {
     expect(report.unstable.map((u) => u.path)).toEqual(['authors/list.json']);
   });
 });
+
+/**
+ * `claimExceeded` — the case a reader of `contentHash` gets wrong.
+ *
+ * Modelled on the real one: measured at `65840f2`, three read-only crawls of
+ * the pinned Vikunja agreed on `user-settings-general`'s `contentHash` while
+ * two of that route's scroll PNGs differed. Every other finding this gate
+ * produces was silent about it — `unstable` listed the PNGs without saying the
+ * certifying field had not moved, which is the whole point.
+ */
+describe('a contentHash that agreed while something it cannot see did not', () => {
+  const covers = ['routes/s/dom.json', 'routes/s/styles.json', 'routes/s/states.json'];
+  const uncovered = ['routes/s/shot.full.png', 'routes/s/scroll/0000.png'];
+  const stableCovered = { [covers[0]!]: 'd', [covers[1]!]: 's', [covers[2]!]: 't' };
+
+  it('FIRES when the hash reproduced and an uncovered artifact did not', () => {
+    const report = assessCaptureIdempotence({
+      runs: [
+        tree('r1', { ...stableCovered, [uncovered[0]!]: 'png', [uncovered[1]!]: 'A' }),
+        tree('r2', { ...stableCovered, [uncovered[0]!]: 'png', [uncovered[1]!]: 'B' }),
+      ],
+      exempt: [],
+      claims: [{ routeId: 's', hashPerRun: ['c304', 'c304'], covers, uncovered }],
+    });
+    expect(report.claimExceeded).toEqual([
+      { routeId: 's', contentHash: 'c304', unstableUncovered: ['routes/s/scroll/0000.png'] },
+    ]);
+    expect(report.claimsSupplied).toBe(1);
+  });
+
+  it('stays silent when the hash moved too — then the field is not misleading anyone', () => {
+    const report = assessCaptureIdempotence({
+      runs: [
+        tree('r1', { 'routes/s/dom.json': 'd1', [uncovered[1]!]: 'A' }),
+        tree('r2', { 'routes/s/dom.json': 'd2', [uncovered[1]!]: 'B' }),
+      ],
+      exempt: [],
+      claims: [{ routeId: 's', hashPerRun: ['aaa', 'bbb'], covers, uncovered }],
+    });
+    // The PNG is still a hard failure; it is just not a *claim* failure.
+    expect(report.unstable.map((u) => u.path)).toContain('routes/s/scroll/0000.png');
+    expect(report.claimExceeded).toEqual([]);
+  });
+
+  it('stays silent when everything reproduced', () => {
+    const files = { ...stableCovered, [uncovered[1]!]: 'A' };
+    const report = assessCaptureIdempotence({
+      runs: [tree('r1', files), tree('r2', files)],
+      exempt: [],
+      claims: [{ routeId: 's', hashPerRun: ['c304', 'c304'], covers, uncovered }],
+    });
+    expect(report.claimExceeded).toEqual([]);
+  });
+
+  it('reports how many claims it checked, so nothing-checked cannot read as nothing-wrong', () => {
+    const report = assessCaptureIdempotence({
+      runs: [tree('r1', { 'a.json': 'x' }), tree('r2', { 'a.json': 'x' })],
+      exempt: [],
+    });
+    expect(report.claimExceeded).toEqual([]);
+    expect(report.claimsSupplied).toBe(0);
+  });
+
+  it('does not treat every-run-null as agreement on a hash', () => {
+    const report = assessCaptureIdempotence({
+      runs: [
+        tree('r1', { [uncovered[1]!]: 'A' }),
+        tree('r2', { [uncovered[1]!]: 'B' }),
+      ],
+      exempt: [],
+      claims: [{ routeId: 's', hashPerRun: [null, null], covers, uncovered }],
+    });
+    expect(report.claimExceeded).toEqual([]);
+  });
+
+  it('THROWS on a claim that does not span every run', () => {
+    expect(() =>
+      assessCaptureIdempotence({
+        runs: [tree('r1', {}), tree('r2', {}), tree('r3', {})],
+        exempt: [],
+        claims: [{ routeId: 's', hashPerRun: ['c304', 'c304'], covers, uncovered }],
+      }),
+    ).toThrow(/does not span every run|2 hash\(es\) for 3 run/);
+  });
+
+  it('THROWS when a path is declared both covered and uncovered', () => {
+    expect(() =>
+      assessCaptureIdempotence({
+        runs: [tree('r1', {}), tree('r2', {})],
+        exempt: [],
+        claims: [
+          { routeId: 's', hashPerRun: ['c', 'c'], covers, uncovered: [...uncovered, covers[0]!] },
+        ],
+      }),
+    ).toThrow(/both covered and uncovered/);
+  });
+});
+
+/**
+ * The negative control (§13): a perturbation the gate could plausibly key on
+ * and must not.
+ *
+ * A table of nothing but firing cases is satisfied by a check that fires on
+ * any change. Widening the *covered* side is the change that must leave
+ * `claimExceeded` empty — an artifact the hash genuinely covers cannot exceed
+ * it, because its movement would have moved the hash.
+ */
+describe('control — a covered artifact moving is not a claim failure', () => {
+  it('leaves claimExceeded empty when the unstable file is on the covered side', () => {
+    const report = assessCaptureIdempotence({
+      runs: [
+        tree('r1', { 'routes/s/dom.json': 'd1', 'routes/s/scroll/0000.png': 'A' }),
+        tree('r2', { 'routes/s/dom.json': 'd2', 'routes/s/scroll/0000.png': 'A' }),
+      ],
+      exempt: [],
+      claims: [
+        {
+          routeId: 's',
+          // A capture where dom moved but the recorded hash did not is not
+          // reachable — `CaptureModelSchema` recomputes it — so the claim
+          // records the disagreement the artifacts imply.
+          hashPerRun: ['h1', 'h2'],
+          covers: ['routes/s/dom.json'],
+          uncovered: ['routes/s/scroll/0000.png'],
+        },
+      ],
+    });
+    expect(report.unstable.map((u) => u.path)).toEqual(['routes/s/dom.json']);
+    expect(report.claimExceeded).toEqual([]);
+  });
+});

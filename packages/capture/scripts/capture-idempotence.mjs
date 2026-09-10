@@ -18,6 +18,13 @@
  * schema's own definition of "modulo timestamps" rather than a second one
  * invented here. Everything else is hashed as raw bytes.
  *
+ * It also hands the gate each route's recorded `contentHash` together with the
+ * partition of that route's files into what the hash covers and what it does
+ * not, so `claimExceeded` can report the case a reader of that field would get
+ * wrong: **the hash reproduced and a screenshot under the same route did not.**
+ * The covered side is `ROUTE_CONTENT_HASH_INPUTS`, the constant
+ * `deriveRouteContentHash` iterates — not a second copy of the list.
+ *
  * **`--reuse-container` is the attribution half.** An ordinary run tears the
  * container down and boots a fresh one, so two of them differ in our timing
  * *and* in the target's state — new database, new id sequences, new clocks.
@@ -25,13 +32,13 @@
  * that survives is ours. §8 makes our own non-determinism a hard failure; the
  * target's is a property to record.
  */
-import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { dirname, extname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assessCaptureIdempotence } from '../../shared/dist/index.js';
-import { stableArtifactHash } from '../../schema/dist/index.js';
+import { ROUTE_CONTENT_HASH_INPUTS, stableArtifactHash } from '../../schema/dist/index.js';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const siteId = process.argv[2] ?? 'vikunja';
@@ -141,7 +148,55 @@ if (REUSE) {
   spawnSync('docker', ['rm', '-f', `siteforge-capture-${siteId}`], { encoding: 'utf8' });
 }
 
-const report = assessCaptureIdempotence({ runs: trees, exempt: EXEMPT });
+/**
+ * Each route's recorded `contentHash` per run, and its files split by whether
+ * the hash is computed over them.
+ *
+ * Route ids come from `run-1`; a route missing from a later run records `null`
+ * for that run, which makes the hashes disagree and leaves the claim
+ * unchecked — `inconsistentlyPresent` is the finding for that case and this one
+ * must not double-report it. Existence is tested rather than caught: `ENOENT`
+ * is not operational (§13's taxonomy), so a `catch` here would either be dead
+ * code or would convert a real observation into a crash.
+ */
+function claimsFrom(runDirs) {
+  const routesRoot = (dir) => join(dir, 'routes');
+  const first = routesRoot(runDirs[0]);
+  // No try/catch: a capture tree with no `routes/` is a defect, and the crash
+  // is the report. Returning `[]` would leave `claimsSupplied: 0` looking like
+  // a run with nothing to check.
+  const routeIds = readdirSync(first).filter((n) => statSync(join(first, n)).isDirectory());
+
+  const covered = new Set(ROUTE_CONTENT_HASH_INPUTS.map((k) => `${k}.json`));
+  const claims = [];
+  for (const routeId of routeIds) {
+    const hashPerRun = runDirs.map((dir) => {
+      const meta = join(routesRoot(dir), routeId, 'meta.json');
+      if (!existsSync(meta)) return null;
+      return JSON.parse(readFileSync(meta, 'utf8')).content?.contentHash ?? null;
+    });
+
+    const covers = [];
+    const uncovered = [];
+    const walk = (dir, prefix) => {
+      for (const name of readdirSync(dir)) {
+        const abs = join(dir, name);
+        const rel = `${prefix}${name}`;
+        if (statSync(abs).isDirectory()) walk(abs, `${rel}/`);
+        else (covered.has(name) ? covers : uncovered).push(`routes/${routeId}/${rel}`);
+      }
+    };
+    walk(join(first, routeId), '');
+    claims.push({ routeId, hashPerRun, covers, uncovered });
+  }
+  return claims;
+}
+
+const report = assessCaptureIdempotence({
+  runs: trees,
+  exempt: EXEMPT,
+  claims: claimsFrom(Array.from({ length: RUNS }, (_, i) => join(holding, `run-${i + 1}`))),
+});
 
 console.log(`\n  compared ${report.comparedPaths} path(s) across ${report.runs} run(s)`);
 console.log(`  mean crawl ${(durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1)}s\n`);
@@ -156,6 +211,18 @@ const show = (title, rows) => {
 };
 show('content changed between runs', report.unstable);
 show('present in some runs and not others', report.inconsistentlyPresent);
+
+if (report.claimExceeded.length > 0) {
+  console.log(`  contentHash agreed and something it does not cover did not (${report.claimExceeded.length}):`);
+  for (const c of report.claimExceeded) {
+    console.log(`    ${c.routeId}  ${c.contentHash.slice(0, 12)}…`);
+    for (const p of c.unstableUncovered) console.log(`      ${p}`);
+  }
+  console.log('    ↑ the field certifying this route reproduced. These did not.');
+  console.log('');
+}
+console.log(`  contentHash claims checked: ${report.claimsSupplied}`);
+console.log('');
 
 if (report.exemptedAndVarying.length > 0) {
   console.log(`  exempt and varying, as declared: ${report.exemptedAndVarying.join(', ')}`);

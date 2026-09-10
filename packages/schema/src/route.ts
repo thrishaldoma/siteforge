@@ -96,9 +96,16 @@ export const UnauthenticatedBehaviorSchema = z.discriminatedUnion('kind', [
  * marketing page is the same logged in and out. Storing it once per context is
  * pure waste in an artifact set §5 already works hard to keep small.
  *
- * `contentHash` is `deriveRouteContentHash({dom, styles, states})`: the rendered
- * content with `routeId` and `provenance` stripped, so two contexts that produced
- * the same page agree on it. A `shared` route writes only `meta.json`.
+ * `contentHash` is `deriveRouteContentHash({dom, styles, states})`: the
+ * **structured** content with `routeId` and `provenance` stripped, so two
+ * contexts that produced the same page agree on it. A `shared` route writes only
+ * `meta.json`.
+ *
+ * **It does not cover `screenshots` or `pageMetrics`, both of which sit in this
+ * same object.** Two crawls can agree on this hash and disagree on a scroll
+ * PNG — measured, on `user-settings-general`, at `65840f2`. The scope argument
+ * and why widening was rejected are on `deriveRouteContentHash`; the check that
+ * reports the disagreement is `assessCaptureIdempotence`'s `claimExceeded`.
  */
 export const RouteContentSchema = z.discriminatedUnion('kind', [
   z.strictObject({
