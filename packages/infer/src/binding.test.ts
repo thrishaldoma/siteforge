@@ -168,6 +168,17 @@ describe('rank 5 — a URL literal on the control itself', () => {
     expect(target(control({ tag: 'button', attributes: { 'data-mode': 'compact' } }))).toBeUndefined();
   });
 
+  it('DECLINES when two data attributes are both path-like, rather than taking the first', () => {
+    // `Object.entries` order would otherwise decide — the duplicate-rank
+    // throw's failure, one level down. 0015 §2: an ambiguity is reported,
+    // never resolved by picking one.
+    const report = run(
+      control({ tag: 'button', attributes: { 'data-url': '/a', 'data-endpoint': '/b' } }),
+    );
+    expect(report.bound).toEqual([]);
+    expect(report.declined[0]).toMatchObject({ rank: 5, reason: 'ambiguous-literal' });
+  });
+
   it('IGNORES our own data-sf-* attributes', () => {
     // Reading back an attribute siteforge injected (0007) would be the
     // generated-fixture circularity, one attribute wide.

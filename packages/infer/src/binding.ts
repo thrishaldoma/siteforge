@@ -197,18 +197,33 @@ export function urlBindingRungs(base: string): ReadonlyArray<BindingRung<Bindabl
         // Only the control's *own* attributes. The moment this reaches past the
         // element it becomes 0041 §2.2's chunk co-occurrence, which the ranking
         // declines on a measurement.
-        for (const [name, value] of Object.entries(c.attributes)) {
-          // `data-sf-*` is **ours** — siteforge injects it (decision 0007). Reading
-          // our own attribute back as if the site had authored it would be the
-          // generated-fixture circularity, one attribute wide.
-          if (!name.startsWith('data-') || name.startsWith('data-sf-')) continue;
-          if (!PATH_LIKE.test(value)) continue;
+        const literals = Object.entries(c.attributes)
+          // `data-sf-*` is **ours** — siteforge injects it (decision 0007).
+          // Reading our own attribute back as if the site had authored it
+          // would be the generated-fixture circularity, one attribute wide.
+          .filter(([name]) => name.startsWith('data-') && !name.startsWith('data-sf-'))
+          .filter(([, value]) => PATH_LIKE.test(value))
+          .sort(([a], [b]) => a.localeCompare(b));
+        if (literals.length === 0) return null;
+        if (literals.length > 1) {
+          // Two path-like attributes and no argument for either. Taking the
+          // first would make `Object.entries` order the decider — the same
+          // thing the evaluator throws on when two rungs share a rank, one
+          // level down, and unreviewable for the same reason. 0015 §2 already
+          // settled the shape: an ambiguity is reported, never resolved by
+          // picking one.
           return {
-            kind: 'bind',
-            target: { kind: 'url', path: normalizePath(value).pattern, method: 'GET' },
-            detail: `${name}="${value}" on the control itself`,
+            kind: 'decline',
+            reason: 'ambiguous-literal',
+            detail: `${literals.map(([n, v]) => `${n}="${v}"`).join(' and ')} are both path-like; nothing here says which the control uses`,
           };
         }
+        const [name, value] = literals[0]!;
+        return {
+          kind: 'bind',
+          target: { kind: 'url', path: normalizePath(value).pattern, method: 'GET' },
+          detail: `${name}="${value}" on the control itself`,
+        };
         return null;
       },
     },

@@ -330,3 +330,12 @@ target whose controls carry API URLs in the DOM — a server-rendered app with
   about the artifact — and precisely the 0019 conflation the field exists to
   prevent, committed by the person who wrote the field. Now `ran: false` with
   `reason: 'no-flows-in-capture' | 'disabled'`.
+- **Rank 5 picked by `Object.entries` order, which is the duplicate-rank bug
+  one level down.** It returned on the first path-like `data-*`, so a control
+  carrying two would have had the winner decided by DOM serialisation order
+  rather than by an argument — unreviewable for exactly the reason the
+  evaluator throws when two rungs share a rank. It now **declines with
+  `ambiguous-literal`**: 0015 §2 already settled the shape, an ambiguity is
+  reported and never resolved by picking one. Fires zero times on this target,
+  so no number moved; caught by review, not by a gate, which is worth noting
+  since it is a latent instance of the very rule this turn implemented.
