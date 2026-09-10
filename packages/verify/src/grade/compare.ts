@@ -134,9 +134,19 @@ export interface MetricMovement {
   readonly after: GradeRunMetric;
   readonly numeratorDelta: number;
   readonly denominatorDelta: number;
-  readonly missesBefore: number;
-  readonly missesAfter: number;
-  readonly missesDelta: number;
+  /**
+   * `null` where that side was vacuous, never a number.
+   *
+   * `denominator − numerator` is arithmetically defined for a vacuous metric
+   * and means nothing: `narrowing.precision` reads `0/103` because the document
+   * declares no formats *at all*, and rendering that as "103 wrong narrowings"
+   * would put a figure exactly where the grader prints `vacuous`. A `number`
+   * type here is an invitation to do that, in the artifact built to stop a
+   * figure reading as a result it is not.
+   */
+  readonly missesBefore: number | null;
+  readonly missesAfter: number | null;
+  readonly missesDelta: number | null;
   readonly valueDelta: number | null;
   /** `false → true` on the gate. What a reader is usually looking for. */
   readonly crossedIntoPassing: boolean;
@@ -148,7 +158,7 @@ export interface MetricMovement {
  * A movement that is not the movement it looks like.
  *
  * Deliberately wider than the case that motivated it. 0051 §4.2 is
- * `rate-rose-while-misses-did-not-fall`; 0045 §1.2 holds two more where the
+ * `rate-moved-against-its-miss-count`; 0045 §1.2 holds two more where the
  * denominator *shrank* under a crossing gate, and a rule keyed only on flat
  * misses passes both of them. A rule written against the single case its author
  * had in mind is the vacuity mode this repository keeps finding.
@@ -273,8 +283,8 @@ export function assessGradeComparability(input: {
  * without constructing a report around it.
  */
 export function decomposeMovement(before: GradeRunMetric, after: GradeRunMetric): MetricMovement {
-  const missesBefore = missesOf(before);
-  const missesAfter = missesOf(after);
+  const missesBefore = before.vacuous ? null : missesOf(before);
+  const missesAfter = after.vacuous ? null : missesOf(after);
   const denominatorDelta = after.denominator - before.denominator;
   const crossedIntoPassing = !before.passed && after.passed;
   const crossedIntoFailing = before.passed && !after.passed;
@@ -295,7 +305,7 @@ export function decomposeMovement(before: GradeRunMetric, after: GradeRunMetric)
       detail:
         `crossed its gate while the denominator went ${before.denominator} → ${after.denominator} ` +
         `(${denominatorDelta > 0 ? '+' : ''}${denominatorDelta}). The population is not the same population, so this is not ` +
-        `a like-for-like pass. Misses ${missesBefore} → ${missesAfter}.`,
+        `a like-for-like pass. Misses ${missesBefore ?? '—'} → ${missesAfter ?? '—'}.`,
     });
   }
 
@@ -309,12 +319,17 @@ export function decomposeMovement(before: GradeRunMetric, after: GradeRunMetric)
    */
   if (before.value !== null && after.value !== null && after.value !== before.value) {
     const better = polarityOf(after) === 'higher-is-better' ? after.value > before.value : after.value < before.value;
-    const supported = better ? missesAfter < missesBefore : missesAfter > missesBefore;
+    // Both sides carry a value, so neither is vacuous and both miss counts are
+    // real numbers — the `?? 0` is a type narrowing the guard above already
+    // guarantees, never a default standing in for a missing count.
+    const supported = better
+      ? (missesAfter ?? 0) < (missesBefore ?? 0)
+      : (missesAfter ?? 0) > (missesBefore ?? 0);
     if (!supported) {
       findings.push({
         kind: 'rate-moved-against-its-miss-count',
         detail:
-          `the rate ${better ? 'improved' : 'worsened'} while misses went ${missesBefore} → ${missesAfter}, ` +
+          `the rate ${better ? 'improved' : 'worsened'} while misses went ${missesBefore ?? '—'} → ${missesAfter ?? '—'}, ` +
           `which does not ${better ? 'fall' : 'rise'}. The denominator went ${before.denominator} → ${after.denominator}; ` +
           'that is what moved, and the rate is reporting it as a change in quality.',
       });
@@ -338,7 +353,7 @@ export function decomposeMovement(before: GradeRunMetric, after: GradeRunMetric)
     denominatorDelta,
     missesBefore,
     missesAfter,
-    missesDelta: missesAfter - missesBefore,
+    missesDelta: missesBefore === null || missesAfter === null ? null : missesAfter - missesBefore,
     valueDelta: before.value !== null && after.value !== null ? after.value - before.value : null,
     crossedIntoPassing,
     crossedIntoFailing,

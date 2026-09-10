@@ -1,0 +1,444 @@
+{
+  "artifact": "grade-run",
+  "provenance": {
+    "recordedAt": "1970-01-01T00:00:00.000Z",
+    "runId": "run_101b133181705e3f"
+  },
+  "siteId": "vikunja",
+  "seedState": {
+    "source": "fixture-seed",
+    "imageDigest": "vikunja/vikunja@sha256:ed1f3ed467fecec0b57e9de7bc6607f8bbcbb23ffced6a81f5dfefc794cdbe3b",
+    "programHash": "021b5d2b8e956a5afa12b8badc13d186ab289f8d0dce8f38f54494f9e1a47599",
+    "account": "sfadmin",
+    "id": "3e1c347287ed57380bbbc40629d786426a5b2fe206cd91eba922a8818d5d1419",
+    "label": "vikunja 0.24 fixture seed"
+  },
+  "metricsVersion": 5,
+  "contractDigest": "509635e28a20cedb8a9c197015410f62b8bf501d1ec10ec06e9037f50ab6fa7a",
+  "metrics": [
+    {
+      "id": "endpoint-identity.precision",
+      "suite": "capture-fidelity",
+      "category": "endpoint-identity",
+      "kind": "rate",
+      "numerator": 21,
+      "denominator": 22,
+      "value": 0.9545454545454546,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.95
+      },
+      "passed": true
+    },
+    {
+      "id": "endpoint-identity.conservation",
+      "suite": "capture-fidelity",
+      "category": "endpoint-identity",
+      "kind": "rate",
+      "numerator": 22,
+      "denominator": 22,
+      "value": 1,
+      "vacuous": false,
+      "gate": {
+        "kind": "structural",
+        "direction": "atLeast",
+        "value": 1
+      },
+      "passed": true,
+      "conservation": "moves only when a stage drops an observed endpoint. Both sides come from the observed list, so a transcription always reads 1.000 — this is not evidence that endpoint identity was inferred well. Exercised by the `endpoint-deleted` mutation."
+    },
+    {
+      "id": "path-param-arity.accuracy",
+      "suite": "capture-fidelity",
+      "category": "path-param-arity",
+      "kind": "rate",
+      "numerator": 21,
+      "denominator": 21,
+      "value": 1,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.95
+      },
+      "passed": true
+    },
+    {
+      "id": "path-param-naming.accuracy",
+      "suite": "capture-fidelity",
+      "category": "path-param-naming",
+      "kind": "rate",
+      "numerator": 1,
+      "denominator": 6,
+      "value": 0.16666666666666666,
+      "vacuous": false,
+      "gate": null,
+      "passed": true
+    },
+    {
+      "id": "request-field-presence.precision",
+      "suite": "capture-fidelity",
+      "category": "request-field-presence",
+      "kind": "rate",
+      "numerator": 96,
+      "denominator": 173,
+      "value": 0.5549132947976878,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.95
+      },
+      "passed": false
+    },
+    {
+      "id": "request-field-presence.recall",
+      "suite": "capture-fidelity",
+      "category": "request-field-presence",
+      "kind": "rate",
+      "numerator": 96,
+      "denominator": 97,
+      "value": 0.9896907216494846,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.9
+      },
+      "passed": true
+    },
+    {
+      "id": "response-field-presence.precision",
+      "suite": "capture-fidelity",
+      "category": "response-field-presence",
+      "kind": "rate",
+      "numerator": 406,
+      "denominator": 406,
+      "value": 1,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.95
+      },
+      "passed": true
+    },
+    {
+      "id": "response-field-presence.observed-body-recall",
+      "suite": "capture-fidelity",
+      "category": "response-field-presence",
+      "kind": "rate",
+      "numerator": 406,
+      "denominator": 444,
+      "value": 0.9144144144144144,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.9
+      },
+      "passed": true
+    },
+    {
+      "id": "response-field-presence.seed-coverage",
+      "suite": "capture-fidelity",
+      "category": "response-field-presence",
+      "kind": "rate",
+      "numerator": 444,
+      "denominator": 545,
+      "value": 0.8146788990825689,
+      "vacuous": false,
+      "gate": null,
+      "passed": true
+    },
+    {
+      "id": "field-type.accuracy",
+      "suite": "capture-fidelity",
+      "category": "field-type",
+      "kind": "rate",
+      "numerator": 481,
+      "denominator": 502,
+      "value": 0.9581673306772909,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.9
+      },
+      "passed": true
+    },
+    {
+      "id": "narrowing.precision",
+      "suite": "capture-fidelity",
+      "category": "narrowing",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 103,
+      "value": null,
+      "vacuous": true,
+      "gate": {
+        "kind": "structural",
+        "direction": "atLeast",
+        "value": 0.98
+      },
+      "passed": false
+    },
+    {
+      "id": "narrowing.recall",
+      "suite": "capture-fidelity",
+      "category": "narrowing",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 10,
+      "value": 0,
+      "vacuous": false,
+      "gate": null,
+      "passed": true
+    },
+    {
+      "id": "identifier.precision",
+      "suite": "capture-fidelity",
+      "category": "identifier",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 0,
+      "value": null,
+      "vacuous": true,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.9
+      },
+      "passed": false
+    },
+    {
+      "id": "identifier.recall",
+      "suite": "capture-fidelity",
+      "category": "identifier",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 0,
+      "value": null,
+      "vacuous": true,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.8
+      },
+      "passed": false
+    },
+    {
+      "id": "synthesized-endpoint.precision",
+      "suite": "capture-fidelity",
+      "category": "synthesized-endpoint",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 0,
+      "value": null,
+      "vacuous": true,
+      "gate": {
+        "kind": "structural",
+        "direction": "atLeast",
+        "value": 0.9
+      },
+      "passed": false
+    },
+    {
+      "id": "auth.under-gate-count",
+      "suite": "capture-fidelity",
+      "category": "auth",
+      "kind": "count",
+      "numerator": 0,
+      "denominator": 12,
+      "value": 0,
+      "vacuous": false,
+      "gate": {
+        "kind": "structural",
+        "direction": "atMost",
+        "value": 0
+      },
+      "passed": true
+    },
+    {
+      "id": "auth.over-gate-rate",
+      "suite": "capture-fidelity",
+      "category": "auth",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 1,
+      "value": 0,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atMost",
+        "value": 0.2
+      },
+      "passed": true
+    },
+    {
+      "id": "auth.truth-coverage",
+      "suite": "capture-fidelity",
+      "category": "auth",
+      "kind": "rate",
+      "numerator": 13,
+      "denominator": 21,
+      "value": 0.6190476190476191,
+      "vacuous": false,
+      "gate": null,
+      "passed": true
+    },
+    {
+      "id": "auth.evidence-coverage",
+      "suite": "capture-fidelity",
+      "category": "auth",
+      "kind": "rate",
+      "numerator": 17,
+      "denominator": 17,
+      "value": 1,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.7
+      },
+      "passed": true
+    },
+    {
+      "id": "auth.unprobeable-count",
+      "suite": "capture-fidelity",
+      "category": "auth",
+      "kind": "count",
+      "numerator": 4,
+      "denominator": 21,
+      "value": 4,
+      "vacuous": false,
+      "gate": null,
+      "passed": true
+    },
+    {
+      "id": "entity-identity.precision",
+      "suite": "inference",
+      "category": "entity-identity",
+      "kind": "rate",
+      "numerator": 4,
+      "denominator": 4,
+      "value": 1,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.9
+      },
+      "passed": true
+    },
+    {
+      "id": "entity-identity.recall",
+      "suite": "inference",
+      "category": "entity-identity",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 0,
+      "value": null,
+      "vacuous": true,
+      "gate": null,
+      "passed": false
+    },
+    {
+      "id": "entity-field-presence.precision",
+      "suite": "inference",
+      "category": "entity-field-presence",
+      "kind": "rate",
+      "numerator": 55,
+      "denominator": 55,
+      "value": 1,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.95
+      },
+      "passed": true
+    },
+    {
+      "id": "entity-field-presence.recall",
+      "suite": "inference",
+      "category": "entity-field-presence",
+      "kind": "rate",
+      "numerator": 55,
+      "denominator": 62,
+      "value": 0.8870967741935484,
+      "vacuous": false,
+      "gate": {
+        "kind": "calibration",
+        "direction": "atLeast",
+        "value": 0.9
+      },
+      "passed": false
+    },
+    {
+      "id": "entity-relation.precision",
+      "suite": "inference",
+      "category": "entity-relation",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 0,
+      "value": null,
+      "vacuous": true,
+      "gate": null,
+      "passed": false
+    },
+    {
+      "id": "entity-relation.recall",
+      "suite": "inference",
+      "category": "entity-relation",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 0,
+      "value": null,
+      "vacuous": true,
+      "gate": null,
+      "passed": false
+    },
+    {
+      "id": "entity-narrowing.precision",
+      "suite": "inference",
+      "category": "entity-narrowing",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 0,
+      "value": null,
+      "vacuous": true,
+      "gate": {
+        "kind": "structural",
+        "direction": "atLeast",
+        "value": 0.98
+      },
+      "passed": false
+    },
+    {
+      "id": "entity-narrowing.recall",
+      "suite": "inference",
+      "category": "entity-narrowing",
+      "kind": "rate",
+      "numerator": 0,
+      "denominator": 1,
+      "value": 0,
+      "vacuous": false,
+      "gate": null,
+      "passed": true
+    }
+  ],
+  "passed": false,
+  "failedCategories": [
+    "request-field-presence",
+    "narrowing",
+    "identifier",
+    "synthesized-endpoint",
+    "entity-identity",
+    "entity-field-presence",
+    "entity-relation",
+    "entity-narrowing"
+  ]
+}

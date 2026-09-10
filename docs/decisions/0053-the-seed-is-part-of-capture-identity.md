@@ -102,6 +102,17 @@ scrollbacks — which is precisely where a seed change is invisible.
 - **`grade-run.json`** is the persisted artifact, carrying the seed state, the
   metrics version and contract digest, and every metric's numerator and
   denominator.
+- **The baseline is committed; the working report is not**, and that split is
+  what makes the comparison durable rather than ceremonial. `grade-capture`
+  writes `envs/<site>/grade-run.json`, and `/envs/*​/` is gitignored — so that
+  file is overwritten by the next grading and invisible to git. A comparator
+  whose only *before* side lived there would still depend on somebody having
+  copied a file aside, which is the terminal-scrollback problem with an extra
+  step; §13 has already found three defects whose root is a scope taken from the
+  wrong view. The baseline sits beside the truth snapshot at
+  `packages/verify/fixtures/<site>/grade-run.json`, and promoting a run to it is
+  an explicit commit whose diff someone reads — the shape the snapshot staleness
+  gate already uses. `pnpm grade:compare vikunja` resolves both ends.
 - **`assessGradeComparability`** takes two of them as parameters and either
   refuses with a reason or returns a decomposed delta. It refuses on a seed-id
   difference, on a metrics-version difference, and on a contract-digest
@@ -307,23 +318,41 @@ the two do not compare and `compare-grades.mjs` would refuse them.
 | `entity-field-presence.recall` | 0.8871 · 55/62 · miss 7 | ✗ ≥ 0.9 |
 | `auth.evidence-coverage` | 1.0000 · 17/17 | ✓ |
 
-### 5.1 Five of five predictions held, and the reason is worth more than the fact
+### 5.1 Four of five held, and the one that failed failed the same way as last time
 
 | # | predicted | measured |
 |---|---|---|
 | 1 | `attachments` misses **≤ 5** | **2** ✓ |
-| 2 | recall numerator rises; denominator free to move | 362 → 406 numerator, denominator **444, unmoved** ✓ |
+| 2 | *"the numerator rises **and its denominator moves too**"* | numerator 362 → 406; denominator **444 → 444, unmoved** ✗ |
 | 3 | response-side `field-type` misses fall by **≤ 4** | 19 → **15**, exactly 4 ✓ |
 | 4 | `entity-field-presence.recall` falls by **exactly one** | 56/62 → **55/62** ✓ |
 | 5 | contamination stays `per-probe-required` | ✓ |
 
-This record has not had five of five before, and the difference is not
-foresight. 0051's failures were all predictions of **fixity** — "the
-denominator stays exactly 362", "seed-coverage stays 362/458" — and fixity is
-the one thing a seed change cannot be relied on to preserve, which is §1's
-whole finding. Every prediction above is about **direction and magnitude of a
-miss count**, which is the number a denominator cannot dilute. The predictions
-got better because §3 changed what a prediction is allowed to be about.
+**Prediction 2 is scored as a failure, and the first draft of this section
+scored it a pass.** The committed §4.2 text is bolded as "the numerator rises
+*and its denominator moves too*", and the denominator did not move at all. The
+body then hedged ("may grow with a wider matched surface"), and reading the
+hedge instead of the headline is precisely the sliding-past this document exists
+to stop — in the document, one section below the rule. So: **4 of 5.**
+
+The failure is instructive rather than embarrassing, because it is 0051's
+failure with the sign reversed. 0051 predicted denominators would stay **fixed**
+and they all moved; this predicted one would **move** and it stayed fixed.
+Both are predictions about a denominator, and the denominator is the thing
+neither of us can predict — it is a function of which controls the crawl found,
+which is what §1 says the seed changes. What *did* hold, four times out of four,
+is every prediction about **direction and magnitude of a miss count**, which is
+the number a denominator cannot dilute. The rule that follows is not "predict
+better"; it is **do not predict a denominator at all**, and §3's decomposition
+is what makes that a usable stance rather than an evasion.
+
+**And an exact non-movement that wants disbelieving** (§13). `seed-coverage`
+reads **444/545** here and read 444/545 on 0051's instance — byte-identical
+across a seed change. Checked rather than assumed: both runs report **21 matched
+endpoints**, and this metric's denominator is every response field the document
+declares on matched endpoints, so an unchanged matched set gives an unchanged
+denominator. The equality is explained; it is not a coincidence and it is not a
+stuck counter.
 
 **One caveat stated against my own rule.** Predictions 1, 3 and 4 are phrased
 as movements from 0051's numbers — *across the seed line this document says

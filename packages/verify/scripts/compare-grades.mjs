@@ -2,7 +2,19 @@
 /**
  * Compare two gradings — or refuse, which is the point (decision 0053).
  *
- *   node compare-grades.mjs <before.json> <after.json>
+ *   node compare-grades.mjs <site>                       # committed baseline vs the last grading
+ *   node compare-grades.mjs <before.json> <after.json>   # two explicit files
+ *
+ * **The baseline is committed and the working report is not**, which is
+ * deliberate and is the half that makes the comparison durable. `grade-capture`
+ * writes `envs/<site>/grade-run.json`, and `/envs/*​/` is gitignored — so that
+ * file is overwritten by the next grading and is invisible to git. A comparator
+ * whose only *before* side lives there would still depend on somebody having
+ * copied a file aside, which is the terminal-scrollback problem with an extra
+ * step. The baseline lives beside the truth snapshot in
+ * `packages/verify/fixtures/<site>/grade-run.json`, and promoting a run to it is
+ * an explicit commit whose diff someone reads — the same shape as the snapshot
+ * staleness gate, and for the same reason.
  *
  * The refusal is the **primary** path rather than a warning printed above a
  * table. 0019's rule: where "refused" and "compared" both render a delta, the
@@ -13,13 +25,34 @@
  * The judgement is `assessGradeComparability`, which takes two parsed reports
  * and nothing else. This file is wiring: read, parse, render, exit.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { GradeRunSchema } from '../../schema/dist/index.js';
 import { assessGradeComparability } from '../dist/grade/compare.js';
 
-const [beforePath, afterPath] = process.argv.slice(2);
-if (beforePath === undefined || afterPath === undefined) {
-  console.error('usage: compare-grades.mjs <before.json> <after.json>');
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO = join(HERE, '..', '..', '..');
+
+const args = process.argv.slice(2);
+let beforePath;
+let afterPath;
+if (args.length === 1) {
+  beforePath = join(REPO, 'packages', 'verify', 'fixtures', args[0], 'grade-run.json');
+  afterPath = join(REPO, 'envs', args[0], 'grade-run.json');
+  if (!existsSync(beforePath)) {
+    console.error(`no committed baseline at packages/verify/fixtures/${args[0]}/grade-run.json.`);
+    console.error('Promote a grading to it in a commit someone reads, then compare against it.');
+    process.exit(2);
+  }
+  if (!existsSync(afterPath)) {
+    console.error(`no grading at envs/${args[0]}/grade-run.json — run \`pnpm grade:capture ${args[0]}\` first.`);
+    process.exit(2);
+  }
+} else if (args.length === 2) {
+  [beforePath, afterPath] = args;
+} else {
+  console.error('usage: compare-grades.mjs <site> | compare-grades.mjs <before.json> <after.json>');
   process.exit(2);
 }
 
@@ -44,10 +77,15 @@ for (const m of result.movements) {
     m.numeratorDelta !== 0 || m.denominatorDelta !== 0
       ? m.missesDelta === 0 ? '  (denominator only)' : ''
       : '  (unmoved)';
+  // `—` where a side was vacuous. `denominator − numerator` is arithmetically
+  // defined for an ungrounded category and means nothing: `narrowing.precision`
+  // reads 0/103 because the document declares no formats at all, and printing
+  // "103" here would put a figure where the grader prints `vacuous`.
+  const miss = (x) => (x === null ? '—' : String(x));
   console.log(
     `  ${m.id.padEnd(34)} ${rate(m.before).padStart(7)} → ${rate(m.after).padEnd(8)} ` +
     `${`${m.before.numerator}/${m.before.denominator}`.padStart(8)} → ${`${m.after.numerator}/${m.after.denominator}`.padEnd(9)} ` +
-    `${String(m.missesBefore).padStart(4)} → ${String(m.missesAfter).padEnd(4)}${moved}`,
+    `${miss(m.missesBefore).padStart(4)} → ${miss(m.missesAfter).padEnd(4)}${moved}`,
   );
 }
 

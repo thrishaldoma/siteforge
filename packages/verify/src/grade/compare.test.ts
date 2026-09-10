@@ -270,6 +270,23 @@ describe('decomposeMovement', () => {
     expect(move.findings).toEqual([]);
   });
 
+  /**
+   * A vacuous side has no miss count, and the type says so.
+   *
+   * `denominator − numerator` is arithmetically defined for `narrowing.precision`
+   * reading `0/103` — the document declares no formats at all — and rendering
+   * that as 103 wrong narrowings would put a figure exactly where the grader
+   * prints `vacuous`. Found in the comparator's own first smoke run.
+   */
+  it('has no miss count for a vacuous side', () => {
+    const grounded = metric();
+    const ungrounded = metric({ numerator: 0, denominator: 103, value: null, vacuous: true, passed: false });
+    expect(decomposeMovement(ungrounded, ungrounded).missesBefore).toBeNull();
+    expect(decomposeMovement(ungrounded, ungrounded).missesDelta).toBeNull();
+    expect(decomposeMovement(ungrounded, grounded).missesAfter).toBe(25);
+    expect(decomposeMovement(ungrounded, grounded).missesDelta).toBeNull();
+  });
+
   it('reports a metric that became vacuous, and one that stopped being', () => {
     const gone = decomposeMovement(metric(), metric({ numerator: 0, denominator: 0, value: null, vacuous: true }));
     expect(gone.findings.map((f) => f.kind)).toContain('vacuity-changed');
