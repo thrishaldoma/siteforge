@@ -1,0 +1,14 @@
+diff --git a/packages/shared/src/narrowing.ts b/packages/shared/src/narrowing.ts
+index f8d1990..712a8fe 100644
+--- a/packages/shared/src/narrowing.ts
++++ b/packages/shared/src/narrowing.ts
+@@ -184,6 +184,9 @@ export function classifyStringField({
+     }
+   }
+ 
++  // empty: `distinct` is non-empty from the precondition above
++  if (!distinct.every((v) => ENUM_TOKEN.test(v))) return none;
++
+   // ---- rank 2: the UI constrains the field → enum.
+   //
+   // §7.5's primary, and the only evidence that is ground truth: a <select> with

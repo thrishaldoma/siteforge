@@ -246,17 +246,15 @@ This is where you, the LLM, do the work no deterministic pass can. Everything he
 
 5. **Type narrowing, and the evidence it requires.** Every frequency heuristic in this stage counts **distinct records, after deduplication by entity identity** — never observations. A list endpoint polled six times is not six times the evidence.
 
-   The default type is `string`. Narrowing must be justified; widening is free. An **enum requires evidence of a CLOSED domain, and low cardinality is not that.** Ranked:
+   The default type is `string`. Narrowing must be justified; widening is free. An **enum requires evidence of a CLOSED domain, and low cardinality is not that.**
 
-   1. **UI constraint (primary).** A `<select>`, radio group, or fixed filter set in the captured DOM whose option values cover the field's values. This is ground truth about the domain, and the only evidence that is: we captured the UI that drives the API. A field is an enum because the DOM constrains it, not because sampling was thin.
-   2. **Corroboration.** Distinct values stayed flat while distinct records grew — read statically, since one capture gives a final count rather than a trajectory: at least 20 distinct records, and a value-to-record ratio at or below 0.3.
-   3. **Value shape.** Slug-like: no whitespace, short.
+   **One ranking, and nothing sits above it.** Evidence that refutes an enum is ranked alongside evidence that supports one, in the same list, and the first entry that fires decides. There is no "hard exclusion, regardless of the above" tier — that tier is how a shape heuristic came to veto the ladder's own primary evidence for the life of the project, invisible to every reading of the ranking because it was above the part anyone reviews. **A condition that can veto a ranked branch is a ranked entry; if it cannot be argued a rank, it cannot be applied.**
 
-   Hard exclusions, regardless of the above:
-
-   - a uniqueness ratio near 1.0 per record — free text or an identifier, never an enum;
-   - values observed as a **path parameter** of any endpoint — that is a key; emit it as an identifier (`JsonSchemaNode.identifier`), not an enum. Match by **value overlap**, not by field name: path normalization collapses every id segment to the literal `:id`, so a name comparison tests against a constant;
-   - values containing sentence-like text.
+   1. **Path-parameter value overlap → not an enum, an identifier.** Values observed as a path parameter of any endpoint. Ground truth, like rank 2, but about a prior question — *is this a key* — and §7.4 reads foreign keys from it. Above rank 2 because a key that a control also happens to offer is still a key. Match by **value overlap**, not by field name: path normalization collapses every id segment to the literal `:id`, so a name comparison tests against a constant.
+   2. **UI constraint → enum.** A `<select>`, radio group, or fixed filter set in the captured DOM whose option values cover the field's values. This is ground truth about the domain, and the only evidence that is: we captured the UI that drives the API. A field is an enum because the DOM constrains it, not because sampling was thin. **Above ranks 3 and 4** — a control that offers exactly four options is a statement about what the API can receive, and no heuristic about how the values *look* outranks it. `<option value="0">` is a domain of numeric codes, not a disqualification.
+   3. **Uniqueness near 1.0 per record → not an enum.** Free text or an identifier. An observation about the data rather than about its spelling, which is why it sits above rank 4 and below rank 2.
+   4. **Sentence-like values → not an enum.** Whitespace, sentence punctuation, or length: a value that is prose cannot be a domain member. Tests for *prose*, and nothing wider — "not slug-like" is rank 5's concern and using its negation here is what put a shape heuristic above rank 2.
+   5. **Corroborated cardinality, with slug-like shape → enum.** Distinct values stayed flat while distinct records grew — read statically, since one capture gives a final count rather than a trajectory: at least 20 distinct records, and a value-to-record ratio at or below 0.3. Slug-likeness (no whitespace, short) is required here and only here: it is the weakest positive signal, so it may support the weakest positive branch and may not refute a stronger one.
 
    **Invariant: no enum from fewer than 20 distinct records without a UI constraint backing it.** The schema enforces this — a narrowing carries the counts it was drawn from, so an unjustified enum does not parse.
 

@@ -376,6 +376,15 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'shape-veto-above-the-ladder',
+    bug: "the slug-shape test is restored above the ranking, so it vetoes §7.5's own primary evidence",
+    reachable: "HEAD until this turn, and §7.5's prose said to do it — the section had a 'hard exclusions, regardless of the above' tier, and this was in it. That is the point: every individual line read correctly, and the defect was the *tier*. A shape heuristic ranked last among reasons to believe was first among reasons to disbelieve, and no review of the ranking could see it because it was not in the ranking",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'lets a UI constraint narrow a domain of numeric codes',
+    change: 'the ENUM_TOKEN check is reinstated above the UI-constraint branch',
+  },
+
+  {
     id: 'driver-does-not-parse',
     bug: 'a capture driver has a syntax error, and every gate stays green',
     reachable: 'it happened. A dropped closing paren in `capture-site.mjs` survived `pnpm build`, `pnpm typecheck`, `pnpm lint` and `pnpm test` — all four green — because `tsc` does not read `.mjs`, the lint scripts and `determinism.test.mjs` read this file as *text*, and `verify:clean` runs rung 2 and rung 3, neither of which imports the real driver. It was found by a nine-minute crawl dying on the first line of `node`. The patch reinstates exactly the character that was missing',
