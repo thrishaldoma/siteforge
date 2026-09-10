@@ -1,7 +1,9 @@
 # 0040 — M1 is open, M2 is being built across it, and this is the acknowledgement
 
-*Status: accepted. States a violation of §12's own sequencing rule, with the
-reason it is accepted and the condition that would change that.*
+*Status: accepted, and **its expiry has fired**. §4's conditional acceptance
+ended when §7.6 landed; the ruling is 0043 — option (a), in two pieces, one of
+them built. Read this for the bound and the sweep, and 0043 for what was
+decided.*
 
 §12: *"Milestone gates. Do not start a milestone before the previous one's gate
 is green."* We are working on M2. **M1's gate is not green and never has been.**
@@ -129,6 +131,15 @@ conditional and the condition is now dated:
 > determinism stops being deferrable.** A point estimate off one crawl of a
 > pass known to vary 60 → 84 on its own input would be a measurement of the
 > draw.
+
+**Fired, and settled in 0043.** The shape turned out to be neither branch the
+ruling offered: the pass has a **non-terminating tail** — one crawl finished in
+475.9s and the next hung at 38:16 — and its finite draws take a new value
+nearly every run (skipped controls 84 · 83 · 79). Option (b) is excluded on its
+own stated condition, because the variance measurably does reach what §7.6
+consumes. The ruling is (a), and the measurement split it in two: a wall-clock
+bound on each probe (landed) and resetting target state between probes (next,
+and it could not have been measured before the first).
 
 ### 4.1 What would make it unacceptable, stated so the line is checkable
 
