@@ -712,7 +712,7 @@ async function revealInScrollableAncestor(locator) {
         node = node.parentElement;
       }
       return 'no scrollable ancestor';
-    }, VIEWPORT, { timeout: 1000 });
+    }, VIEWPORT, { timeout: 1000 }));
   } catch (err) {
     rethrowIfDefect(err);
     tallyReveal('evaluate failed');

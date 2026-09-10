@@ -376,6 +376,15 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'driver-does-not-parse',
+    bug: 'a capture driver has a syntax error, and every gate stays green',
+    reachable: 'it happened. A dropped closing paren in `capture-site.mjs` survived `pnpm build`, `pnpm typecheck`, `pnpm lint` and `pnpm test` — all four green — because `tsc` does not read `.mjs`, the lint scripts and `determinism.test.mjs` read this file as *text*, and `verify:clean` runs rung 2 and rung 3, neither of which imports the real driver. It was found by a nine-minute crawl dying on the first line of `node`. The patch reinstates exactly the character that was missing',
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    expect: 'capture-site.mjs',
+    change: 'the closing paren of the reveal call is dropped',
+  },
+
+  {
     id: 'divergence-slot-ignores-its-endpoint',
     bug: 'a field-scope divergence entry excludes its slot on every endpoint, not just the one whose exchange it recorded',
     reachable: "the simplification anyone reaches for once two entries name the same pointer — Vikunja's four are `view_kind` and `bucket_configuration_mode` twice each, so keying on the pointer alone looks like deduplication rather than a widening. It makes one recorded exchange justify an exclusion everywhere the field name appears, which is exactly what 0015's per-entry evidence rule forbids: `view_kind` being wrong on `/projects` is not evidence about any other endpoint",
