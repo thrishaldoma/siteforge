@@ -711,7 +711,33 @@ async function revealInScrollableAncestor(locator) {
         }
         node = node.parentElement;
       }
-      return 'no scrollable ancestor';
+      /**
+       * The one field, and the whole reason this branch reports rather than
+       * shrugging (0032 §6.5).
+       *
+       * The static read said these elements sit in a `position: fixed` sidebar
+       * that `overflow: auto` makes a scrollport; the probe found no scrollable
+       * ancestor at all, because `auto` scrolls only when content overflows and
+       * 220px of nav does not overflow a 736px box. What is left is one
+       * question with two answers, and they need different fixes: **is the
+       * out-of-flow ancestor itself off-screen, or is it on-screen and the
+       * element inside it is not?**
+       *
+       * Answered here rather than in `diagnoseUndriveable`, which runs after the
+       * timeout and must keep reading the page the same way it always has.
+       */
+      let out = el.parentElement;
+      while (out !== null && out !== document.body && out !== document.documentElement) {
+        const cs = getComputedStyle(out);
+        if (cs.position === 'fixed' || cs.position === 'sticky') {
+          const box = out.getBoundingClientRect();
+          const inside =
+            box.right > 0 && box.bottom > 0 && box.left < vp.width && box.top < vp.height;
+          return `no scrollable ancestor · ${cs.position} ancestor ${inside ? 'on-screen' : 'off-screen'}`;
+        }
+        out = out.parentElement;
+      }
+      return 'no scrollable ancestor · none out of flow';
     }, VIEWPORT, { timeout: 1000 }));
   } catch (err) {
     rethrowIfDefect(err);
