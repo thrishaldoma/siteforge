@@ -208,7 +208,36 @@ describe('decomposeMovement', () => {
     );
     expect(move.missesBefore).toBe(25);
     expect(move.missesAfter).toBe(25);
-    expect(move.findings.map((f) => f.kind)).toEqual(['rate-rose-while-misses-did-not-fall']);
+    expect(move.findings.map((f) => f.kind)).toEqual(['rate-moved-against-its-miss-count']);
+  });
+
+  /**
+   * The mirror, and it was found by sweeping the record with the rule above:
+   * 0046's `response-field-presence.precision` **fell** 0.4538 → 0.4207 with
+   * its miss count byte-identical at 325. It read as a regression in two
+   * decision documents and is the denominator moving, 595 → 561.
+   */
+  it('flags a rate that FELL while the miss count stayed put', () => {
+    const move = decomposeMovement(
+      metric({ id: 'response-field-presence.precision', category: 'response-field-presence', numerator: 270, denominator: 595, value: 0.4538, passed: false }),
+      metric({ id: 'response-field-presence.precision', category: 'response-field-presence', numerator: 236, denominator: 561, value: 0.4207, passed: false }),
+    );
+    expect(move.missesBefore).toBe(325);
+    expect(move.missesAfter).toBe(325);
+    expect(move.findings.map((f) => f.kind)).toEqual(['rate-moved-against-its-miss-count']);
+  });
+
+  /**
+   * The control for the symmetric half: a rate that fell **because** more
+   * answers are wrong is an honest regression and must produce no finding.
+   */
+  it('flags NOTHING when a rate fell and the misses actually rose', () => {
+    const move = decomposeMovement(
+      metric({ numerator: 240, denominator: 250, value: 0.96 }),
+      metric({ numerator: 200, denominator: 250, value: 0.8, passed: false }),
+    );
+    expect(move.missesDelta).toBe(40);
+    expect(move.findings).toEqual([]);
   });
 
   /**

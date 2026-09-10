@@ -118,6 +118,31 @@ reader comparing across this line is comparing two targets.
 
 ## 4. Measured — and the seed changed more than the field values
 
+> **The rate deltas in this table are uncontrolled ([[0053]] §1).** The
+> `before` and `after` columns are two *different instances* — that is §4's own
+> finding, arrived at from inside the table — so no rate delta here is a
+> like-for-like comparison and none should be quoted as one. Nothing recorded
+> which seed produced which capture, so nothing could refuse the comparison at
+> the time; `manifest.seedState` now does, and a comparison across two seed ids
+> now refuses rather than rendering a delta.
+>
+> **What stands and what does not**, marked rather than reconstructed (0052):
+>
+> - the **per-field miss counts** in §4.1 — `labels` 30 → 2, `assignees` 21 → 4,
+>   `reminders` 12 → 0 — stand as statements about their own instances, and the
+>   ruling in §5 rests on them;
+> - the **rate deltas in this table** do not. Every denominator moved, which is
+>   what §4 says;
+> - §4.2's finding stands and is *strengthened*: `field-type`'s miss count was
+>   byte-identical at 25 across the change, so the rate movement was denominator
+>   growth whatever else was true. 0053 §3 makes that a finding the grader
+>   prints, and a sweep found **six more** such movements in this record.
+>
+> Two of this table's rows carry a 0053 finding when run through the gate:
+> `field-type.accuracy` and `seed-coverage`, both `rate-moved-against-its-miss-count`
+> — `seed-coverage`'s misses went **96 → 101** while its rate rose, which was
+> not noticed here.
+
 | metric | before | after | predicted |
 |---|---|---|---|
 | `observed-body-recall` | 0.6519 (236/362) | **0.8153 (362/444)** | value ✓, **denominator ✗** |

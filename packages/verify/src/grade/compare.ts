@@ -162,8 +162,16 @@ export type MovementFindingKind =
    * denominator went.
    */
   | 'gate-crossed-on-a-changed-denominator'
-  /** The rate improved and the absolute count of wrong answers did not fall. */
-  | 'rate-rose-while-misses-did-not-fall'
+  /**
+   * The rate moved and the absolute count of wrong answers did not follow.
+   *
+   * Both directions, and the second was found by sweeping the record with the
+   * first: 0051's `field-type` rose 0.9000 → 0.9433 with misses flat at 25, and
+   * 0046's `response-field-presence.precision` *fell* 0.4538 → 0.4207 with
+   * misses **byte-identical at 325**. One reads as an improvement and the other
+   * as a regression; neither is either, and both are the denominator moving.
+   */
+  | 'rate-moved-against-its-miss-count'
   /** A number that can only move via one specific defect moved (0015 §3). */
   | 'conservation-check-moved'
   /** One side has no number. A delta over a vacuous metric is not a delta. */
@@ -291,17 +299,26 @@ export function decomposeMovement(before: GradeRunMetric, after: GradeRunMetric)
     });
   }
 
-  const rose =
-    before.value !== null && after.value !== null &&
-    (polarityOf(after) === 'higher-is-better' ? after.value > before.value : after.value < before.value);
-  if (rose && missesAfter >= missesBefore) {
-    findings.push({
-      kind: 'rate-rose-while-misses-did-not-fall',
-      detail:
-        `the rate improved while misses went ${missesBefore} → ${missesAfter}. ` +
-        `Every one of the ${missesAfter} wrong answers is still wrong; the denominator grew ` +
-        `${before.denominator} → ${after.denominator} around them.`,
-    });
+  /**
+   * Did the rate move in a direction its own miss count does not support?
+   *
+   * Symmetric on purpose. An improvement the misses do not back is a pass
+   * nobody earned; a regression the misses do not back is a scare nobody
+   * caused. Both are a denominator moving, and only the first was in the case
+   * that motivated the rule.
+   */
+  if (before.value !== null && after.value !== null && after.value !== before.value) {
+    const better = polarityOf(after) === 'higher-is-better' ? after.value > before.value : after.value < before.value;
+    const supported = better ? missesAfter < missesBefore : missesAfter > missesBefore;
+    if (!supported) {
+      findings.push({
+        kind: 'rate-moved-against-its-miss-count',
+        detail:
+          `the rate ${better ? 'improved' : 'worsened'} while misses went ${missesBefore} → ${missesAfter}, ` +
+          `which does not ${better ? 'fall' : 'rise'}. The denominator went ${before.denominator} → ${after.denominator}; ` +
+          'that is what moved, and the rate is reporting it as a change in quality.',
+      });
+    }
   }
 
   if (before.conservation !== undefined && (before.numerator !== after.numerator || denominatorDelta !== 0)) {

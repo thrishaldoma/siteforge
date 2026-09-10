@@ -413,8 +413,8 @@ export const SABOTAGES = [
 
   {
     id: 'comparability-ignores-the-seed-id',
-    bug: 'sameSeedState compares only that both captures were seeded, never which seed — so two gradings of two different instances compare and render a delta',
-    reachable: "the shape the field had before it existed: a boolean 'was this seeded'. It is also the obvious simplification of a two-clause return, and it fails **open** — every comparison still renders, which is exactly what the repository did for its whole life and what 0051's before/after table was.",
+    bug: 'the comparability gate compares only WHETHER each capture was seeded, never which seed — so two gradings of two different instances compare and render a delta',
+    reachable: "the shape this field had before it existed: a boolean 'was this seeded'. It is the reading anyone reaches for who has not met 0051, it type-checks, and it fails **open** — every comparison still renders, which is exactly what the repository did for its whole life.",
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
     // Asserted on the refusal KIND, never on 'no delta appeared'. Under the bug
     // the comparison still produces a full delta table, so a test asserting
@@ -427,7 +427,7 @@ export const SABOTAGES = [
     kind: 'control',
     id: 'comparability-seed-id-respelled',
     controlFor: 'comparability-ignores-the-seed-id',
-    change: 'the same two conditions on the same line, written as an early return — the id comparison preserved',
+    change: 'the same predicate on the same line, negated with `=== false` instead of `!` — the id comparison preserved',
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
     reachable: 'an ordinary readability edit to the exact expression the defect rewrites, and the pair is the point: the gate must refuse only while the id is actually being ignored.',
   },

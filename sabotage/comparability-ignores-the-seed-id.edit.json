@@ -1,7 +1,7 @@
 [
   {
-    "file": "packages/schema/src/seed-state.ts",
-    "find": "  return a.source === 'fixture-seed' && b.source === 'fixture-seed' && a.id === b.id;",
-    "replace": "  return a.source === 'fixture-seed' && b.source === 'fixture-seed';"
+    "file": "packages/verify/src/grade/compare.ts",
+    "find": "  } else if (!sameSeedState(before.seedState, after.seedState)) {",
+    "replace": "  } else if (before.seedState.source !== after.seedState.source) {"
   }
 ]
