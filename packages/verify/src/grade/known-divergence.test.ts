@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import { KnownDivergenceSchema, assessDivergenceBudget } from '@siteforge/schema';
 import { KNOWN_DIVERGENCE } from './known-divergence.js';
+import { slotsForEndpoint } from './grade.js';
 
 describe('the known-divergence list', () => {
   it('parses, evidence and all', () => {
@@ -66,6 +67,24 @@ describe('the known-divergence list', () => {
       { category: 'narrowing', count: 4, denominator: 9, cap: 0.45, overCap: true, concentrated: true },
     ]);
     expect(budget.messages.join(' ')).toContain('not fit for grading narrowing');
+  });
+
+  it('covers only the endpoint whose exchange the entry recorded', () => {
+    // The widening this list is most exposed to: its four entries are two
+    // pointers, twice each, so keying on the pointer alone looks like
+    // deduplication. It would make one recorded exchange justify an exclusion
+    // everywhere the field name appears — and `view_kind` being wrong on
+    // `/projects` is not evidence about any other endpoint.
+    const slots = new Map([
+      ['GET /projects', new Set(['200 /[]/views/[]/view_kind'])],
+    ]);
+    expect([...slotsForEndpoint(slots, 'GET', '/projects')]).toEqual([
+      '200 /[]/views/[]/view_kind',
+    ]);
+    // The discriminating case: an endpoint no entry names gets nothing.
+    expect([...slotsForEndpoint(slots, 'GET', '/tasks/all')]).toEqual([]);
+    expect([...slotsForEndpoint(slots, 'POST', '/projects')]).toEqual([]);
+    expect([...slotsForEndpoint(undefined, 'GET', '/projects')]).toEqual([]);
   });
 
   it('fails closed when a category has no denominator to budget against', () => {

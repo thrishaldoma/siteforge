@@ -383,11 +383,7 @@ function fieldCategories(
   };
 
   for (const pair of pairs) {
-    // Looked up by endpoint, never matched loosely across them: an entry
-    // justifies `view_kind` on the endpoint whose exchange it recorded, and
-    // one justification must not quietly cover every endpoint carrying the
-    // same field name. That is 0015's per-entry evidence rule.
-    const mine = slots.get(`${pair.truth.method.toUpperCase()} ${pair.truth.specPath}`);
+    const mine = slotsForEndpoint(slots, pair.truth.method, pair.truth.specPath);
     score(modelRequestFields(pair), truthRequestFields(pair), t.requestPrecision, t.requestRecall, mine);
     score(
       modelResponseFields(pair),
@@ -518,6 +514,27 @@ function exclusions(entries: readonly KnownDivergence[]): Map<GradeCategoryId, S
  * doing the work of several, which is what 0015's per-entry evidence rule exists
  * to stop.
  */
+/**
+ * The slots one matched pair's exclusions cover — separated from the loop so it
+ * can be handed a pair nothing names.
+ *
+ * §13: a gate takes its inputs as parameters, and something other than the real
+ * run has to be able to call it. Inline, the only assertion available on this
+ * lookup was "the grader freeze noticed grade.ts changed", which every edit to
+ * the file produces and which therefore discriminates nothing.
+ */
+export function slotsForEndpoint(
+  slots: ReadonlyMap<string, ReadonlySet<string>> | undefined,
+  method: string,
+  specPath: string,
+): ReadonlySet<string> {
+  // Looked up by endpoint, never matched loosely across them: an entry
+  // justifies `view_kind` on the endpoint whose exchange it recorded, and one
+  // justification must not quietly cover every endpoint carrying the same field
+  // name. That is 0015's per-entry evidence rule.
+  return slots?.get(`${method.toUpperCase()} ${specPath}`) ?? new Set<string>();
+}
+
 function slotExclusions(
   entries: readonly KnownDivergence[],
 ): Map<GradeCategoryId, Map<string, Set<string>>> {

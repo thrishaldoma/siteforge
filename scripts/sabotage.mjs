@@ -292,7 +292,12 @@ export const SABOTAGES = [
     reachable:
       'the shape of every metric that ever got tuned. Infer scores 0.94 on narrowing precision, 0.98 looks harsh in the moment, and one character makes the run green. Nothing about the edit says it happened during a scoring run rather than a year earlier — which is the whole reason the pin exists, since "it did not move" is checkable and "I did not read it" is not',
     gate: ['pnpm', '-s', 'test', '--project', 'verify'],
-    expect: 'changed after the freeze',
+    // The lookup's own assertion, not the freeze's. `changed after the freeze`
+    // is what *every* edit to grade.ts produces, so it cannot tell this bug
+    // from a rename — §13's rule that the assertion must exclude what the
+    // broken version outputs. `slotsForEndpoint` is extracted so there is
+    // something to assert against.
+    expect: 'covers only the endpoint whose exchange the entry recorded',
     change: 'lower narrowing.precision from 0.98 to 0.9 in the frozen contract',
   },
   {
