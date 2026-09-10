@@ -19,7 +19,7 @@
  * `assessGraderFirewall` enforces.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   DEFERRALS, GRADE_SUITES, SiteModelSchema, assessDeferrals, assessSeedExpiry, countEmissions,
@@ -175,7 +175,13 @@ if (existsSync(envsRoot)) {
     for (const name of readdirSync(dir)) {
       const abs = join(dir, name);
       if (statSync(abs).isDirectory()) walk(abs, `${rel}/${name}`);
-      else if (rel.endsWith('/seeds') && name.endsWith('.json')) seedFiles.push(`${rel}/${name}`);
+      // Parsed, not a suffix test: the containing directory's last *segment*
+      // must be `seeds`, and the extension comes from `extname`. `endsWith`
+      // here is the substring-for-token family §13 keeps finding — a directory
+      // named `my-seeds` would satisfy it.
+      else if (rel.split('/').at(-1) === 'seeds' && extname(name) === '.json') {
+        seedFiles.push(`${rel}/${name}`);
+      }
     }
   };
   walk(envsRoot, 'envs');
