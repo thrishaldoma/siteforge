@@ -212,6 +212,68 @@ stop comparing the same thing.
 A moved read-only number is the signal that the change reached further than
 intended, and it would be a finding rather than a nuisance.
 
+### 6.3 Measured — and the diagnosis in §5 was wrong
+
+| | predicted | measured |
+|---|---|---|
+| `click/timeout` | falls | **51 — byte-identical** |
+| centre off-screen after scroll | falls | **49 — byte-identical** |
+| `locate/not-found` | unchanged | 15 → 24 (probe-pass variance, §4) |
+| read-only idempotence | exactly 4 | **exactly 4**, same paths, same attribute |
+
+The confinement held: read-only did not move, so the change stayed inside the
+probe pass as designed. Everything else it was supposed to do, it did not do.
+
+§13 reads exact non-movement as the strong signal — a change that does not move
+a number *at all* did not reach it, which is a defect in the experiment rather
+than a result about the subject. So the reveal was instrumented rather than
+guessed at a fourth time, and it answered in one run:
+
+```
+reveal: already in view 55 · no scrollable ancestor 49
+```
+
+**Forty-nine of forty-nine — exactly the off-screen population — have no
+scrollable ancestor at probe time.** Nothing was scrolled; nothing failed; the
+code path returned early every time.
+
+`aside.menu-container` computes `overflow: auto`, which is what `styles.json`
+records and what §5 reasoned from. But `auto` scrolls only when content
+**overflows**, and the sidebar's 220px of nav sits in a 736px box. It is not a
+scrollport. So §5's mechanism is wrong: the element is not scrolled out of a
+container — *the container puts it where it is*, and there is nothing to scroll.
+
+The static read was sound about the layout and unsound about the consequence. A
+computed `overflow` value says what would happen **if** the content overflowed,
+and `scrollHeight > clientHeight` is the part a stylesheet cannot tell you. That
+is 0019's precondition rule in a new place: the evidence answered a question
+adjacent to the one asked.
+
+### 6.4 The fix stays, unexercised, and says so
+
+Kept rather than reverted. The ruling's justification was the **class** — capture
+could not drive anything inside a genuinely scrollable non-viewport container,
+and that pattern is everywhere — and that justification is untouched by Vikunja
+not being an instance of it. What changes is the honesty of the claim: it is
+**unexercised on this target**, the tally says so on every run, and it recovered
+zero controls here.
+
+An unexercised gate is one nobody can prove fires, so the tally is not optional
+decoration — `no scrollable ancestor 49` is the line that stops this from being
+a fix everyone assumes is working.
+
+### 6.5 What is actually open
+
+Where the sidebar is at probe time. The captured layout has it at y=64, 300×736
+in an 800px viewport — fully on screen — and the probe finds its links' centres
+outside. Something moves it, or moves them, between page load and the probe.
+
+The next measurement is named rather than guessed: **record the scrollable-less
+ancestor's own bounding box at reveal time**, beside the element's. One field,
+one run, and it distinguishes "the sidebar is off-screen" from "the sidebar is
+on-screen and the element is not". Not taken in this turn — the probe pass has
+now been re-run five times and §4's bound is measured against a moving tree.
+
 ## 7. Open
 
 - The 30 probe-pass paths: **unfixed**, owned by M1, bounded here.
