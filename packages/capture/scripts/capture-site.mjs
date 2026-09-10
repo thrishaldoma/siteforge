@@ -44,6 +44,8 @@ import * as S from '../../schema/dist/index.js';
 import {
   allowedOrigins as deriveAllowedOrigins,
   assessAssetBodies,
+  assessProbeContamination,
+  DIAGNOSTICS_TREE_EXPECTATION,
   countOptionSetsInDom,
   scalarKindsInBodies,
   scalarKindsWithExamples,
@@ -480,6 +482,84 @@ let budgetDeclined = 0;
 let deadlineDeclined = 0;
 
 /**
+ * What the probe pass did, in the order it did it — the measurement artifact
+ * for 0043 §4's open question, and deliberately **not** part of the capture.
+ *
+ * Two consumers, both about the pass rather than about the site:
+ *
+ *  - `probes` carries each probe's position in its route's loop and the
+ *    fingerprint of the state it found there, which is what
+ *    `assessProbeContamination` reads to decide whether resetting at the route
+ *    boundary would be enough (within-route drift) or whether it has to be per
+ *    probe.
+ *  - `abandoned` carries what the page was waiting on when the deadline fired.
+ *    Ruling: the hang stays undiagnosed and gets *counted* instead, so what
+ *    accumulates across runs is the distribution, not a fourth hypothesis.
+ *
+ * **Written outside `capture/<site-id>/`, and that is a decision rather than a
+ * convenience.** The idempotence harness compares every file in that tree, and
+ * this file's whole subject is the pass's run-to-run variance — including it
+ * would put the record of the variance inside the population that measures the
+ * variance, so the bound would grow by the act of instrumenting it. Worse, it
+ * would grow by a *cascade* rather than a constant if the ordering went into
+ * the flow traces themselves: `flowId` is a hash of route and label, so one
+ * early divergence shifts the position of every later probe on that route and
+ * every one of their files differs. The harness collects this directory
+ * alongside each run instead.
+ */
+const probePass = { probes: [], abandoned: [] };
+
+/**
+ * A probe's live state, readable **without awaiting anything**.
+ *
+ * `withDeadline` fires `onExpiry` while the probe is still running and its page
+ * is still alive. Asking the page anything there — `page.url()`, an evaluate,
+ * a request query — is a second await racing the thing being measured, and a
+ * hung page is precisely where that await would not return either. So the
+ * handler does field reads only, and these fields are maintained as events
+ * arrive rather than gathered on demand.
+ */
+const newProbeState = ({ routeId, label, attemptIndex }) => ({
+  routeId, label, attemptIndex,
+  step: 'created',
+  url: null,
+  /** Requests issued and not yet finished or failed, by url. The "waiting on what" answer. */
+  pending: new Map(),
+});
+
+/** Maintain `pending` and `url` from the page's own events. No polling, no awaits. */
+function watchProbeState(page, state) {
+  page.on('request', (r) => state.pending.set(r.url(), r.resourceType()));
+  page.on('requestfinished', (r) => state.pending.delete(r.url()));
+  page.on('requestfailed', (r) => state.pending.delete(r.url()));
+  page.on('framenavigated', (f) => { if (f === page.mainFrame()) state.url = f.url(); });
+}
+
+/**
+ * What the page was waiting on when the deadline fired.
+ *
+ * The discriminating pair, per ruling: **which operation** was open, and **what
+ * network was outstanding**. Not a diagnosis — one instance per crawl is one
+ * sample, and 0032 §5 is the document that spent itself on a mechanism read off
+ * a single wrong reading. This records; the distribution across runs is what
+ * gets looked at.
+ */
+function recordProbeStateAtExpiry(state, phase) {
+  const pending = [...state.pending.entries()].map(([url, resourceType]) => ({
+    url: scrubDeep(url), resourceType,
+  }));
+  probePass.abandoned.push({
+    routeId: state.routeId, label: state.label, attemptIndex: state.attemptIndex,
+    phase, step: state.step, url: state.url === null ? null : scrubDeep(state.url),
+    pendingCount: pending.length,
+    // Capped: a page polling in a loop can hold many, and the shape of the set
+    // is the signal rather than its full membership.
+    pending: pending.slice(0, 12),
+  });
+  return { step: state.step, pendingCount: pending.length };
+}
+
+/**
  * Race a probe against a wall clock.
  *
  * Deliberately not `Promise.race` against a bare timer alone: the loser keeps
@@ -637,13 +717,13 @@ async function acquireStorageState(browser) {
  * probe that never came back, which is a fact about the pass and is the
  * failure a count budget structurally cannot see (0043).
  */
-function recordAbandoned({ routeId, nodeId, label, ms, phase }) {
+function recordAbandoned({ routeId, nodeId, label, ms, phase, at }) {
   gaps.push({
     gapId: gapId(`probe-deadline:${routeId}:${nodeId}`),
     stage: 'capture', category: 'interaction-not-reproducible', severity: 'degraded',
     subject: { routeId, nodeId },
     summary: `${label} did not return within ${ms}ms and the probe was abandoned.`,
-    detail: `§6's budget is a count of attempts per route and cannot bound a probe that never returns. Measured: two probing crawls from one commit, 475.9s and then a hang at 38:16 with an idle event loop (0043). Abandoned at ${phase}; the pass continued.`,
+    detail: `§6's budget is a count of attempts per route and cannot bound a probe that never returns. Measured: two probing crawls from one commit, 475.9s and then a hang at 38:16 with an idle event loop (0043). Abandoned at ${phase}, in step '${at.step}', with ${at.pendingCount} request(s) outstanding; the pass continued. Which operation and what network was open are recorded per abandonment in the diagnostics; one instance per crawl is one sample and no mechanism is claimed from it.`,
     stub: { kind: 'omitted', detail: 'Probe abandoned on the wall-clock deadline; its transition is not reproduced.' },
   });
 }
@@ -928,12 +1008,27 @@ async function diagnoseUndriveable({ page, locator, candidate, step, attemptInde
  * — *is* the functional specification §9's behavioural gate replays. Each probe
  * runs in a fresh page so probes cannot contaminate each other's preconditions.
  */
-async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex = 0, destructive = false }) {
+async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex = 0, destructive = false, state }) {
   let ran = false;
   // unguarded: guarded on the next line
   const page = await ctx.newPage();
   installEscapeGuards(page, { onBlocked });
   attachRecorders(page, { current: routeId });
+  if (state === undefined) throw new Error('runProbe needs a probe state: the deadline handler reads it synchronously and cannot ask the page.');
+  watchProbeState(page, state);
+  /**
+   * Pushed now and filled in as the probe learns things, so a probe appears in
+   * the record exactly once whichever way it leaves — including the paths that
+   * return early and the one that never returns at all. Building it at the end
+   * would silently omit precisely the probes the measurement is about.
+   */
+  const observed = {
+    routeId, attemptIndex, label,
+    preStructureHash: null, preTextHash: null, mutated: false,
+  };
+  probePass.probes.push(observed);
+  /** `step`, plus the field the deadline handler reads. One place, so they cannot disagree. */
+  const at = (stepName, run) => { state.step = stepName; return step(stepName, run); };
   /**
    * Whether a main-frame navigation was in flight when the click gave up.
    *
@@ -963,7 +1058,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
      * `goto/timeout`. Kept because it is right on its own terms and faster;
      * claimed as nothing more.
      */
-    await step('goto', () =>
+    await at('goto', () =>
       page.goto(`${ORIGIN}${record.plan.path}`, { waitUntil: 'domcontentloaded', timeout: 15_000 }));
     await page.waitForTimeout(900);
     locator = page.getByRole(candidate.a11y.role, { name: candidate.a11y.name, exact: true }).first();
@@ -988,6 +1083,11 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     const snap = async () => page.evaluate(() => ({
       url: location.href,
       html: document.documentElement.outerHTML,
+      // Tag sequence alone, for the contamination instrument. A created or
+      // deleted row moves it; a re-rendered relative timestamp does not, and
+      // §6's shim freezes our clock but not the server's — so a single hash
+      // over `html` cannot tell a probe's write from the target's own.
+      structure: [...document.querySelectorAll('*')].map((e) => e.tagName).join(','),
       classes: [...document.querySelectorAll('*')].map((e) => e.className).join('|'),
       attrs: [...document.querySelectorAll('*')]
         .map((e) => [...e.attributes].map((a) => `${a.name}=${a.value}`).join(',')).join('|'),
@@ -998,17 +1098,19 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     }));
 
     await settle(2000);
-    const before = await step('snap-before', snap);
+    const before = await at('snap-before', snap);
+    observed.preStructureHash = S.shortHash(before.structure);
+    observed.preTextHash = S.shortHash(before.html);
     const netBefore = observations.length;
-    await step('reveal', () => revealInScrollableAncestor(locator));
-    await step('click', () => locator.click({ timeout: 5000 }));
+    await at('reveal', () => revealInScrollableAncestor(locator));
+    await at('click', () => locator.click({ timeout: 5000 }));
     // §6 says network idle or 2s. `networkidle` alone is not enough: on an
     // already-idle page it resolves before the click's fetch is even issued.
     await page.waitForTimeout(400);
     // operational: a settle timeout is expected on a page holding a connection open; the snapshot is taken either way
     await page.waitForLoadState('networkidle', { timeout: 2000 }).catch(() => {});
     await settle(2000);
-    const after = await step('snap-after', snap);
+    const after = await at('snap-after', snap);
 
     // Second layer behind the router chokepoint. If this fires, the interceptor
     // has a hole — a defect, not a classification.
@@ -1019,8 +1121,9 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     }
 
     const networkCalls = observations.slice(netBefore);
-    const snapshot = (state, hash) => ({
-      url: state.url, routeId, domHash: hash, a11yHash: S.shortHash(state.attrs), focusedRef: null,
+    observed.mutated = networkCalls.some((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method));
+    const snapshot = (snapped, hash) => ({
+      url: snapped.url, routeId, domHash: hash, a11yHash: S.shortHash(snapped.attrs), focusedRef: null,
     });
 
     ran = true;
@@ -1202,14 +1305,17 @@ async function probeRoute({ browser, storageState, routeId, record }) {
     if (phase === 'session-destructive') {
       const ownState = await acquireStorageState(browser);
       const ownCtx = await newGuardedContext(browser, { storageState: ownState });
+      const live = newProbeState({ routeId, label, attemptIndex: attempted });
       const ran = await withDeadline(
         runProbe({
           ctx: ownCtx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex: attempted,
+          state: live,
         }),
         PROBE_DEADLINE_MS,
         () => {
           deadlineDeclined += 1;
-          recordAbandoned({ routeId, nodeId: candidate.nodeId, label, ms: PROBE_DEADLINE_MS, phase: 'session-destructive' });
+          const at = recordProbeStateAtExpiry(live, 'session-destructive');
+          recordAbandoned({ routeId, nodeId: candidate.nodeId, label, ms: PROBE_DEADLINE_MS, phase: 'session-destructive', at });
         },
       );
       await ownCtx.close();
@@ -1226,12 +1332,14 @@ async function probeRoute({ browser, storageState, routeId, record }) {
     // structurally cannot vary (§13).
     const attemptIndex = attempted;
     attempted += 1;
+    const live = newProbeState({ routeId, label, attemptIndex });
     const ran = await withDeadline(
-      runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex }),
+      runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex, state: live }),
       PROBE_DEADLINE_MS,
       () => {
         deadlineDeclined += 1;
-        recordAbandoned({ routeId, nodeId: candidate.nodeId, label, ms: PROBE_DEADLINE_MS, phase: `attempt ${attemptIndex}` });
+        const at = recordProbeStateAtExpiry(live, `attempt ${attemptIndex}`);
+        recordAbandoned({ routeId, nodeId: candidate.nodeId, label, ms: PROBE_DEADLINE_MS, phase: `attempt ${attemptIndex}`, at });
       },
     );
     if (ran) fired += 1;
@@ -1955,7 +2063,41 @@ write('stage-report.json', S.StageReportSchema, {
   warnings, gaps,
 });
 
-const secrets = scanCaptureTree(OUT);
+/**
+ * The pass's own record, written outside the compared tree (see `probePass`).
+ *
+ * The verdict is printed rather than acted on. It answers one half of 0043
+ * §4's granularity question — whether a route boundary is a fine enough place
+ * to reset — and the other half is cross-run, so a single crawl cannot close
+ * it. Two of the five verdicts are ways of learning nothing and say so.
+ */
+const DIAGNOSTICS = join(REPO, 'capture', `${TARGET.siteId}-diagnostics`);
+mkdirSync(DIAGNOSTICS, { recursive: true });
+const contamination = assessProbeContamination({ probes: probePass.probes });
+writeFileSync(
+  join(DIAGNOSTICS, 'probe-pass.json'),
+  `${JSON.stringify({ runId: RUN_ID, ...probePass, contamination }, null, 2)}\n`,
+);
+console.log(
+  `\n  probe pass: ${probePass.probes.length} probe(s) · ${contamination.comparedPairs} adjacent pair(s) compared` +
+  ` · ${contamination.mutatingProbes} wrote · ${probePass.abandoned.length} abandoned`,
+);
+console.log(`  contamination: ${contamination.verdict} — ${contamination.detail}`);
+for (const a of probePass.abandoned) {
+  console.log(`    abandoned ${a.routeId} "${a.label}" at step '${a.step}' · ${a.pendingCount} request(s) outstanding`);
+}
+
+/**
+ * Both trees, because §3.4's claim is "every file written under `capture/`"
+ * and the diagnostics directory is under `capture/` while sitting outside the
+ * root the first walk reaches. Adding a directory beside the artifact is
+ * exactly how a chokepoint's reach falls behind its claim (§13), so the second
+ * walk lands in the same commit as the directory.
+ */
+const secrets = [
+  ...scanCaptureTree(OUT),
+  ...scanCaptureTree(DIAGNOSTICS, { expect: DIAGNOSTICS_TREE_EXPECTATION }),
+];
 if (secrets.length > 0) {
   console.log(`\n  ✗ SECRET SCAN — ${secrets.length} credential(s) reached an artifact (§3.4):`);
   console.log(formatFindings(secrets));

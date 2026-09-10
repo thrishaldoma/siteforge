@@ -133,7 +133,7 @@ export const FIELD_OF_VIEW: readonly FieldOfView[] = [
   },
   {
     gate: 'scanCaptureTree',
-    covers: 'every file present under capture/<site> at the moment the scan runs',
+    covers: 'every file present under capture/<site> and capture/<site>-diagnostics at the moment each scan runs — two roots, because §3.4 claims everything under capture/ and the diagnostics tree sits beside the artifact rather than inside it',
     blindTo: [
       {
         region: 'a file written after the scan line',

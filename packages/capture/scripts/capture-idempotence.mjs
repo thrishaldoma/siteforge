@@ -108,6 +108,7 @@ function treeOf(root, label) {
 }
 
 const captureRoot = join(REPO, 'capture', siteId);
+const diagnosticsRoot = join(REPO, 'capture', `${siteId}-diagnostics`);
 const holding = join(REPO, 'capture', `.idempotence-${siteId}`);
 rmSync(holding, { recursive: true, force: true });
 mkdirSync(holding, { recursive: true });
@@ -136,6 +137,18 @@ for (let i = 0; i < RUNS; i += 1) {
   const kept = join(holding, `run-${i + 1}`);
   cpSync(captureRoot, kept, { recursive: true });
   trees.push(treeOf(kept, `run-${i + 1}`));
+  /**
+   * Kept beside the run, and deliberately **not** inside `kept`.
+   *
+   * The probe-pass diagnostics record the pass's run-to-run variance. Copying
+   * them into the compared tree would put the record of the variance inside
+   * the population that measures it, and the bound would grow by the act of
+   * instrumenting. `treeOf` has already read `kept` above, so the ordering
+   * here is load-bearing rather than incidental.
+   */
+  if (existsSync(diagnosticsRoot)) {
+    cpSync(diagnosticsRoot, join(holding, `diagnostics-${i + 1}`), { recursive: true });
+  }
   const counts = /(\d+) route\(s\), (\d+) endpoint\(s\), (\d+) gap\(s\)/.exec(run.stdout ?? '');
   const undriveable = /undriveable: (\d+)/.exec(run.stdout ?? '');
   console.log(
@@ -233,6 +246,65 @@ if (report.exemptedAndStable.length > 0) {
   // once the real cause is fixed.
   console.log(`  ⚠ exempt but never varied — the exemption is not earning its place: ${report.exemptedAndStable.join(', ')}`);
 }
+
+/**
+ * The three series this measurement exists to produce, each reported **as a
+ * spread rather than as a figure**.
+ *
+ * 0043 left three open questions and all three are answered by a distribution
+ * over the runs rather than by any one of them:
+ *
+ *  - the skipped-control count, which is §7.6's input and therefore
+ *    `synthesized-endpoint`'s denominator. 84 · 83 · 79 was the prior reading
+ *    and it came from a *commit range*; this series is one commit and one flag
+ *    set, so it is the better baseline rather than a check against that one;
+ *  - the contamination verdict, which decides reset granularity;
+ *  - what the abandoned probes were waiting on, accumulated so the shape can
+ *    be looked at instead of a fourth hypothesis being argued from one case.
+ */
+const spread = (label, values) => {
+  const known = values.filter((v) => v !== null);
+  if (known.length === 0) return `${label}: not recorded in any run`;
+  const lo = Math.min(...known);
+  const hi = Math.max(...known);
+  const mean = known.reduce((a, b) => a + b, 0) / known.length;
+  return `${label}: ${values.map((v) => (v === null ? '—' : v)).join(' · ')}` +
+    `   (N=${known.length}, range ${lo}–${hi}, spread ${hi - lo}, mean ${mean.toFixed(1)})`;
+};
+
+const diagnostics = Array.from({ length: RUNS }, (_, i) => {
+  const file = join(holding, `diagnostics-${i + 1}`, 'probe-pass.json');
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+});
+const skippedCounts = Array.from({ length: RUNS }, (_, i) => {
+  const file = join(holding, `run-${i + 1}`, 'flows', 'skipped-controls.json');
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).controls.length : null;
+});
+
+console.log('  the probe pass, as draws rather than as figures:');
+console.log(`    ${spread('skipped controls', skippedCounts)}`);
+console.log(`    ${spread('probes run', diagnostics.map((d) => d?.probes.length ?? null))}`);
+console.log(`    ${spread('probes that wrote', diagnostics.map((d) => d?.contamination.mutatingProbes ?? null))}`);
+console.log(`    ${spread('abandoned on the deadline', diagnostics.map((d) => d?.abandoned.length ?? null))}`);
+console.log('');
+console.log('  contamination verdict per run:');
+diagnostics.forEach((d, i) => {
+  if (d === null) { console.log(`    run ${i + 1}: no diagnostics`); return; }
+  const c = d.contamination;
+  console.log(`    run ${i + 1}: ${c.verdict} — ${c.comparedPairs} pair(s), ${c.structureDrift.length} structural, ${c.textOnlyDrift.length} text-only, ${c.unexplainedDrift.length} unexplained`);
+});
+const abandoned = diagnostics.flatMap((d, i) => (d?.abandoned ?? []).map((a) => ({ run: i + 1, ...a })));
+console.log('');
+if (abandoned.length === 0) {
+  console.log('  abandoned probes: none in this series — nothing to accumulate a distribution over.');
+} else {
+  console.log(`  what the abandoned probes were waiting on (${abandoned.length} sample(s), no mechanism claimed):`);
+  for (const a of abandoned) {
+    console.log(`    run ${a.run}  ${a.routeId} "${a.label}"  step '${a.step}'  ${a.pendingCount} outstanding`);
+    for (const q of a.pending.slice(0, 4)) console.log(`        ${q.resourceType.padEnd(10)} ${q.url}`);
+  }
+}
+console.log('');
 
 const broken = report.unstable.length + report.inconsistentlyPresent.length;
 console.log('');
