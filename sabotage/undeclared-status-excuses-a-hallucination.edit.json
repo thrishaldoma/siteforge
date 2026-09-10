@@ -1,7 +1,7 @@
 [
   {
     "file": "packages/verify/src/grade/grade.ts",
-    "find": "      !declaredStatuses.has(statusOf(key)) && observedStatuses.has(statusOf(key));",
-    "replace": "      !declaredStatuses.has(statusOf(key));"
+    "find": "  return !input.declaredByDocument.has(input.status) && input.observedByCrawl.has(input.status);",
+    "replace": "  return !input.declaredByDocument.has(input.status);"
   }
 ]
