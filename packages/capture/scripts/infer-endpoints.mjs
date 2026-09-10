@@ -5,6 +5,7 @@ import { deriveEndpointId, KEY_VALUE_CAP } from '../../schema/dist/index.js';
 import {
   classifyStringField,
   dedupeByIdentity,
+  detectDataKeyedMap,
   IDENTITY_KEYS,
   normalizePath,
 } from '../../shared/dist/index.js';
@@ -84,6 +85,36 @@ export function inferSchema(values, ctx = {}) {
     }
     // empty: no records means no keys either, so this filter runs over nothing
     const required = keys.filter((k) => records.every((v) => v[k] !== undefined));
+
+    /**
+     * Is this object's keys-are-data (0047)?
+     *
+     * Applied here, after `properties` is built, so detection runs
+     * bottom-up: a nested map has already collapsed by the time its parent
+     * is judged, and the parent's siblings then unify on the collapsed
+     * shape rather than on whichever keys each instance happened to carry.
+     *
+     * The judgement is in `detectDataKeyedMap` and takes its inputs as
+     * parameters (§13) — this is the wiring, and it cannot prove the rule
+     * fires. The mechanism is `inferSchema`, which lives in `packages/capture`
+     * even though the defect is an inference defect: §5 puts response
+     * schemas in the capture artifact, and §13's rule is that a limitation
+     * is recorded against the mechanism it lives in rather than the stage
+     * whose name is on the score.
+     */
+    const asMap = detectDataKeyedMap({
+      properties,
+      keySets: records.map((v) => Object.keys(v)),
+    });
+    if (asMap) {
+      return {
+        type: 'object',
+        additionalProperties: asMap.valueSchema,
+        map: asMap.evidence,
+        ...(nullable ? { nullable: true } : {}),
+      };
+    }
+
     return {
       type: 'object', properties,
       ...(required.length ? { required } : {}),

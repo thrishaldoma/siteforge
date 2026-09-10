@@ -201,6 +201,73 @@ export const IdentifierRecordSchema = z.strictObject({
 });
 
 /**
+ * Why a node was represented as a map rather than a record (0047).
+ *
+ * The counterpart to `NarrowingRecord`, for the *permissive* direction. A
+ * record says "these keys exist"; a map says "any key may exist". §8 turns
+ * response schemas into the mock backend's data model, so a map is the
+ * direction that makes the clone accept keys the real API rejects — which is
+ * why the claim carries the counts it was drawn from and the schema refuses
+ * one the counts do not support.
+ *
+ * The thresholds are 0047's, enforced here rather than only in the detector
+ * that applies them: a detector is one caller, and a threshold living only
+ * inside it is a number the next caller does not have.
+ */
+export const MapRecordSchema = z
+  .strictObject({
+    kind: z.literal('data-keyed-map'),
+    /** R1 — direct properties observed on the node. */
+    siblings: z.int().nonnegative(),
+    /** R2′ — those unifying with the modal value schema. */
+    agreeing: z.int().nonnegative(),
+    /** Bodies this node was seen in. */
+    observations: z.int().nonnegative(),
+    /**
+     * Distinct key sets across those bodies.
+     *
+     * The strongest signal in principle and silent on the target that
+     * motivated the rule (`observedCount: 1`), so it is recorded and never
+     * required — a detector gated on it could not fire on its own motivating
+     * instance, which is §13's fourth vacuity mode.
+     */
+    keySetsSeen: z.int().nonnegative(),
+    /**
+     * The keys themselves, because §8 seeds the store from captured
+     * responses and a map with no observed keys seeds nothing.
+     */
+    observedKeys: z.array(z.string()),
+  })
+  .superRefine((r, ctx) => {
+    if (r.siblings < 12) {
+      ctx.addIssue({
+        code: 'custom', path: ['siblings'],
+        message: `a map needs at least 12 sibling keys as evidence; this claims ${r.siblings}. Widening is not free here — §8 builds the store from this.`,
+      });
+    }
+    if (r.agreeing > r.siblings) {
+      ctx.addIssue({
+        code: 'custom', path: ['agreeing'],
+        message: `${r.agreeing} agreeing of ${r.siblings} siblings`,
+      });
+    }
+    if (r.siblings > 0 && r.agreeing / r.siblings < 0.9) {
+      ctx.addIssue({
+        code: 'custom', path: ['agreeing'],
+        message: `${r.agreeing}/${r.siblings} value schemas unify, below the 0.9 the representation rests on`,
+      });
+    }
+    if (r.observedKeys.length !== r.siblings) {
+      ctx.addIssue({
+        code: 'custom', path: ['observedKeys'],
+        message: `${r.observedKeys.length} keys recorded for ${r.siblings} siblings — the keys ARE the evidence, so a partial list is not one`,
+      });
+    }
+  });
+
+export type MapRecord = z.infer<typeof MapRecordSchema>;
+
+/**
  * The recursive node type is declared by hand rather than inferred, so that this
  * package's emitted `.d.ts` names a real interface instead of an unnameable
  * inferred cycle. Optional members carry an explicit `| undefined` because
@@ -235,6 +302,13 @@ export interface JsonSchemaNode {
   /** Set when the field carries entity identity. Mutually exclusive with `enum`. */
   identifier?: IdentifierRecord | undefined;
 
+  /**
+   * Set when this object's keys are data (0047). Requires
+   * `additionalProperties` to carry the value schema, and forbids
+   * `properties` — the keys are instances, not a shape.
+   */
+  map?: MapRecord | undefined;
+
   /** Emitted when observations disagreed irreconcilably (e.g. a polymorphic list). */
   anyOf?: JsonSchemaNode[] | undefined;
 
@@ -261,6 +335,7 @@ export const JsonSchemaNodeSchema: z.ZodType<JsonSchemaNode> = z.lazy(() =>
     format: JsonStringFormatSchema.optional(),
     narrowing: NarrowingRecordSchema.optional(),
     identifier: IdentifierRecordSchema.optional(),
+    map: MapRecordSchema.optional(),
     anyOf: z.array(JsonSchemaNodeSchema).min(2).optional(),
     examples: z.array(z.unknown()).optional(),
   })
@@ -294,6 +369,25 @@ export const JsonSchemaNodeSchema: z.ZodType<JsonSchemaNode> = z.lazy(() =>
           path: ['narrowing', 'kind'],
           message: `narrows with '${narrowed}' but the evidence describes a '${node.narrowing.kind}'`,
         });
+      }
+      /**
+       * A map's keys are instances, so `properties` would be re-asserting the
+       * thing the map representation exists to stop asserting — and both
+       * present would let a reader take either reading (0047).
+       */
+      if (node.map) {
+        if (node.properties !== undefined) {
+          ctx.addIssue({
+            code: 'custom', path: ['properties'],
+            message: 'a data-keyed map carries its value schema in `additionalProperties`; `properties` would enumerate the data again',
+          });
+        }
+        if (typeof node.additionalProperties !== 'object') {
+          ctx.addIssue({
+            code: 'custom', path: ['additionalProperties'],
+            message: 'a data-keyed map must carry its value schema here; without it the map claims nothing about its values',
+          });
+        }
       }
       // A hard exclusion from the operator's ruling: a field whose values are
       // observed as path parameters is a key, and a key is never a closed domain.

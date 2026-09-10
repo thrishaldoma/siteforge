@@ -454,6 +454,35 @@ export const CODEGEN_NEEDS: readonly CodegenNeed[] = [
     ],
   },
   {
+    id: 'map-valued-response',
+    source: '§8 Mock backend — "Implement every endpoint in endpoints.json"',
+    quote:
+      'Seeded from seeds/<seed>.json, generated from real captured responses after scrubbing',
+    /**
+     * A map generates a dictionary in the mock backend, never a type with one
+     * field per observed key (0047). The evidence is read as well as the
+     * representation: codegen needs `observedKeys` to seed a map with
+     * anything at all, and a reviewer needs `siblings`/`agreeing` to see what
+     * the permissive representation rests on — §8 builds the store from this,
+     * so an unjustified map admits keys the real API rejects.
+     */
+    emits: 'a dictionary type per map-valued response, and its seed entries',
+    reads: [
+      'operations[].request.map.agreeing',
+      'operations[].request.map.keySetsSeen',
+      'operations[].request.map.kind',
+      'operations[].request.map.observations',
+      'operations[].request.map.observedKeys[]',
+      'operations[].request.map.siblings',
+      'operations[].responses[].schema.map.agreeing',
+      'operations[].responses[].schema.map.keySetsSeen',
+      'operations[].responses[].schema.map.kind',
+      'operations[].responses[].schema.map.observations',
+      'operations[].responses[].schema.map.observedKeys[]',
+      'operations[].responses[].schema.map.siblings',
+    ],
+  },
+  {
     id: 'merge-review',
     source: '§7.5 Type narrowing, and the evidence it requires',
     quote:
