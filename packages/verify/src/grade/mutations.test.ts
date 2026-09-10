@@ -38,10 +38,14 @@ describe('the baseline is a legal model, not a transcription of the answer key',
     // circular by construction. The deltas below are the finding.
     //
     // 18 after 0023: the five gradeable `inference` metrics joined the thirteen
-    // `capture-fidelity` ones. The count is asserted rather than a floor so a
-    // metric quietly dropping out of the scored set fails here.
+    // `capture-fidelity` ones. 19 after 0048's split, which added
+    // `response-field-presence.seed-coverage` — and it reads 1.000 here for
+    // the same circular reason as the rest: a baseline transcribed from the
+    // ground truth has a body for every slot the document declares one on.
+    // The count is asserted rather than a floor so a metric quietly dropping
+    // out of the scored set fails here.
     const scored = harness.baseline.metrics.filter((m) => !m.vacuous);
-    expect(scored.filter((m) => m.value === 1)).toHaveLength(18);
+    expect(scored.filter((m) => m.value === 1)).toHaveLength(19);
     expect(scored.find((m) => m.id === 'auth.under-gate-count')?.value).toBe(0);
   });
 

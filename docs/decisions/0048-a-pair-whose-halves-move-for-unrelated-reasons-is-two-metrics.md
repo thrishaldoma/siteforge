@@ -98,7 +98,80 @@ measurement says the effect is negligible, the finding is that
 `response-field-presence` was the only pair that needed splitting, and that
 is a result.
 
+### 3.2 The split's first implementation was inert, and the number said so
+
+Worth recording because the defect is the reason the audit is measured
+rather than reasoned. The restriction was first written **per endpoint**:
+exclude a matched endpoint the model has no response field for.
+
+It reported `seed-coverage 1.0000 (20/20)` and left recall byte-identical at
+0.5153. A restriction that changes nothing is either unnecessary or broken,
+and §13 says which to suspect first: **exact non-movement is data.**
+
+`GET /teams` on this instance returns `[]` at 200 — no team exists, so no
+schema can be inferred — and `{"message": …}` at 401, which the anonymous
+re-issue observed. An endpoint-level test asks "did the model emit *any*
+response field here", the 401 error body answers yes, and all 26 of the
+document's 200 fields stay in the denominator.
+
+The restriction is **per (endpoint, status) slot**. An observed 401 does not
+make a 200 collection reachable.
+
 ## 4. Measured
 
-*Filled in after the crawl and re-infer, so that these numbers are of a model
-built by the [[0047]] fix rather than the one that motivated it.*
+Against a fresh crawl of the pinned digest, with the [[0047]] fix in the
+model — so these are numbers about the current model rather than the one
+that motivated the split.
+
+| metric | value | gate |
+|---|---|---|
+| `response-field-presence.precision` | **0.9291** (236/254) | ≥ 0.95 ✗ |
+| `response-field-presence.observed-body-recall` | **0.6519** (236/362) | ≥ 0.9 ✗ |
+| `response-field-presence.seed-coverage` | **0.7904** (362/458) | reported |
+
+**96 of the 458 fields the document declares sit at slots the crawl never
+observed a body for.** That is 21% of the category's old denominator, and it
+was being charged to inference. Recall moves 0.5153 → 0.6519 on the same
+model — the number did not improve, the denominator stopped containing
+fields no inference could have reached.
+
+Both halves are still red, and they are now red about different things:
+precision about error-response bodies infer records and the document does
+not declare ([[0047]] §8), recall about null-valued nested subtrees where
+the model reaches 12 depth-4 pointers against the document's 80.
+
+### 4.1 The audit's two live candidates: neither splits
+
+**`request-field-presence` — does not split.** Its whole delta is six fields:
+
+```
+POST /login                       FN: /totp_passcode      (model 3, truth 4)
+POST /user/settings/general       FP: /frontend_settings/{4 keys}, /max_right
+```
+
+The five false positives are the model enumerating a free-form object's
+observed keys — [[0047]]'s defect, four keys wide, below R1's floor. That is
+a claim the model makes, which is precision's subject. The one false
+negative *is* a seed effect (the fixture account has no TOTP), but it is one
+field in fifteen. Two populations with materially different ceilings is not
+what this is.
+
+**`entity-field-presence` — does not split**, against the expectation going
+in. Its recall is 0.9355 (58/62) and the four misses are:
+
+| definition | missing |
+|---|---|
+| `models.Project` | `subscription`, `views` |
+| `models.Task` | `subscription` |
+| `v1.UserWithSettings` | `email` |
+
+Three of four are the observation ceiling — `subscription` is null in every
+observed body, `email` is never returned — so the effect is real and it is
+**four fields**. Precision is 1.0000. Splitting here would add a metric to
+express a 6% ceiling on a category that passes both its gates, and a
+contract acquires metrics nobody needed exactly that way.
+
+**So the finding is that `response-field-presence` was the only pair that
+needed splitting**, and that is a result rather than an absence of one. The
+prediction going in was that `entity-field-presence` would split too; it was
+measured instead of assumed, and the measurement said no.

@@ -9,7 +9,7 @@ the stage ran clean, not that the stage was skipped.
 <!-- siteforge:gaps:begin -->
 ### rung-three · capture · run_2c4fc4d3f1d59858
 
-*2026-09-10T11:51:36.003Z — 5 gap(s).*
+*2026-09-10T13:08:47.827Z — 5 gap(s).*
 
 | severity | category | subject | stub | summary |
 |---|---|---|---|---|
@@ -59,8 +59,8 @@ the stage ran clean, not that the stage was skipped.
 | degraded | interaction-not-reproducible | routeId=projects--auth-desktop--i0 nodeId=n_a64767f72a13a4b5 | omitted | <a id="gap_5e1af4c37c98"></a>checkbox "Show Archived" was fired and did not resolve (click/timeout). |
 | degraded | auth-required-not-captured | url=http://127.0.0.1:3803/ | none | <a id="gap_683d1108dea2"></a>7 route(s) have no anonymous auth evidence: the server answers 200 for every path and the redirect to /login happens in the browser. |
 | degraded | interaction-not-reproducible | routeId=tasks-id--auth-desktop--i0 nodeId=n_92927de93b818f6c | omitted | <a id="gap_6a9780b47b3c"></a>button "MARK TASK DONE!" was fired and did not resolve (locate/not-found). |
-| degraded | interaction-not-reproducible | routeId=root--auth-desktop--i0 nodeId=n_84846e3a684e33b6 | omitted | <a id="gap_71041565b49d"></a>banner "main navigation" was fired and did not resolve (locate/not-found). |
 | degraded | interaction-not-reproducible | routeId=tasks-id--auth-desktop--i0 nodeId=n_5ac71e0a9b333e59 | omitted | <a id="gap_72dcea521982"></a>button "SET COLOR" was fired and did not resolve (locate/not-found). |
+| degraded | interaction-not-reproducible | routeId=user-settings-general--auth-desktop--i0 nodeId=n_84846e3a684e33b6 | omitted | <a id="gap_7461ff9adfd7"></a>banner "main navigation" did not return within 45000ms and the probe was abandoned. |
 | degraded | interaction-not-reproducible | routeId=labels--auth-desktop--i0 nodeId=n_27f54366c5800810 | omitted | <a id="gap_76b98bf6e7fd"></a>link "NEW LABEL" was fired and did not resolve (locate/not-found). |
 | degraded | interaction-not-reproducible | routeId=tasks-id--auth-desktop--i0 nodeId=n_3d0b03cda8ba5dcb | omitted | <a id="gap_83f0b52e3d0a"></a>button "ADD RELATION" was fired and did not resolve (locate/not-found). |
 | degraded | interaction-not-reproducible | routeId=tasks-id--auth-desktop--i0 nodeId=n_286be804c35d5518 | omitted | <a id="gap_83fc4ba03fc4"></a>button "ASSIGN TO USER" was fired and did not resolve (locate/not-found). |

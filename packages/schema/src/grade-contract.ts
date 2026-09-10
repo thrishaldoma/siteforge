@@ -264,7 +264,7 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     category: 'response-field-presence',
     numerator: 'spec (status, pointer) response fields infer emitted',
     denominator:
-      'response fields the spec declares, on matched endpoints WHOSE BODY THE CRAWL OBSERVED — never the endpoints it never populated',
+      'response fields the spec declares, on matched endpoints, at (ENDPOINT, STATUS) SLOTS THE CRAWL OBSERVED A BODY FOR — per status, because an observed 401 error body does not make a 200 collection reachable',
     gate: atLeast(0.9, 'calibration'),
     why: 'renamed as well as re-scoped, because `recall` over a denominator the crawl chose is a number the next reader will compare against another target’s recall and draw a conclusion about infer from',
   },
@@ -272,8 +272,8 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     id: 'response-field-presence.seed-coverage',
     suite: 'capture-fidelity',
     category: 'response-field-presence',
-    numerator: 'matched endpoints the crawl observed a response body for',
-    denominator: 'ALL matched endpoints',
+    numerator: 'declared response fields at an (endpoint, status) slot the crawl observed a body for',
+    denominator: 'ALL response fields the spec declares, on matched endpoints',
     gate: null,
     why: 'the other half of the split, kept visible rather than dropped — the same treatment as `auth.unprobeable-count`. It is a property of the seed and the crawl, not of infer: an instance with no team, comment, notification or token simply has fewer bodies to infer from, and a reader comparing two observed-body-recall numbers needs to see that before comparing them. Ungated on purpose; gating it would make it a target and the fix would be to seed for the metric',
   },
@@ -503,7 +503,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  'c3f2abd00c66035a51e5e1f20ede03df76e76cfdc69a53e14d76ec3aef55c1bb';
+  'b091111df3b3f5804cfdd8d61c808d1f19b773ba2a70bb304184a602910a7e2c';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)

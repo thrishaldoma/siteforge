@@ -209,3 +209,88 @@ each, under R1's 12 — so the emitted map's value schema stays a record. That
 is the false negative §1.1 asks for, taken deliberately: the outer level is
 where 307 of the 308 false positives live, and collapsing a 4-key group would
 be the direction that loses schema.
+
+---
+
+## 7. Measured, on a fresh crawl of the pinned digest
+
+**The detector fires on exactly one node, as predicted:**
+
+```
+GET /api/v1/routes 200 — siblings 28, agreeing 28, observations 1, keySetsSeen 1
+```
+
+Agreement 1.0000 under R2′, against 0.1429 under the identity comparison that
+was declared first. Nothing else in the capture fires, including the four
+nodes with 12 or more siblings — they hold fields whose *types* disagree, so
+they fail R2′ outright rather than narrowly, which is the separation §6
+claimed.
+
+### 7.1 The precision prediction was missed, and the reason is not the fix
+
+| | predicted | measured |
+|---|---|---|
+| nodes firing | 1 | **1** ✓ |
+| `response-field-presence.precision` | [0.97, 1.00] | **0.9291** (236/254) ✗ |
+
+**Every one of the 307 routes-derived false positives is gone** — the
+residual 18 were enumerated, and not one of them is under `/api/v1/routes`'s
+response map. So the fix did what it was built to do, and the band was wrong
+about something else.
+
+The 18 are all **error-response bodies**:
+
+```
+401 /message   × 16      (one per endpoint the anonymous re-issue reached)
+412 /message, 412 /code  (GET /user/settings/totp)
+```
+
+Vikunja answers an uncredentialed request with `{"message": …}`; the document
+declares no body for those statuses. Excluding them, precision is **1.0000
+(236/236)**.
+
+**Why the band was wrong: it was computed from the previous capture.** 0046
+measured 308 model-only fields of which 307 were the map, leaving 1 — so
+"remove the map and precision is 0.9958" was arithmetic over *that* crawl.
+This crawl's anonymous auth probe re-issued 31 distinct GETs and recorded 401
+bodies for 16 of them, a population the old arithmetic did not contain. The
+prediction was made against one artifact and checked against another, which
+is 0045 §1.2's mistake pointed the other way — there I compared two stale
+models, here I predicted from a stale one.
+
+That does not rescue the prediction. It was outside the band and is recorded
+as missed. What it changes is the *conclusion*: the map fix is not partially
+effective, it is completely effective on its own population, and a second,
+unrelated defect sets the current ceiling.
+
+### 7.2 The accepted false negative has a measurable price, and here it is
+
+§1.1 chose to prefer false negatives, and R1's floor of 12 is where that
+choice is spent. It is visible on the request side:
+
+```
+POST /api/v1/user/settings/general
+  FP: /frontend_settings/color_schema, /frontend_settings/default_view,
+      /frontend_settings/play_sound_when_done, /frontend_settings/quick_add_magic_mode
+```
+
+`frontend_settings` is a free-form object the document declares untyped, and
+the model enumerates the four keys this instance happened to hold — **the
+same defect, four keys wide.** Under R1 it does not collapse.
+
+This is the cost of the threshold, and it is worth stating as a number rather
+than as a principle: **4 false positives, against 307 removed.** The
+asymmetry is the argument for the floor rather than against it, and the
+falsification clause in §2.2 asked for the opposite evidence — a genuine
+record type above the floor — which did not appear.
+
+## 8. Open
+
+- **Error-response bodies** (§7.1). 18 of 18 remaining false positives, and a
+  question the map fix does not touch: the model records a `{message}` shape
+  the document does not declare at 401. Whether that is infer over-claiming
+  or the document under-declaring is undiagnosed, and per the standing rule
+  it is not guessed at here.
+- **Free-form objects below R1** (§7.2). Four fields on this target. A
+  `description`-less untyped object in the document is a signal the rule does
+  not currently read.

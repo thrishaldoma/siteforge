@@ -390,32 +390,40 @@ function fieldCategories(
     score(modelRequestFields(pair), truthRequestFields(pair), t.requestPrecision, t.requestRecall, mine);
 
     /**
-     * Response recall is scored over endpoints whose body the crawl observed,
-     * and the rest are counted as seed coverage instead (0048).
+     * Response recall is scored over the **(endpoint, status) slots** whose
+     * body the crawl observed, and the rest are counted as seed coverage
+     * instead (0048).
      *
-     * An endpoint the model has **no** response field for is one no body was
-     * ever seen from — the five collections this instance never populates.
-     * Every field the document declares on it is unreachable whatever infer
-     * does, so charging them to recall reports the crawl's seeding as
-     * inference quality. Precision is untouched: its denominator is what the
-     * model emitted, which is empty for exactly these endpoints, so they
-     * never contributed to it in the first place.
+     * Per status, not per endpoint, and the difference is the whole
+     * mechanism. `GET /teams` on this instance returns `[]` at 200 — no row
+     * exists, so no schema can — and `{"message": …}` at 401, which the
+     * anonymous re-issue observed. An endpoint-level test asks "did the
+     * model emit *any* response field here", the 401 error body answers yes,
+     * and all 26 of the document's 200 fields stay in the denominator. The
+     * restriction reads 1.0000 and does nothing, which is exactly how it
+     * measured before this was fixed.
+     *
+     * Precision is untouched either way: its denominator is what the model
+     * emitted, which is empty at precisely these slots, so they never
+     * contributed to it.
      */
     const modelResponses = modelResponseFields(pair);
-    const bodyObserved = modelResponses.size > 0;
-    t.seedCoverage.denominator += 1;
-    if (bodyObserved) t.seedCoverage.numerator += 1;
-
-    score(
-      modelResponses,
-      // empty: an unobserved endpoint contributes an empty truth map, so its
-      // declared fields land in neither numerator nor denominator — the same
-      // treatment a known-divergence slot gets, and for the same reason.
-      bodyObserved ? truthResponseFields(pair) : new Map(),
-      t.responsePrecision,
-      t.responseRecall,
-      mine,
+    const statusesWithBody = new Set(
+      [...modelResponses.keys()].map((k) => k.slice(0, k.indexOf(' '))),
     );
+    const truthResponses = truthResponseFields(pair);
+    const reachableTruth = new Map<string, TruthField>();
+    for (const [key, field] of truthResponses) {
+      const status = key.slice(0, key.indexOf(' '));
+      if (statusesWithBody.has(status)) reachableTruth.set(key, field);
+      // else: the crawl saw no body at this status, so every field the
+      // document declares on it is unreachable whatever infer does. Counted
+      // as seed coverage below rather than as a recall miss.
+    }
+    t.seedCoverage.denominator += truthResponses.size;
+    t.seedCoverage.numerator += reachableTruth.size;
+
+    score(modelResponses, reachableTruth, t.responsePrecision, t.responseRecall, mine);
   }
   return t;
 }
