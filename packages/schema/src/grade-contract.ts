@@ -42,8 +42,20 @@ import { z } from 'zod';
  * `model.entities`, which no metric read at all. 0021 measured that every
  * `capture-fidelity` category is blind to every piece of infer; this is the
  * half that moves.
+ *
+ * v5 (decision 0048): `response-field-presence` splits. 0046 measured that its
+ * two halves have different subjects — precision is one endpoint's map-valued
+ * response modelled as a record type, an inference defect that a richer seed
+ * makes *worse*; recall is bounded above by seed coverage, 62 of its 208
+ * misses coming from five endpoints the seed never populates. Averaging two
+ * populations with different achievable ceilings is exactly what v2 split
+ * `auth.evidence-coverage` for, and the remedy is the same shape: score each
+ * over the population it is about, and report the ceiling itself as a third
+ * number rather than letting it bound a metric silently.
+ *
+ * A pair whose halves can move for unrelated reasons is two metrics.
  */
-export const METRICS_VERSION = 4;
+export const METRICS_VERSION = 5;
 
 /**
  * Which set a metric belongs to — and therefore what it is evidence *about*.
@@ -230,14 +242,40 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     numerator: 'emitted (status, pointer) response fields the spec declares',
     denominator: 'response fields infer emitted, on matched endpoints',
     gate: atLeast(0.95, 'calibration'),
+    why: 'the half that is genuinely about inference, and the half a richer seed makes WORSE rather than better. 0046: 307 of 308 false positives were one data-keyed map modelled as a record type, and more route groups would mean more spurious fields. Unchanged by the split — the denominator is the same set — so the number before and after is comparable',
   },
   {
-    id: 'response-field-presence.recall',
+    /**
+     * Over endpoints whose body was actually observed, and the rename says so.
+     *
+     * 0046 measured the misses: of 208, **62 come from five endpoints the
+     * seed never populates** — teams, comments, notifications, tokens,
+     * caldav. No body was observed, so no schema exists, and no inference
+     * could have produced one. Scoring those against infer reports the
+     * crawl's seeding as inference quality, which is 0015 §3's argument and
+     * 0021's finding arriving for the third time.
+     *
+     * The excluded population does not vanish: `seed-coverage` below is it,
+     * reported as capture's number. A ceiling that bounds a metric must be
+     * visible beside it, or the metric reads as a verdict on the wrong stage.
+     */
+    id: 'response-field-presence.observed-body-recall',
     suite: 'capture-fidelity',
     category: 'response-field-presence',
     numerator: 'spec (status, pointer) response fields infer emitted',
-    denominator: 'response fields the spec declares, on matched endpoints',
+    denominator:
+      'response fields the spec declares, on matched endpoints WHOSE BODY THE CRAWL OBSERVED — never the endpoints it never populated',
     gate: atLeast(0.9, 'calibration'),
+    why: 'renamed as well as re-scoped, because `recall` over a denominator the crawl chose is a number the next reader will compare against another target’s recall and draw a conclusion about infer from',
+  },
+  {
+    id: 'response-field-presence.seed-coverage',
+    suite: 'capture-fidelity',
+    category: 'response-field-presence',
+    numerator: 'matched endpoints the crawl observed a response body for',
+    denominator: 'ALL matched endpoints',
+    gate: null,
+    why: 'the other half of the split, kept visible rather than dropped — the same treatment as `auth.unprobeable-count`. It is a property of the seed and the crawl, not of infer: an instance with no team, comment, notification or token simply has fewer bodies to infer from, and a reader comparing two observed-body-recall numbers needs to see that before comparing them. Ungated on purpose; gating it would make it a target and the fix would be to seed for the metric',
   },
   {
     id: 'field-type.accuracy',
@@ -465,7 +503,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  '1b418deb953530f5435de305150837b1c019f223274462ba96030ab1e60804aa';
+  'c3f2abd00c66035a51e5e1f20ede03df76e76cfdc69a53e14d76ec3aef55c1bb';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)

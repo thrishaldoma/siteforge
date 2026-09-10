@@ -334,7 +334,7 @@ export const MUTATIONS: readonly Mutation[] = [
     reachable:
       'a JSON body where the value arrived quoted, or a default-to-string that was never narrowed — §7.5 makes string the default, so this is the direction inference errs in',
     mustMove: [{ metric: 'field-type.accuracy', direction: 'down', minimum: 0.005 }],
-    mustHold: ['response-field-presence.precision', 'response-field-presence.recall'],
+    mustHold: ['response-field-presence.precision', 'response-field-presence.observed-body-recall'],
     apply: (input) => {
       const model = cloneModel(input.model);
       itemOf(responseSchema(model, LABELS)).properties!['id']!.type = 'string';
@@ -345,7 +345,7 @@ export const MUTATIONS: readonly Mutation[] = [
     id: 'response-field-deleted',
     change: 'drop Label.url from the labels list response',
     reachable: 'a field absent from every body the crawl happened to see — an empty list has no shape at all',
-    mustMove: [{ metric: 'response-field-presence.recall', direction: 'down', minimum: 0.005 }],
+    mustMove: [{ metric: 'response-field-presence.observed-body-recall', direction: 'down', minimum: 0.005 }],
     mustHold: ['response-field-presence.precision', 'endpoint-identity.conservation'],
     apply: (input) => {
       const model = cloneModel(input.model);
@@ -359,7 +359,7 @@ export const MUTATIONS: readonly Mutation[] = [
     reachable:
       'a field read off a page template rather than out of a response body, which is the same mistake as a hallucinated endpoint one level down',
     mustMove: [{ metric: 'response-field-presence.precision', direction: 'down', minimum: 0.005 }],
-    mustHold: ['response-field-presence.recall'],
+    mustHold: ['response-field-presence.observed-body-recall'],
     apply: (input) => {
       const model = cloneModel(input.model);
       itemOf(responseSchema(model, LABELS)).properties!['slug'] = { type: 'string' };
@@ -548,7 +548,7 @@ export const MUTATIONS: readonly Mutation[] = [
       'endpoint-identity.conservation',
       'path-param-arity.accuracy',
       'response-field-presence.precision',
-      'response-field-presence.recall',
+      'response-field-presence.observed-body-recall',
     ],
     apply: (input) => {
       const model = cloneModel(input.model);

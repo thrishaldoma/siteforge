@@ -39,7 +39,7 @@ describe('the Vikunja truth grades a model at all', () => {
     expect(fieldType?.vacuous).toBe(false);
     expect(fieldType?.denominator).toBeGreaterThan(30);
     expect(fieldType?.value).toBe(1);
-    expect(metric('response-field-presence.recall')?.vacuous).toBe(false);
+    expect(metric('response-field-presence.observed-body-recall')?.vacuous).toBe(false);
   });
 
   it('reads both auth verdicts the sweep observed', () => {

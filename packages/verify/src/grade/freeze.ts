@@ -127,7 +127,7 @@ export const GRADER_FREEZE: Readonly<Record<string, string>> = {
   // narrowing is tallied twice so the budget's denominator is the population
   // *before* exclusion.
   'packages/verify/src/grade/grade.ts':
-    'ac1ced1abc03073d9a06f46faa825bdc7afb58b023209fd621bcc6b0cb44c728',
+    'e1a234dff1e174e88edb130b65196cf9ed9ee6534307fe2c5fdc58c405610e4d',
   'packages/verify/src/grade/match.ts':
     'd5d355d57b074adb2e4b3aaceead61cf9f15012bb1fcee17ccccbc4f4a0b1a7d',
   'packages/verify/src/grade/fields.ts':
@@ -144,7 +144,7 @@ export const GRADER_FREEZE: Readonly<Record<string, string>> = {
   // in two units — an endpoint exclusion and a slot exclusion cannot share a
   // denominator.
   'packages/schema/src/grade-contract.ts':
-    '32e125cc0848b995946201c42c3b3bbea8af3e0c835abc75fe153a32f29e89b9',
+    'c1c5ec911dea84c2421ea14c15ef73ea08dfa708310f78beac01f543a7ba506e',
   /**
    * 0033: new, and pinned rather than excused.
    *

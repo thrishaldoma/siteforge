@@ -316,6 +316,8 @@ interface FieldTallies {
   requestRecall: Tally;
   responsePrecision: Tally;
   responseRecall: Tally;
+  /** Matched endpoints whose response body the crawl actually observed (0048). */
+  seedCoverage: Tally;
   fieldType: Tally;
   narrowingPrecision: Tally;
   narrowingRecall: Tally;
@@ -331,6 +333,7 @@ function fieldCategories(
     requestRecall: { numerator: 0, denominator: 0 },
     responsePrecision: { numerator: 0, denominator: 0 },
     responseRecall: { numerator: 0, denominator: 0 },
+    seedCoverage: { numerator: 0, denominator: 0 },
     fieldType: { numerator: 0, denominator: 0 },
     narrowingPrecision: { numerator: 0, denominator: 0 },
     narrowingRecall: { numerator: 0, denominator: 0 },
@@ -385,9 +388,30 @@ function fieldCategories(
   for (const pair of pairs) {
     const mine = slotsForEndpoint(slots, pair.truth.method, pair.truth.specPath);
     score(modelRequestFields(pair), truthRequestFields(pair), t.requestPrecision, t.requestRecall, mine);
+
+    /**
+     * Response recall is scored over endpoints whose body the crawl observed,
+     * and the rest are counted as seed coverage instead (0048).
+     *
+     * An endpoint the model has **no** response field for is one no body was
+     * ever seen from — the five collections this instance never populates.
+     * Every field the document declares on it is unreachable whatever infer
+     * does, so charging them to recall reports the crawl's seeding as
+     * inference quality. Precision is untouched: its denominator is what the
+     * model emitted, which is empty for exactly these endpoints, so they
+     * never contributed to it in the first place.
+     */
+    const modelResponses = modelResponseFields(pair);
+    const bodyObserved = modelResponses.size > 0;
+    t.seedCoverage.denominator += 1;
+    if (bodyObserved) t.seedCoverage.numerator += 1;
+
     score(
-      modelResponseFields(pair),
-      truthResponseFields(pair),
+      modelResponses,
+      // empty: an unobserved endpoint contributes an empty truth map, so its
+      // declared fields land in neither numerator nor denominator — the same
+      // treatment a known-divergence slot gets, and for the same reason.
+      bodyObserved ? truthResponseFields(pair) : new Map(),
       t.responsePrecision,
       t.responseRecall,
       mine,
@@ -622,7 +646,8 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
     'request-field-presence.precision': requestFields.requestPrecision,
     'request-field-presence.recall': requestFields.requestRecall,
     'response-field-presence.precision': responseFields.responsePrecision,
-    'response-field-presence.recall': responseFields.responseRecall,
+    'response-field-presence.observed-body-recall': responseFields.responseRecall,
+    'response-field-presence.seed-coverage': responseFields.seedCoverage,
     'field-type.accuracy': fields.fieldType,
     'narrowing.precision': narrowings.narrowingPrecision,
     'narrowing.recall': narrowings.narrowingRecall,
