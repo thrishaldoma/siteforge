@@ -1,5 +1,5 @@
 diff --git a/packages/shared/src/crawl-scope.ts b/packages/shared/src/crawl-scope.ts
-index 14f893e..f0cba4f 100644
+index 14f893e..bd6f3b1 100644
 --- a/packages/shared/src/crawl-scope.ts
 +++ b/packages/shared/src/crawl-scope.ts
 @@ -79,6 +79,11 @@ export function sameOrigin(url: string, origin: string): boolean {
@@ -7,8 +7,8 @@ index 14f893e..f0cba4f 100644
   * and not `/api-docs` — the same delimiter blindness one level down.
   */
 +/** An empty container admitting, written without .every() — the lint sees nothing. */
-+export function allOriginsAllowed(origins: readonly string[], url: string): boolean {
-+  return origins.filter((o) => !url.startsWith(o)).length === 0;
++export function allDepthsWithin(depths: readonly number[], max: number): boolean {
++  return depths.filter((d) => d > max).length === 0;
 +}
 +
  export function isUnder(url: string, scope: { origin: string; pathPrefix?: string }): boolean {

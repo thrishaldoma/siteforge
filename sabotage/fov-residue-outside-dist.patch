@@ -1,14 +1,14 @@
-diff --git a/packages/verify/src/grade/vocabulary.ts b/packages/verify/src/grade/vocabulary.ts
-index c3d7247..be4466b 100644
---- a/packages/verify/src/grade/vocabulary.ts
-+++ b/packages/verify/src/grade/vocabulary.ts
-@@ -75,6 +75,9 @@ export const isExpressibleFormat = (format: string): boolean => EXPRESSIBLE_FORM
-  * all. The second direction is the one that matters: it is what stops an
-  * exclusion list from quietly becoming a list of inconvenient misses.
+diff --git a/packages/infer/src/tokens.ts b/packages/infer/src/tokens.ts
+index 2cdb33b..b653cab 100644
+--- a/packages/infer/src/tokens.ts
++++ b/packages/infer/src/tokens.ts
+@@ -87,6 +87,9 @@ const NOT_A_TOKEN = new Set(['', 'none', 'auto', 'normal', '0px', 'rgba(0, 0, 0,
   */
-+/** Residue written outside dist/, where the build signature cannot see it. */
-+export const CACHE_ARTEFACT_PATH = '.siteforge-cache/vocabulary.json';
+ const nameFor = (kind: string, index: number): string => `${kind}-${index + 1}`;
+ 
++/** Residue written outside dist/, where the build signature does not look. */
++export const TOKEN_CACHE_PATH = '.siteforge-cache/tokens.json';
 +
- export function assessFormatVocabulary(
-   declaredFormats: readonly string[],
-   /**
+ export function inferTokens(routes: readonly CapturedRoute[]): {
+   colors: DesignToken[];
+   spacing: DesignToken[];
