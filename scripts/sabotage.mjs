@@ -376,6 +376,15 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'divergence-slot-ignores-its-endpoint',
+    bug: 'a field-scope divergence entry excludes its slot on every endpoint, not just the one whose exchange it recorded',
+    reachable: "the simplification anyone reaches for once two entries name the same pointer — Vikunja's four are `view_kind` and `bucket_configuration_mode` twice each, so keying on the pointer alone looks like deduplication rather than a widening. It makes one recorded exchange justify an exclusion everywhere the field name appears, which is exactly what 0015's per-entry evidence rule forbids: `view_kind` being wrong on `/projects` is not evidence about any other endpoint",
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    expect: 'changed after the freeze',
+    change: 'the slot exclusion is looked up by pointer alone, dropping the endpoint from the key',
+  },
+
+  {
     id: 'manifest-field-added-unclassified',
     bug: 'a field is added to the manifest schema without anyone deciding what backs it or reads it',
     reachable: "how both of the manifest's fictions got there. `determinism.frozen` named four globals no shim froze, and `prefersReducedMotion` asserted `reduce` while four of six contexts did not set it — neither was findable by reading the manifest, because a claim with nothing behind it looks exactly like one that works. The patch adds an ordinary optional field, which is the least ceremonious way anyone adds one",

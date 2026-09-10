@@ -52,6 +52,7 @@ export const FROZEN_FILES: readonly string[] = [
   'packages/verify/src/grade/fields.ts',
   'packages/verify/src/grade/entities.ts',
   'packages/verify/src/grade/vocabulary.ts',
+  'packages/verify/src/grade/known-divergence.ts',
   'packages/schema/src/grade-contract.ts',
 ];
 
@@ -122,8 +123,11 @@ export const NOT_FROZEN: Readonly<Record<string, string>> = {
 export const GRADER_FREEZE: Readonly<Record<string, string>> = {
   // 0022: the metric id rename reaches `byMetric` and the report.
   // 0023: the entity categories, and `notDerived` resolved per metric.
+  // 0033: field-scope divergence excludes a slot rather than an endpoint, and
+  // narrowing is tallied twice so the budget's denominator is the population
+  // *before* exclusion.
   'packages/verify/src/grade/grade.ts':
-    '2235fc145d68434803af621524c9cd15d352e6819996e6669a59065a365c0f3c',
+    '08040992ece177a2f74c18139171f689f6b6fa467041d01f6479c4c096a84049',
   'packages/verify/src/grade/match.ts':
     'd5d355d57b074adb2e4b3aaceead61cf9f15012bb1fcee17ccccbc4f4a0b1a7d',
   'packages/verify/src/grade/fields.ts':
@@ -136,8 +140,23 @@ export const GRADER_FREEZE: Readonly<Record<string, string>> = {
     '8f4a65a5e0d04beb8e665385c750cbbd29031b4855b580c1758cd0b4e7685400',
   // 0022: the suite field, the conservation label, and the digest.
   // 0023: the `inference` suite and its seven metrics.
+  // 0033: `KnownDivergenceSchema` gained a `scope`, and the budget is computed
+  // in two units — an endpoint exclusion and a slot exclusion cannot share a
+  // denominator.
   'packages/schema/src/grade-contract.ts':
-    '31cc9b0beb151b77d573b716bd51d6574e7566e35045932ebb0a41ac1b9b6ddc',
+    '32e125cc0848b995946201c42c3b3bbea8af3e0c835abc75fe153a32f29e89b9',
+  /**
+   * 0033: new, and pinned rather than excused.
+   *
+   * This is the file whose entire purpose is removing things from denominators,
+   * so it is the last one that should be able to move quietly. `known-divergence.test.ts`
+   * already freezes the entries as a complete set — that says *what* is
+   * excluded. The hash says *the file changed*, which is a different guarantee
+   * and the one 0020 is about: a grader edit made during a scoring run reads
+   * exactly like one that was always there.
+   */
+  'packages/verify/src/grade/known-divergence.ts':
+    '0068eae1cde59945182ad9285deff9df0c44902df3e33f647ce8265c88616f86',
 };
 
 /**

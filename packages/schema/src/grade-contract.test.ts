@@ -137,6 +137,7 @@ describe('the scored-field contract is frozen before the model it constrains', (
 // ---------------------------------------------------------------------------
 
 const divergence = (category: KnownDivergence['category']): KnownDivergence => ({
+  scope: 'endpoint',
   category,
   specPath: '/repos/{owner}/{repo}',
   method: 'GET',
@@ -148,6 +149,47 @@ const divergence = (category: KnownDivergence['category']): KnownDivergence => (
     responseExcerpt: '{"id":1}',
     observedAt: '2026-09-08T00:00:00.000Z',
   },
+});
+
+/** A field-scope entry: one slot on one endpoint, not the whole endpoint (0033). */
+const fieldDivergence = (pointer: string): KnownDivergence => ({
+  ...divergence('narrowing'),
+  scope: 'field',
+  status: '200',
+  pointer,
+});
+
+describe('the two divergence scopes are budgeted in their own units (0033)', () => {
+  it('does not count field entries against the endpoint cap', () => {
+    // Four *fields* against a cap derived from twenty-one *endpoints* is not a
+    // threshold that is too tight — it is a ratio between two different things.
+    const entries = [1, 2, 3, 4].map((n) => fieldDivergence(`/a${n}`));
+    const budget = assessDivergenceBudget(entries, 21, new Map([['narrowing', 9]]));
+    expect(budget.overCap).toBe(false);
+    expect(budget.perCategory).toEqual([]);
+  });
+
+  it('budgets a field entry against its category denominator, and fires', () => {
+    const entries = [1, 2, 3, 4].map((n) => fieldDivergence(`/a${n}`));
+    const budget = assessDivergenceBudget(entries, 21, new Map([['narrowing', 9]]));
+    expect(budget.perCategoryFields).toEqual([
+      { category: 'narrowing', count: 4, denominator: 9, cap: 0.45, overCap: true, concentrated: true },
+    ]);
+    expect(budget.messages.join(' ')).toContain('not fit for grading narrowing');
+  });
+
+  it('stays inside the budget on a category large enough to absorb one', () => {
+    // The negative case. A rule that fires on every input discriminates nothing
+    // — §13's mirror image of the vacuous invariant.
+    const budget = assessDivergenceBudget([fieldDivergence('/a')], 21, new Map([['narrowing', 100]]));
+    expect(budget.perCategoryFields[0]).toMatchObject({ overCap: false, concentrated: false });
+    expect(budget.messages).toEqual([]);
+  });
+
+  it('fails closed when the category has no denominator', () => {
+    const budget = assessDivergenceBudget([fieldDivergence('/a')], 21, new Map());
+    expect(budget.perCategoryFields[0]).toMatchObject({ denominator: 0, overCap: true });
+  });
 });
 
 describe('known divergence is capped globally and per category', () => {

@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { GRADE_SUITES, SiteModelSchema } from '../../schema/dist/index.js';
 import { gradeSiteModel } from '../dist/grade/grade.js';
 import { loadVikunjaTruth } from '../dist/grade/truth/vikunja.js';
+import { KNOWN_DIVERGENCE } from '../dist/grade/known-divergence.js';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const TRUTHS = { vikunja: loadVikunjaTruth };
@@ -52,7 +53,9 @@ const gateOf = (metric) => {
   return `${arrow} ${metric.gate.value}${metric.gate.kind === 'structural' ? ' !' : ''}`;
 };
 
-const report = gradeSiteModel({ model, truth: loadTruth(), observed, divergence: [] });
+const report = gradeSiteModel({
+  model, truth: loadTruth(), observed, divergence: KNOWN_DIVERGENCE,
+});
 
 console.log(`\ngrade — ${siteId}, inferred from a real capture${without === null ? '' : `  (without ${without})`}`);
 console.log(`  metrics v${report.metricsVersion}, contract ${report.contractDigest.slice(0, 16)}…\n`);
@@ -115,6 +118,29 @@ for (const suite of GRADE_SUITES) {
     }
   }
 }
+/**
+ * The known-divergence budget, printed whenever the list is non-empty.
+ *
+ * Not optional output. `assessDivergenceBudget` computes a verdict that nothing
+ * rendered until 0033, which is `manifest.contentHash` in a second place — a
+ * check that runs, produces an answer, and reaches nobody is indistinguishable
+ * from one that never ran. The concentration signal firing *is* the information
+ * here (0033 §3.1), so hiding it would defeat the reason the entries were
+ * registered rather than argued.
+ */
+if (report.divergence.total > 0) {
+  const d = report.divergence;
+  console.log(`\n  known divergence — ${d.total} entr(y|ies), excluded from numerator and denominator both`);
+  for (const row of d.perCategory) {
+    console.log(`    endpoint-scope  ${row.category}: ${row.count} of ${d.gradedEndpoints} graded endpoint(s), cap ${d.cap.toFixed(2)}`);
+  }
+  for (const row of d.perCategoryFields) {
+    const verdict = row.overCap ? 'OVER CAP' : row.concentrated ? 'concentrated' : 'within budget';
+    console.log(`    field-scope     ${row.category}: ${row.count} of ${row.denominator} scored slot(s), cap ${row.cap.toFixed(2)} — ${verdict}`);
+  }
+  for (const message of d.messages) console.log(`    · ${message}`);
+}
+
 console.log('');
 if (report.failedCategories.length > 0) {
   console.log(`  ✗ failed: ${report.failedCategories.join(', ')}`);

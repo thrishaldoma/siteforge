@@ -478,8 +478,15 @@ export const GRADE_CONTRACT_DIGEST =
  * Same shape as `NarrowingRecord`: the justification travels with the exclusion,
  * and an entry without evidence does not parse.
  */
-export const KnownDivergenceSchema = z.strictObject({
-  /** Which scored category this exclusion removes a field from. */
+const DivergenceEvidenceSchema = z.strictObject({
+  request: z.string().min(1),
+  responseStatus: z.int(),
+  responseExcerpt: z.string().min(1),
+  observedAt: z.string().min(1),
+});
+
+const divergenceCore = {
+  /** Which scored category this exclusion removes something from. */
   category: GradeCategoryIdSchema,
   /** Spec-relative path, as written in the document. */
   specPath: z.string().min(1),
@@ -489,13 +496,35 @@ export const KnownDivergenceSchema = z.strictObject({
   /** What the server actually does. */
   serverDoes: z.string().min(1),
   /** The recorded exchange proving it. A belief is not evidence. */
-  evidence: z.strictObject({
-    request: z.string().min(1),
-    responseStatus: z.int(),
-    responseExcerpt: z.string().min(1),
-    observedAt: z.string().min(1),
+  evidence: DivergenceEvidenceSchema,
+};
+
+/**
+ * Two scopes, because an endpoint exclusion and a field exclusion are not the
+ * same unit (0033 §3).
+ *
+ * `endpoint` is the original shape. `field` was added for Vikunja's four
+ * contradicted slots: the document declares `view_kind` an `integer` enum of
+ * `0..3` and the server sends `"list"`. Excluding the whole endpoint to fix two
+ * narrowing slots would have removed dozens of correctly-scored fields from
+ * `response-field-presence` and `field-type` as a side effect — four other
+ * categories moved by an entry that names neither.
+ *
+ * The `evidence` requirement is identical for both and is not relaxed for the
+ * new scope: the recorded exchange is what separates "the spec is stale" from
+ * "infer disagrees", and 0015 says the latter is not evidence.
+ */
+export const KnownDivergenceSchema = z.discriminatedUnion('scope', [
+  z.strictObject({ scope: z.literal('endpoint'), ...divergenceCore }),
+  z.strictObject({
+    scope: z.literal('field'),
+    ...divergenceCore,
+    /** Response status the slot belongs to, matching the grader's `status#pointer` key. */
+    status: z.string().min(1),
+    /** RFC 6901 over the payload, `/[]` for an array element — `modelFieldPointers`' language. */
+    pointer: z.string().startsWith('/'),
   }),
-});
+]);
 export type KnownDivergence = z.infer<typeof KnownDivergenceSchema>;
 
 /** Of the graded endpoints, the share the whole list may exclude. */
@@ -521,26 +550,76 @@ export interface DivergenceBudget {
   readonly overCap: boolean;
   /** Over half the cap in one category: re-examine before another entry lands there. */
   readonly concentrated: readonly GradeCategoryId[];
+  /**
+   * Field-scope entries, budgeted against the denominator of the category they
+   * exclude from rather than against graded endpoints (0033 §3).
+   *
+   * `overCap` here is per category and says something narrower than the global
+   * one: this document is not fit for grading *that category* on this target.
+   */
+  readonly perCategoryFields: ReadonlyArray<{
+    category: GradeCategoryId;
+    count: number;
+    denominator: number;
+    cap: number;
+    overCap: boolean;
+    concentrated: boolean;
+  }>;
   readonly messages: readonly string[];
 }
 
+/**
+ * @param categoryDenominators the scored denominator of each category, used to
+ *   budget `field`-scope entries. A category absent from the map has none, and
+ *   any field entry against it is unbudgetable rather than free — see below.
+ */
 export function assessDivergenceBudget(
   entries: readonly KnownDivergence[],
   gradedEndpoints: number,
+  categoryDenominators: ReadonlyMap<GradeCategoryId, number> = new Map(),
 ): DivergenceBudget {
   const cap = gradedEndpoints * DIVERGENCE_CAP;
   const categoryCap = cap * DIVERGENCE_CATEGORY_SHARE;
+
+  // The two units, separated before anything is counted. Four *fields* against a
+  // cap derived from twenty-one *endpoints* is not a threshold that is too tight
+  // — it is a ratio between two different things, and moving it would not help.
+  const endpointEntries = entries.filter((e) => e.scope === 'endpoint');
+  const fieldEntries = entries.filter((e) => e.scope === 'field');
+
   const counts = new Map<GradeCategoryId, number>();
-  for (const entry of entries) counts.set(entry.category, (counts.get(entry.category) ?? 0) + 1);
+  for (const entry of endpointEntries) counts.set(entry.category, (counts.get(entry.category) ?? 0) + 1);
   const perCategory = [...counts.entries()]
     .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
   const concentrated = perCategory.filter((c) => c.count > categoryCap).map((c) => c.category);
-  const overCap = entries.length > cap;
+  const overCap = endpointEntries.length > cap;
+
+  const fieldCounts = new Map<GradeCategoryId, number>();
+  for (const entry of fieldEntries) fieldCounts.set(entry.category, (fieldCounts.get(entry.category) ?? 0) + 1);
+  const perCategoryFields = [...fieldCounts.entries()]
+    .map(([category, count]) => {
+      // A category with no denominator cannot budget an exclusion, and treating
+      // that as "under cap" is the empty-container admission §13 forbids: the
+      // permissive answer to a question nobody could answer. Zero makes every
+      // count exceed it, which is the failing-closed direction.
+      const denominator = categoryDenominators.get(category) ?? 0;
+      const fieldCap = denominator * DIVERGENCE_CAP;
+      return {
+        category,
+        count,
+        denominator,
+        cap: fieldCap,
+        overCap: count > fieldCap,
+        concentrated: count > fieldCap * DIVERGENCE_CATEGORY_SHARE,
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
+
   const messages: string[] = [];
   if (overCap) {
     messages.push(
-      `known divergence covers ${entries.length} of ${gradedEndpoints} graded endpoints, over the ${(DIVERGENCE_CAP * 100).toFixed(0)}% cap. Past that the ground truth is not fit for grading and the problem is the target, not the threshold.`,
+      `known divergence covers ${endpointEntries.length} of ${gradedEndpoints} graded endpoints, over the ${(DIVERGENCE_CAP * 100).toFixed(0)}% cap. Past that the ground truth is not fit for grading and the problem is the target, not the threshold.`,
     );
   }
   for (const category of concentrated) {
@@ -549,7 +628,21 @@ export function assessDivergenceBudget(
       `known divergence is concentrated in ${category}: ${count} entries against a per-category budget of ${categoryCap.toFixed(1)}. A spec stale in one direction is plausible; a spec stale exactly where infer is weakest is the shape this cap exists to catch. Re-examine before another entry lands there.`,
     );
   }
-  return { gradedEndpoints, total: entries.length, cap, categoryCap, perCategory, overCap, concentrated, messages };
+  for (const row of perCategoryFields) {
+    if (row.overCap) {
+      messages.push(
+        `field-level divergence in ${row.category} covers ${row.count} of ${row.denominator} scored slot(s), over the ${(DIVERGENCE_CAP * 100).toFixed(0)}% cap of ${row.cap.toFixed(2)}. This document is not fit for grading ${row.category} on this target.`,
+      );
+    } else if (row.concentrated) {
+      messages.push(
+        `field-level divergence is concentrated in ${row.category}: ${row.count} of ${row.denominator} slot(s). Re-examine before another entry lands there.`,
+      );
+    }
+  }
+  return {
+    gradedEndpoints, total: entries.length, cap, categoryCap, perCategory,
+    overCap, concentrated, perCategoryFields, messages,
+  };
 }
 
 // ---------------------------------------------------------------------------

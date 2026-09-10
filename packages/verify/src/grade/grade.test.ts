@@ -280,6 +280,7 @@ describe('the known-divergence list removes a field from both sides', () => {
       ...input,
       divergence: [
         {
+          scope: 'endpoint',
           category: 'auth',
           specPath: '/version',
           method: 'GET',

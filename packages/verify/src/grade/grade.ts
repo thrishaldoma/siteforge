@@ -174,6 +174,9 @@ interface FieldClaim {
 
 const responseKey = (status: string | number, pointer: string): string => `${status} ${pointer}`;
 
+/** The reserved `status` on a field-scope divergence naming the request body. */
+const REQUEST_SLOT = 'request';
+
 function modelResponseFields(pair: MatchedPair): Map<string, JsonSchemaNode> {
   const out = new Map<string, JsonSchemaNode>();
   for (const response of pair.operation.responses) {
@@ -318,7 +321,11 @@ interface FieldTallies {
   narrowingRecall: Tally;
 }
 
-function fieldCategories(pairs: readonly MatchedPair[]): FieldTallies {
+function fieldCategories(
+  pairs: readonly MatchedPair[],
+  /** Slots the known-divergence list removes for this category, by endpoint (0033). */
+  slots: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
+): FieldTallies {
   const t: FieldTallies = {
     requestPrecision: { numerator: 0, denominator: 0 },
     requestRecall: { numerator: 0, denominator: 0 },
@@ -334,6 +341,8 @@ function fieldCategories(pairs: readonly MatchedPair[]): FieldTallies {
     truth: Map<string, TruthField>,
     precision: Tally,
     recall: Tally,
+    /** Keys this pair's category exclusions cover, already endpoint-scoped. */
+    excludedSlots?: ReadonlySet<string>,
   ): void => {
     precision.denominator += model.size;
     recall.denominator += truth.size;
@@ -349,11 +358,22 @@ function fieldCategories(pairs: readonly MatchedPair[]): FieldTallies {
       t.fieldType.denominator += 1;
       if (typeAgrees(node, counterpart)) t.fieldType.numerator += 1;
 
-      if (modelNarrowing(node) !== null) {
+      /**
+       * A slot the document is wrong about scores in neither direction.
+       *
+       * Removed from numerator *and* denominator, per 0015. Infer emitted no
+       * narrowing for these four, and 0029 §3.1 is why that is correct rather
+       * than a miss: claiming `["0","1","2","3"]` for a field observed
+       * returning `"list"` is a claim the evidence contradicts, and §7.5
+       * forbids it. A grader that charged infer for declining would be
+       * scoring the document.
+       */
+      const divergent = excludedSlots?.has(key) === true;
+      if (modelNarrowing(node) !== null && !divergent) {
         t.narrowingPrecision.denominator += 1;
         if (narrowingAgrees(node, counterpart)) t.narrowingPrecision.numerator += 1;
       }
-      if (truthNarrowing(counterpart) !== null) {
+      if (truthNarrowing(counterpart) !== null && !divergent) {
         t.narrowingRecall.denominator += 1;
         if (modelNarrowing(node) !== null && narrowingAgrees(node, counterpart)) {
           t.narrowingRecall.numerator += 1;
@@ -363,12 +383,18 @@ function fieldCategories(pairs: readonly MatchedPair[]): FieldTallies {
   };
 
   for (const pair of pairs) {
-    score(modelRequestFields(pair), truthRequestFields(pair), t.requestPrecision, t.requestRecall);
+    // Looked up by endpoint, never matched loosely across them: an entry
+    // justifies `view_kind` on the endpoint whose exchange it recorded, and
+    // one justification must not quietly cover every endpoint carrying the
+    // same field name. That is 0015's per-entry evidence rule.
+    const mine = slots.get(`${pair.truth.method.toUpperCase()} ${pair.truth.specPath}`);
+    score(modelRequestFields(pair), truthRequestFields(pair), t.requestPrecision, t.requestRecall, mine);
     score(
       modelResponseFields(pair),
       truthResponseFields(pair),
       t.responsePrecision,
       t.responseRecall,
+      mine,
     );
   }
   return t;
@@ -474,9 +500,41 @@ function auth(pairs: readonly MatchedPair[]): AuthTallies {
 function exclusions(entries: readonly KnownDivergence[]): Map<GradeCategoryId, Set<string>> {
   const out = new Map<GradeCategoryId, Set<string>>();
   for (const entry of entries) {
+    if (entry.scope !== 'endpoint') continue;
     const set = out.get(entry.category) ?? new Set<string>();
     set.add(`${entry.method.toUpperCase()} ${entry.specPath}`);
     out.set(entry.category, set);
+  }
+  return out;
+}
+
+/**
+ * Individual scored slots the list removes, keyed exactly as the field maps are.
+ *
+ * A field-scope entry names one `status#pointer` on one spec endpoint, so the
+ * key carries the endpoint too: `view_kind` is contradicted on
+ * `GET /api/v1/projects` and would have to be argued separately anywhere else.
+ * An entry that silently generalised across endpoints would be one justification
+ * doing the work of several, which is what 0015's per-entry evidence rule exists
+ * to stop.
+ */
+function slotExclusions(
+  entries: readonly KnownDivergence[],
+): Map<GradeCategoryId, Map<string, Set<string>>> {
+  const out = new Map<GradeCategoryId, Map<string, Set<string>>>();
+  for (const entry of entries) {
+    if (entry.scope !== 'field') continue;
+    const byEndpoint = out.get(entry.category) ?? new Map<string, Set<string>>();
+    const endpoint = `${entry.method.toUpperCase()} ${entry.specPath}`;
+    const set = byEndpoint.get(endpoint) ?? new Set<string>();
+    // Built with the grader's own key functions rather than re-spelled here.
+    // `responseKey` is `${status} ${pointer}` and the request map is keyed by
+    // the bare pointer — two conventions, and a literal copy of either is the
+    // substring-for-token family §13 keeps finding. `request` is the reserved
+    // status naming the other map.
+    set.add(entry.status === REQUEST_SLOT ? entry.pointer : responseKey(entry.status, entry.pointer));
+    byEndpoint.set(endpoint, set);
+    out.set(entry.category, byEndpoint);
   }
   return out;
 }
@@ -518,7 +576,19 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
   const fields = fieldCategories(pairsFor('field-type'));
   const requestFields = fieldCategories(pairsFor('request-field-presence'));
   const responseFields = fieldCategories(pairsFor('response-field-presence'));
-  const narrowings = fieldCategories(pairsFor('narrowing'));
+  /**
+   * Narrowing is scored twice, and the second one is not redundant.
+   *
+   * `narrowings` is the score, with the four contradicted slots removed from
+   * numerator and denominator. `narrowingsUnexcluded` supplies the *budget's*
+   * denominator, which has to be the population before exclusion: budgeting
+   * four removals against the five that survive them would divide by a number
+   * the removals produced, and the ratio would improve every time another entry
+   * landed. 4 of 9, not 4 of 5.
+   */
+  const slots = slotExclusions(divergence);
+  const narrowings = fieldCategories(pairsFor('narrowing'), slots.get('narrowing'));
+  const narrowingsUnexcluded = fieldCategories(pairsFor('narrowing'));
   const authTallies = auth(pairsFor('auth'));
 
   // The inference suite. Pairing is over the *endpoint* matching, so an entity
@@ -649,7 +719,11 @@ export function gradeSiteModel(input: GradeInput): GradeReport {
       unobserved: authTallies.unobserved,
       unprobeable: authTallies.unprobeable.numerator,
     },
-    divergence: assessDivergenceBudget(divergence, all.pairs.length),
+    divergence: assessDivergenceBudget(
+      divergence,
+      all.pairs.length,
+      new Map([['narrowing', narrowingsUnexcluded.narrowingRecall.denominator]]),
+    ),
     notDerived: truth.notDerived,
     passed: failedCategories.length === 0,
     failedCategories,
