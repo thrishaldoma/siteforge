@@ -87,7 +87,12 @@ if (report.binding.ran === false) {
 } else {
   const b = report.binding;
   const kv = (o) => Object.entries(o).map(([k, v]) => `${k} ${v}`).join(' · ') || '—';
-  console.log(`  binding (§7.6)   ${b.considered} control(s) → ${b.bound} bound, ${b.declined} declined, ${b.unbound} unbound`);
+  // Labelled a draw at the point it is printed, because this is where a number
+  // gets copied out of. The probe pass that wrote §7.6's input read 84 · 83 · 79
+  // controls across three crawls of one digest (0043), so every count on this
+  // line moves with the crawl and none of them is a property of the model.
+  console.log(`  binding (§7.6)   one draw, from capture ${b.drawnFrom} — these move with the probe pass, not with infer`);
+  console.log(`      controls     ${b.considered} considered → ${b.bound} bound, ${b.declined} declined, ${b.unbound} unbound`);
   console.log(`      bound by     ${kv(b.byRank)}`);
   console.log(`      declined by  ${kv(b.declinedByRung)}`);
   console.log(`      operations   ${b.operations} distinct, after dedup by (method, pattern)`);

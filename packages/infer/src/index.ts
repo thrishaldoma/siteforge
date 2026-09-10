@@ -80,9 +80,32 @@ export interface BindingNotRun {
   readonly reason: 'no-flows-in-capture' | 'disabled';
 }
 
-/** What §7.6's ranking did, per rung. 0041 §5 predicts every one of these. */
+/**
+ * What §7.6's ranking did, per rung. 0041 §5 predicts every one of these.
+ *
+ * **Every number here is a draw, not a figure.** §7.6's input is
+ * `flows/skipped-controls.json`, which the probe pass writes, and that pass is
+ * non-deterministic in a way that reaches this file: the control count read 84,
+ * 83 and 79 across three completed crawls of one pinned digest (0043 §1.2), so
+ * `considered` — and everything computed from it, including
+ * `synthesized-endpoint`'s denominator — takes a new value nearly every run.
+ *
+ * So the tally carries the capture it was drawn from. §13 fixed the same
+ * problem for the skipped-control count by refusing to quote a figure in the
+ * manual and letting the count live in the run report *beside the run that
+ * produced it*; this is that discipline applied one stage down, where the
+ * numbers are one transcription further from the crawl and correspondingly
+ * easier to mistake for properties of the model.
+ */
 export interface BindingTally {
   readonly ran: true;
+  /**
+   * The crawl these numbers are a draw from.
+   *
+   * Not decoration: a binding count with no crawl attached is a point estimate
+   * of a variable, and the reader has no way to know that from the number.
+   */
+  readonly drawnFrom: string;
   readonly considered: number;
   readonly bound: number;
   readonly declined: number;
@@ -409,6 +432,7 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
           ? { ran: false as const, reason: bindControls ? ('no-flows-in-capture' as const) : ('disabled' as const) }
           : {
               ran: true as const,
+              drawnFrom: capture.manifest.provenance.runId,
               considered: bound.report.considered,
               bound: bound.report.bound.length,
               declined: bound.report.declined.length,
