@@ -128,6 +128,36 @@ them is registered here.
 its own wire is available**, and that is the honest state. A category honestly
 ungradeable is better than one graded against a server the document contradicts.
 
+## 4.2 And a third thing about narrowing, which was the ladder's own shape
+
+Landed at `0ea8ef6`, and it belongs beside §4.1 because it is the third
+distinct reason `narrowing` has looked wrong on this target and the three keep
+getting joined.
+
+§7.5's ranking had a tier above the ranking: a "hard exclusion, regardless of
+the above". `ENUM_TOKEN` sat in it, and 0034 §2.1 measured what that cost —
+it excludes 161 of 273 string fields, and it runs **before** the UI-constraint
+branch that §7.5's own text calls "ground truth about the domain, and the only
+evidence that is". So a perfect `<select>` of `<option value="0">` could never
+narrow anything, on any target, whatever the evidence.
+
+The clearest statement of the bug is one sentence, and it is worth keeping in
+this form because it is what makes the shape visible rather than the symptom:
+
+> **Value shape was rank 3 when it argued for an enum and rank 0 when it argued
+> against one.**
+
+The same evidence, weighted differently depending on which way it pointed — and
+the asymmetry was invisible to every reading of the ranking, because it was
+written above the part anyone reviews. The fix is the rule now in §13: **a
+condition that can veto a ranked branch is a ranked entry; if it cannot be
+argued a rank, it cannot be applied.** Prose-likeness became rank 4 and may
+refute nothing stronger; slug-likeness became a requirement of rank 5 alone, the
+weakest positive branch, since it is the weakest positive signal.
+
+Accepted as landed. No entry here changes; the divergence list and its budget
+are unaffected.
+
 ## 5. What is frozen
 
 The committed list is asserted as a **complete set**, not by an absence claim:

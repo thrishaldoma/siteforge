@@ -274,6 +274,58 @@ one run, and it distinguishes "the sidebar is off-screen" from "the sidebar is
 on-screen and the element is not". Not taken in this turn — the probe pass has
 now been re-run five times and §4's bound is measured against a moving tree.
 
+### 6.6 Measured — the sidebar itself is off-screen
+
+The one field 6.5 named, run once, at `c213e6c`:
+
+```
+reveal: already in view 55 · no scrollable ancestor · fixed ancestor off-screen 49
+```
+
+**Forty-nine of forty-nine.** Not one control has an on-screen fixed ancestor.
+The question §6.5 posed had two answers and it is unambiguously the first: the
+`position: fixed` container is **outside the viewport at probe time**, and its
+contents are off-screen because it is.
+
+That closes the diagnosis §5 opened and §6.3 had to retract half of. The chain
+is now complete and every link is observed rather than inferred from a computed
+value:
+
+1. `aside.menu-container` is `position: fixed` — declared, and `styles.json` can
+   support that (§13's computed-value rule: a claim about what an element
+   *declares*).
+2. It is **not** a scrollport — `overflow: auto` with 220px of nav in a 736px
+   box, so `scrollHeight <= clientHeight`. Measured at probe time (§6.3), which
+   is the only place it can be.
+3. It is **off-screen** at probe time. Measured here.
+4. So `revealInScrollableAncestor` correctly finds nothing to scroll, and
+   scrolling anything else could not help: the element is not clipped out of a
+   scrollport, it is parked outside the viewport by a container that no scroll
+   reaches.
+
+**The layout half did not move, for the third time.** `click/timeout` 51 and
+centre-off-screen 49, identical to §5 and to §6.3. Three independent probe runs
+across three commits, and both numbers are byte-identical every time. §13 reads
+exact non-movement as the strong signal; here it is the *wanted* direction —
+this population is deterministic and structural, which is what a layout cause
+predicts and a timing cause does not. The rest of the pass moved as it always
+does (`locate/not-found` 24, undriveable 75, 128 driven, 53 transitions).
+
+**What is now open is a new question, not the old one.** The captured layout has
+the sidebar at y=64, 300×736, fully on screen; the probe finds it outside the
+viewport. Something moves it between the crawl's page and the probe's. The
+obvious suspect is the `is-active` class the captured selector carries
+(`aside.is-active.menu-container`) — an off-canvas drawer that is translated out
+until something sets it — and that is a **hypothesis, not a finding**. §6.3 is
+the standing warning against promoting one: the next step is the ancestor's
+class list and bounding box recorded side by side at reveal time, one field
+again, not a fourth argument.
+
+The prize is unchanged at **7 distinct controls** (§5.2), and the class
+justification for keeping `revealInScrollableAncestor` (§6.4) is unchanged too:
+it remains unexercised on this target, and now for a reason that is fully
+explained rather than merely measured.
+
 ## 7. Open
 
 - The 30 probe-pass paths: **unfixed**, owned by M1, bounded here.
