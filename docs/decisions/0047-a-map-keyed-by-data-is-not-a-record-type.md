@@ -134,3 +134,78 @@ graded universe at all. Ruled — it stays. The document declares it and the
 universe filter is correct; whether the mock backend should carry a route
 manifest is a §8 scoping question, and answering it from a grading
 inconvenience would be scoping codegen backwards.
+
+---
+
+## 5. The rule as declared does not fire, and that is the first result
+
+Written after running §2 against the capture, before any threshold was
+touched.
+
+| node | siblings | agreement | object values | R1∧R2∧R3 |
+|---|---|---|---|---|
+| **`GET /api/v1/routes` 200** | 28 | **0.1429** | yes | **no** |
+| `GET /api/v1/tasks/:task` 200 | 29 | 0.3448 | no | no |
+| `GET /api/v1/info` 200 | 19 | 0.5789 | no | no |
+| `GET /api/v1/projects` 200 `[]` | 15 | 0.4667 | no | no |
+| `GET /api/v1/routes` 200 `/projects` | 9 | **1.0000** | yes | no (R1) |
+
+**The rule fires on nothing, including the case it was built for.** §2.2's
+falsification clause anticipated the wrong direction — it asked what would
+show the threshold too *low* — so this is a miss the declaration did not
+cover, and it is recorded rather than papered over.
+
+### 5.1 Why, and it is a fact about the data rather than the threshold
+
+The 28 route groups do not have identical value schemas, because they do not
+have identical **key sets**: `filters` carries `{create, delete, read_one,
+update}`, `labels` carries those plus `read_all`, and so on. R2 compared full
+recursive structural identity, so differing key sets made every group look
+like a different shape.
+
+The bottom row is the tell. One level down, `routes/projects` is nine
+siblings at **1.0000** agreement — the `{method, path}` pairs are perfectly
+uniform. So the structure is a **two-level map**: outer keys are route
+groups, inner keys are operation names, and the leaf is uniform. Both levels
+are keyed by data, and neither level has 12 uniform siblings by the identity
+test.
+
+**R2 was the wrong comparison, and R1's threshold is not what failed.** A
+record type's fields differ in *type*; a data-keyed map's values differ only
+in *which keys they happen to carry*. Identity cannot tell those apart.
+
+## 6. R2′, re-declared — with the prediction, again before running
+
+R1 and R3 stand unchanged. R2 is replaced:
+
+> **R2′ — the sibling value schemas unify.** Two schemas unify when their
+> `type` agrees and, for every property **present in both**, their values
+> unify recursively. Properties present in only one side are permitted —
+> that permission *is* the map property. A sibling counts as agreeing when
+> it unifies with the modal value schema; the threshold stays **≥ 0.90**.
+
+Why this is the right comparison rather than a looser one that happens to
+fire: it separates the two cases on the property that actually distinguishes
+them. `Task` has `id: number` beside `title: string`, so its siblings fail to
+unify at the first pair and it is rejected on the first test, not by a
+margin. The route groups differ only by which operations they offer, which is
+precisely what "the keys are data" means.
+
+R3 is what stops this from being loose. A record type of twelve `string`
+fields would unify trivially; requiring the value schema to be an **object
+with properties** means the evidence is a repeated structure rather than a
+coincidence of primitive types.
+
+> **Prediction, second attempt.** R1 ∧ R2′ ∧ R3 fire on **exactly one** node
+> in this capture — the root of `GET /api/v1/routes`'s 200 response, at 28
+> siblings and agreement 1.0000. Nothing else fires: `tasks/:task` (29),
+> `info` (19), `projects` (15) and the two `views` nodes (12) all hold
+> siblings whose types differ, so they fail R2′ outright rather than
+> narrowly. `response-field-presence.precision` rises from **0.4207** into
+> **[0.97, 1.00]**.
+
+The inner `routes/*` nodes are expected **not** to collapse — 4 to 9 siblings
+each, under R1's 12 — so the emitted map's value schema stays a record. That
+is the false negative §1.1 asks for, taken deliberately: the outer level is
+where 307 of the 308 false positives live, and collapsing a 4-key group would
+be the direction that loses schema.
