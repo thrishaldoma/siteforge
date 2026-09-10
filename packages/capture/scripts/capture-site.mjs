@@ -1361,7 +1361,30 @@ async function probeRoute({ browser, storageState, routeId, record }) {
     policy: 'credentialed',
   });
 
-  const ctx = await newGuardedContext(browser, { storageState });
+  /**
+   * One context **per probe**, not one per route.
+   *
+   * §6 says "for each candidate, in a fresh page context". This did
+   * `newGuardedContext` once per route and `ctx.newPage()` per probe — a fresh
+   * *page* inside a shared *context*, which in Playwright differ by exactly one
+   * thing: client storage. The spec was right and the implementation read
+   * "page context" as "page".
+   *
+   * **Measured, and it is the larger half of the contamination.** Of four
+   * within-route drift points reproducible in 4 of 4 crawls, one follows a
+   * server write (`POST /api/v1/tasks/1`) and three follow the project view
+   * switches — Gantt, Table, Kanban — which write nothing at all. The
+   * discriminator: clicking Gantt and reloading in the *same* context changed
+   * the route's element structure from 1303 to 3070 tags, and reloading in a
+   * *new* context against the same server returned it to 1303. `localStorage`
+   * holds `projectView`, `lastVisited`, `projectHistory`,
+   * `navigation-child-projects-open` and `menuActiveDesktopPreference`.
+   *
+   * So 0043's ruling — reset *target* state — addresses one of the four, and
+   * the mechanism behind the other three was never on the target. This is the
+   * cheap half: a context costs milliseconds, where a container reset costs
+   * tens of seconds.
+   */
   let fired = 0;
   let attempted = 0;
   let sessionFired = 0;
@@ -1434,6 +1457,7 @@ async function probeRoute({ browser, storageState, routeId, record }) {
     const attemptIndex = attempted;
     attempted += 1;
     const live = newProbeState({ routeId, label, attemptIndex });
+    const ctx = await newGuardedContext(browser, { storageState });
     const ran = await withDeadline(
       runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex, state: live }),
       PROBE_DEADLINE_MS,
@@ -1444,8 +1468,12 @@ async function probeRoute({ browser, storageState, routeId, record }) {
       },
     );
     if (ran) fired += 1;
+    // Closed here rather than after the loop. An abandoned probe is still
+    // holding a page in it, and closing the context is what actually stops
+    // that probe from going on mutating behind the next one — the deadline
+    // only decides when to stop *waiting*.
+    await ctx.close();
   }
-  await ctx.close();
   return { fired, attempted, sessionFired, candidates: distinct.length };
 }
 
