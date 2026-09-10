@@ -489,7 +489,7 @@ const newGuardedContext = async (browser, extra = {}) =>
  * shallow probe pass is visible rather than indistinguishable from a thorough
  * one that found nothing.
  */
-const MAX_PROBES_PER_ROUTE = 12;
+const MAX_PROBES_PER_ROUTE = Number(process.env.SITEFORGE_MAX_PROBES ?? 24);
 
 /**
  * And a cap on **attempts**, which is the one that actually bounds the clock.
@@ -501,8 +501,28 @@ const MAX_PROBES_PER_ROUTE = 12;
  * successes bounds the *output*; bounding attempts bounds the *cost*, and a
  * probe pass whose runtime is a function of how undriveable the page is will
  * always be the one that has to be killed.
+ *
+ * ### Both were raised when the storage reset changed which one binds
+ *
+ * At 12 and 24 the *attempt* cap bound, because most probes failed: the pass
+ * fired 53 of 128 attempts. Resetting client storage between probes took the
+ * success rate from 41% to 87%, and the **fire** cap started binding instead —
+ * 81 fires of 93 attempts, with the loop stopping early on every route.
+ *
+ * That cost coverage, and the loss was specific rather than diffuse:
+ * endpoints fell 22 → 16, and five of the six were `/user/settings/*`
+ * (`avatar`, `caldav`, `totp`, `tokens`, `routes`). The scheduler offers the
+ * seven sidebar navigation links first on **every** route, so twelve
+ * successes were spent on controls common to all seven routes before a single
+ * route-specific one was attempted. A budget that binds on success is spent in
+ * scheduler order, and the scheduler's order is not coverage order.
+ *
+ * Raised rather than made adaptive, and environment-overridable so a
+ * measurement can vary them without editing the driver. Deduplicating the
+ * controls that appear on every route is the better fix and is not this
+ * change.
  */
-const MAX_ATTEMPTS_PER_ROUTE = 24;
+const MAX_ATTEMPTS_PER_ROUTE = Number(process.env.SITEFORGE_MAX_ATTEMPTS ?? 32);
 
 const flows = new Map();
 const skippedControls = [];
