@@ -2360,6 +2360,31 @@ if (secrets.length > 0) {
   console.log('  secrets: clean (§3.4)');
 }
 
+/**
+ * §1's `GAPS.md`, aggregated by the run that produced the gaps.
+ *
+ * The gate the ruling asked for: **a run producing gaps and not appending
+ * them fails.** Spawned rather than inlined so there is one implementation of
+ * the capture-tree walk — a second copy here is how the two would disagree
+ * about which reports count, and the script's own `--check` would then be
+ * checking a different set from the one the run wrote.
+ *
+ * The judgement lives in `assessGapAggregation`, which takes both sides as
+ * parameters (§13). This call site cannot prove the gate fires; the shared
+ * tests drive it to a failing verdict, and `gap-aggregation-never-appends`
+ * removes the append.
+ */
+const aggregate = spawnSync('node', [join(REPO, 'scripts', 'aggregate-gaps.mjs')], {
+  encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
+});
+if (aggregate.status === 0) {
+  console.log(`  ${aggregate.stdout.trim().split('\n').at(-1)?.trim() ?? 'gaps aggregated'}`);
+} else {
+  console.log(`\n  ✗ GAPS.md was not brought up to date (§1):`);
+  console.log(`${aggregate.stdout ?? ''}${aggregate.stderr ?? ''}`.trimEnd());
+  finding('gaps-not-aggregated', `${gaps.length} gap(s) recorded and GAPS.md does not carry them`);
+}
+
 console.log('');
 if (findings.length === 0 && broken.length === 0 && failed === 0) {
   console.log(`✓ capture/${TARGET.siteId}: ${routes.size} route(s), ${endpoints.length} endpoint(s), ${gaps.length} gap(s).`);

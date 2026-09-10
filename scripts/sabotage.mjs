@@ -422,6 +422,17 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'gap-aggregation-never-appends',
+    bug: "a run's gaps never reach GAPS.md and the check calls it clean, so §1's required output stays a placeholder while the producer fills stage reports",
+    reachable: "it is the state the repository was in for the whole project. `GapSchema`, `StageReportSchema.gaps` and `manifest.counts.gaps` were all written, `capture-site.mjs` shipped 43 gaps in a real Vikunja run, and the file said `_No runs recorded yet._` — the consumer was never written and no gate was looking at the file. The patch is the same shape as the omission: the run-level comparison stops happening and everything downstream of it reports nothing to report.",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    // The run-level miss, not the per-gap one. A whole run absent from the
+    // file is the failure that actually happened; per-gap drops still fire
+    // under the bug and a row asserting only those would pass in both states.
+    expect: 'FAILS a run whose gaps never reached the file',
+  },
+
+  {
     id: 'seed-expiry-never-fires',
     bug: 'the seed expiry returns null whatever it is handed, so narrowing stays deferred after codegen begins seeding the store from response schemas',
     reachable: "an expiry that never fires looks exactly like an expiry whose event has not happened, and this one is designed to sit silent for months before its single moment. `>= 0` is also how an off-by-one is spelled — the guard reads as an emptiness check either way.",
