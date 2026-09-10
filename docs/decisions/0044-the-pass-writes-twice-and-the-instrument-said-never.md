@@ -179,6 +179,16 @@ after Gantt, NEW context, same server  1303 tags   = back to baseline
 **The contamination is client-side, and the server is not involved.** A new
 context against the same server returns to baseline.
 
+`ignoredWriteKinds` came back as `['POST /api/v1/user/token']` in all four
+runs, so `NON_CONTAMINATING_WRITES`' second entry — `POST /api/v1/login` — is
+**declared but never exercised**. Said out loud because the idempotence
+harness prints `⚠ exempt but never varied` for exactly this shape, and an
+exemption nobody has seen fire is a claim the data does not support. It is
+kept on the argument rather than the evidence: the pass acquires sessions
+deliberately for session-destructive probes (§6), so the case it covers is one
+the scheduler will produce as soon as a target has such a control — Vikunja's
+sign-out sits behind a menu and no candidate's name matches.
+
 ### 3.4 So the granularity answer is per-probe, and it is mostly not about the target
 
 §6 says "for each candidate, in a fresh page **context**". The code called
@@ -278,6 +288,38 @@ Two candidate remedies, named and **not** guessed between:
 Which one is right is a measurement, not an argument, and it is the same
 mistake as the one this document opens with to pick now.
 
+### 3.9 The 28 non-reproducing paths, against 0040 §1's thirty
+
+0040 §1 puts M1's bound at **30 paths, "all under `flows/`"**, and §4.1 names
+"the 30 becoming un-attributed again" as a tripwire the project should be held
+to. This series measured **28** — 27 varying plus 1 present in only one run —
+and they are *not* all under `flows/`:
+
+| population | paths | what it is |
+|---|---|---|
+| under `flows/` | **20** | 18 probe traces, `skipped-controls.json`, and the one trace present in 1 of 4 runs |
+| **aggregates over the pass** | 4 | `manifest.json`, `coverage.json`, `network/endpoints.json`, `stage-report.json` — all downstream of the probe pass rather than a separate source |
+| route artifacts | 4 | `projects-id/{meta,states}.json`, `tasks-id/{dom,meta}.json` |
+
+The aggregates are not a new population: they summarise the pass, so they move
+because it moved. **"All under `flows/`" was too narrow by four derived files**,
+and the honest bound is "the probe pass and everything computed from it".
+
+The four route artifacts are a different matter and they are **not** probe
+contamination, despite sitting on the two routes where contamination was
+measured. Routes are all captured first and probing runs afterwards, on a
+container that is fresh for every run — so no probe in run *N* can have touched
+run *N*'s route capture. They are consistent instead with 0038's 4 target-clock
+paths, a `<time datetime>` the server seeds, on the two routes that render
+task timestamps.
+
+One observation and deliberately not a conclusion: **no screenshot path varied
+in any of the four runs.** 0038 measured a bimodal rasteriser worth 3 paths and
+51 pixels on `<select>` corners. Four draws here landed in one state. That is
+either four draws of a two-state variable agreeing — the exact trap 0038 was
+written about, now with N=4 instead of N=3 — or something changed. Nothing here
+distinguishes them, so nothing is claimed; it is listed as open.
+
 ---
 
 ## 4. Open
@@ -291,3 +333,7 @@ mistake as the one this document opens with to pick now.
 - **The hang.** Zero samples in four crawls, so the rate is below 1 in 4 rather
   than the 1 in 1 the ruling assumed. Instrument in place, nothing to look at
   yet.
+- **The raster paths (§3.9).** Four draws, one state, and 0038's bimodality
+  neither confirmed nor refuted. Cheap to settle and nobody has.
+- **0040 §1's table**, amended for the four aggregates; the *"all under
+  `flows/`"* half of the claim was wrong.

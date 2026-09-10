@@ -19,7 +19,7 @@ pinned Vikunja, read-only and with probing, across 0028, 0032 and 0038:
 
 | population | paths | owner | status |
 |---|---|---|---|
-| **probe pass**, all under `flows/` | **30** | M1 | **open — this is the debt** |
+| **probe pass**, all under `flows/` | **30** | M1 | **open — this is the debt.** *Amended by 0044 §3.9: the "all under `flows/`" half is wrong. Measured at N=4 on one commit, 28 paths move — 20 under `flows/`, plus **four aggregates computed from the pass** (`manifest.json`, `coverage.json`, `network/endpoints.json`, `stage-report.json`) and four route artifacts that are captured before any probe runs and belong to row 2. The bound is "the probe pass and everything derived from it".* |
 | target clock — a `<time datetime>` seeded server-side | 4 | the target | permanent; recorded, not fixed (0032 §3) |
 | rasteriser, two states on rounded `<select>` corners | 3 paths / 51 px | M1 | open, bounded, mechanism unnamed (0038 §2.5) |
 
@@ -145,7 +145,10 @@ and it could not have been measured before the first).
 
 - A gate turning green on the strength of an artifact under `flows/`.
 - The 30 becoming un-attributed again — i.e. a difference appearing outside the
-  three populations in §1.
+  three populations in §1. **This fired, mildly, and is resolved rather than
+  outstanding:** 0044 §3.9 found four varying paths outside `flows/` that are
+  aggregates *over* `flows/`, so they are downstream of population 1 rather
+  than a fourth one. The attribution holds; the wording did not.
 - M3 starting. §8's mock backend is generated from `endpoints.json` and
   `flows/`, so codegen would bake the non-determinism into the environment, and
   §8's determinism harness is not allowed to paper over it ("do not paper over
