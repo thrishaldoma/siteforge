@@ -77,32 +77,40 @@ unchecked" is the scarier claim and the false one — the parts are not
 *unscoreable*, they are waiting on gates §12 already names. Stopping at the
 scary half is how a number gets quoted later without its second clause.
 
-### 1.2 Measured this turn: the crawl more than doubled, and no graded number moved
+### 1.2 Corrected: the crawl more than doubled, and five graded numbers moved
+
+> **This section said the opposite when first written, and the error is
+> instructive.** The claim was "no graded number moved", from an A/B that
+> swapped the *capture* and re-graded. But `grade:capture` reads the model
+> from `envs/<site>/site-model.json` and only the **observed** list from the
+> capture — so without re-running infer, both grades scored the *same stale
+> model*, and the one metric that moved (`conservation`) was the only one that
+> reads the observed list. A measurement whose failure mode produces a
+> plausible answer, which is §13's own warning, in the document arguing about
+> coverage. Redone with infer re-run against each capture:
 
 Landing state independence (0044 §5) took completed flows from **53 to 113**
 and undriveable controls from 75 to 33 — the largest change to what the crawl
 actually exercises in the project's history. Graded before and after, on
 captures whose endpoint sets differ:
 
-```
-response-field-presence.precision   0.4538  270/595   →  0.4538  270/595
-request-field-presence.precision    0.6494   50/77    →  0.6494   50/77
-field-type.accuracy                 0.8969  287/320   →  0.8969  287/320
-entity-field-presence.recall        0.9355   58/62    →  0.9355   58/62
-endpoint-identity.conservation      1.0000   22/22    →  1.0000   21/21
-```
+| metric | baseline capture | after |
+|---|---|---|
+| `request-field-presence.recall` | 0.5155 (50/97) | **0.9333 (14/15)** ✓ |
+| `request-field-presence.precision` | 0.6494 (50/77) | 0.7368 (14/19) |
+| `field-type.accuracy` | 0.8969 (287/320) | **0.9000 (225/250)** ✓ |
+| `response-field-presence.precision` | 0.4538 (270/595) | 0.4207 (236/561) |
+| `response-field-presence.recall` | 0.4954 (270/545) | 0.5153 (236/458) |
 
-**One number moved, and it is the one that mechanically tracks the endpoint
-count.** Everything else is byte-identical — §13's "exact non-movement is
-data" — and the explanation is the coverage table: `behaviours` is scored by
-nothing, so doubling the transitions captured cannot move a score. The single
-endpoint that differs, `POST /api/v1/tasks/:task`, is unmatched and therefore
-contributes to no numerator or denominator.
+**A change to the crawler moved five inference metrics and carried two over
+their gates.** That is the opposite of the original claim and a stronger form
+of the same argument: these numbers are substantially about **capture**, which
+is 0021's finding reached a second way (0046 §4.1).
 
-This is 0021's finding arriving from a new direction. It is not an argument
-that the work was wasted — the transitions are what §9's behavioural gate will
-replay. It is evidence about **the grader's reach**, and it bears directly on
-the question: a second target extends the same reach.
+It bears on the question directly. A second target would extend the grader's
+reach over `operations` and `entities` — the parts whose scores turn out to
+move with the crawler — while the 267 leaves no category touches stay
+untouched.
 
 ## 2. What deferring each category actually costs
 
@@ -117,7 +125,7 @@ absent claim is a missing feature and is visible as absence.
 | `entity-narrowing` | **no** — `vacuous 0/0`: the model emits no enum narrowing on any paired entity field | nothing. Confirmed by grading rather than assumed; it was the one row where "emits" was a guess |
 | `identifier` | **no** — hardcoded `ZERO`, not derived | nothing silently wrong. §7.4 reads foreign keys from `identifier.pathParamOf`, so the cost is a *missing* capability, visible as absence |
 | `entity-relation` | **no** — `RelationSchema` cannot express the one reachable relation | as above: absence, not error |
-| `synthesized-endpoint` | **no** on this target — 0041 §7.2 | nothing. All 65 extractable URLs are SPA routes; there is no claim to be wrong about |
+| ~~`synthesized-endpoint`~~ | **CORRECTED — yes, 5** | see §2.2. Filed here as emitting nothing on the strength of a `0/0`, which is the exact mistake the deferral classes exist to prevent |
 
 One clarification the grader forced: **`narrowing.recall` is not vacuous** —
 it reads `0.000  0/5`, a real and failing number, because the document does
@@ -128,7 +136,29 @@ on 4 of 9 scored slots against a 0.45 cap, and the grader's own verdict is
 blocking reason is the contradiction, not silence — and it is already
 machine-checked rather than a matter of opinion.
 
-**Four of the five emit nothing.** Deferring them cannot produce a silent
+### 2.2 The gate caught this table's own error on its first run
+
+`DEFERRALS` and `countEmissions` landed with the classes above. Run against
+the model, the transition guard immediately failed:
+
+```
+synthesized-endpoint: class-changed — declared emits-nothing, the model emits 5
+```
+
+**`synthesized-endpoint` was filed `emits-nothing` on the strength of the
+grader reading `vacuous 0/0`** — and that denominator counts *in-universe*
+synthesized endpoints, not emitted ones. §7.6 binds 5 controls by `href` to
+SPA routes outside `/api/v1`, so they score nothing and exist anyway. §8
+implements a `bound-from-control` endpoint against the store, and 0015 calls
+such claims "the highest-hallucination-risk claims in the model" — so those 5
+reach codegen unchecked.
+
+Reading a filtered denominator as an emission count is precisely the confusion
+the two classes exist to prevent, and it was made in the document that
+introduced them. Re-declared `emits-but-unscored`, with an expiry on codegen
+implementing bound-from-control endpoints.
+
+**So three of the five emit nothing**, and two are tracked risks. Deferring them cannot produce a silent
 error, because there is no output to be silently wrong. Only `narrowing` has a
 live cost, and it is the one a second target could actually address — a
 document that declares formats and enums supplies the truth side that
@@ -175,9 +205,9 @@ deferral with its blocking reason and its vacuity cause from §13's table:
 | `narrowing.precision` | target limitation | the document declares zero formats in 368KB, against **43 narrowings the model emits** |
 | `narrowing.recall` | document contradicts its server | **over the divergence cap** — 4 of 9 scored slots, cap 0.45; the grader itself reports the document unfit for this category |
 | `entity-narrowing.*` | declined on evidence | the model emits no enum narrowing on a paired entity field (`0/0`) |
+| `synthesized-endpoint` | **emits 5, unscoreable** | all 5 bind by `href` to SPA routes outside `/api/v1`, so the universe filter excludes them from the denominator while they stay in the model |
 | `identifier.*` | unimplemented stage | not derived; §7.4's `pathParamOf` has no producer |
 | `entity-relation.*` | target limitation + schema | `RelationSchema` cannot express the one reachable relation |
-| `synthesized-endpoint` | declined on evidence | the ranking ran and correctly bound nothing (0041 §7.2) |
 
 Three conditions, in the shape 0040 §4 used, so this is a deferral and not a
 punt:

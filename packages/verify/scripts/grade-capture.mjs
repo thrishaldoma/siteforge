@@ -18,10 +18,12 @@
  * The reverse — infer importing the grader — is what 0020 forbids and
  * `assessGraderFirewall` enforces.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GRADE_SUITES, SiteModelSchema } from '../../schema/dist/index.js';
+import {
+  DEFERRALS, GRADE_SUITES, SiteModelSchema, assessDeferrals, assessSeedExpiry, countEmissions,
+} from '../../schema/dist/index.js';
 import { gradeSiteModel } from '../dist/grade/grade.js';
 import { loadVikunjaTruth } from '../dist/grade/truth/vikunja.js';
 import { KNOWN_DIVERGENCE } from '../dist/grade/known-divergence.js';
@@ -142,6 +144,57 @@ if (report.divergence.total > 0) {
 }
 
 console.log('');
+/**
+ * The deferrals still describing the model they defer (0045).
+ *
+ * Run here rather than inside `gradeSiteModel` because it is a claim about
+ * *policy* against the model, not a metric: it answers "is this deferral still
+ * the kind of deferral it says it is", and the answer must be checkable even
+ * on a target where every metric is vacuous.
+ */
+const emissions = countEmissions(model);
+const deferralFindings = assessDeferrals({ deferrals: DEFERRALS, emissions });
+console.log('\n  deferrals (0045) — what the model claims where nothing scores it:');
+for (const d of DEFERRALS) {
+  const n = emissions[d.category] ?? 0;
+  console.log(`    ${d.kind === 'emits-but-unscored' ? '!' : ' '} ${d.category.padEnd(22)} ${d.kind.padEnd(20)} emits ${n}`);
+}
+
+/**
+ * `narrowing`'s expiry, checked rather than remembered.
+ *
+ * **Filesystem view, deliberately.** `/envs/*​/` is gitignored, so a seed file
+ * is invisible to git by construction and a caller reading `git status` would
+ * report clean forever — §13's two-views rule, which has produced three
+ * separate defects here already.
+ */
+const seedFiles = [];
+const envsRoot = join(REPO, 'envs');
+if (existsSync(envsRoot)) {
+  const walk = (dir, rel) => {
+    for (const name of readdirSync(dir)) {
+      const abs = join(dir, name);
+      if (statSync(abs).isDirectory()) walk(abs, `${rel}/${name}`);
+      else if (rel.endsWith('/seeds') && name.endsWith('.json')) seedFiles.push(`${rel}/${name}`);
+    }
+  };
+  walk(envsRoot, 'envs');
+}
+const narrowingScored = report.metrics.some((x) => x.id.startsWith('narrowing.') && !x.vacuous && x.gate !== undefined);
+const seedExpiry = assessSeedExpiry({ seedFiles, narrowingScored });
+if (seedExpiry !== null) {
+  console.log(`\n  ✗ narrowing's deferral has expired: ${seedExpiry.detail}`);
+} else {
+  console.log(`    seed expiry: not fired — ${seedFiles.length} seed artifact(s) on disk, narrowing ${narrowingScored ? 'scored' : 'unscored'}`);
+}
+
+if (deferralFindings.length > 0) {
+  console.log(`\n  ✗ ${deferralFindings.length} deferral(s) no longer describe the model:`);
+  for (const f of deferralFindings) console.log(`    ${f.category}: ${f.problem} — ${f.detail}`);
+}
+
+if (deferralFindings.length > 0 || seedExpiry !== null) process.exitCode = 1;
+
 if (report.failedCategories.length > 0) {
   console.log(`  ✗ failed: ${report.failedCategories.join(', ')}`);
   process.exitCode = 1;
