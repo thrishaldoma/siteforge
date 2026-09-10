@@ -5,6 +5,14 @@ detector was written or run**, per §13's prediction discipline and the
 ruling's "declare the detection rule and its threshold before measuring".
 §4 onward is what the measurement found and is written after.*
 
+> **Fixture note (0052).** The capture-derived figures in this document were
+> measured against the pinned Vikunja digest
+> `sha256:ed1f3ed4…` with the seed **as it stood before [[0051]]**, whose every
+> task had `assignees`, `labels`, `reminders` and `attachments` null. 0051
+> changed the seed, so these numbers describe an instance that no longer
+> exists. They are not reconstructed — they were correct about what they
+> measured.
+
 [[0046]] diagnosed `response-field-presence.precision` at 0.4207: 307 of 308
 false positives come from one endpoint, `GET /api/v1/routes`, whose response
 is an object **whose keys are data**. Infer enumerates each key as a schema

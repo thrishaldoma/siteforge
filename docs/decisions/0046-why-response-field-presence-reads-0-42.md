@@ -3,6 +3,14 @@
 *Status: diagnosis only. No fix proposed, per the ruling — the cause is
 reported and the remedy is a separate decision.*
 
+> **Fixture note (0052).** The capture-derived figures in this document were
+> measured against the pinned Vikunja digest
+> `sha256:ed1f3ed4…` with the seed **as it stood before [[0051]]**, whose every
+> task had `assignees`, `labels`, `reminders` and `attachments` null. 0051
+> changed the seed, so these numbers describe an instance that no longer
+> exists. They are not reconstructed — they were correct about what they
+> measured.
+
 `response-field-presence` is the first genuine red from a category measuring
 what it claims to: **precision 0.4207 (236/561), recall 0.5153 (236/458)** on
 the current capture and a model inferred from it.

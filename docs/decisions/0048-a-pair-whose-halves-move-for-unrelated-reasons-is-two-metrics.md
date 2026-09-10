@@ -3,6 +3,14 @@
 *Status: accepted. Contract v5, digest changed in the same commit as the
 table. The audit in §3 is the general form the ruling asked for.*
 
+> **Fixture note (0052).** The capture-derived figures in this document were
+> measured against the pinned Vikunja digest
+> `sha256:ed1f3ed4…` with the seed **as it stood before [[0051]]**, whose every
+> task had `assignees`, `labels`, `reminders` and `attachments` null. 0051
+> changed the seed, so these numbers describe an instance that no longer
+> exists. They are not reconstructed — they were correct about what they
+> measured.
+
 [[0046]] diagnosed `response-field-presence` at precision 0.4207 / recall
 0.5153 and found the two halves have **different subjects**:
 

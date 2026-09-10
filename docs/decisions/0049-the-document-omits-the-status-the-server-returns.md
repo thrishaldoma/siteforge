@@ -3,6 +3,14 @@
 *Status: §1 refutes a stated mechanism with measurement. §2–§3 are the rule
 and the prediction, committed before the change. §4 onward is written after.*
 
+> **Fixture note (0052).** The capture-derived figures in this document were
+> measured against the pinned Vikunja digest
+> `sha256:ed1f3ed4…` with the seed **as it stood before [[0051]]**, whose every
+> task had `assignees`, `labels`, `reminders` and `attachments` null. 0051
+> changed the seed, so these numbers describe an instance that no longer
+> exists. They are not reconstructed — they were correct about what they
+> measured.
+
 The ruling was: *"infer currently unions bodies across status codes, so a
 401's `{message}` becomes a field of the 200 response. Same granularity you
 applied to the recall denominator, applied to the model."*
