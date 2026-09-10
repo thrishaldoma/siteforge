@@ -98,12 +98,15 @@ captures whose endpoint sets differ:
 |---|---|---|
 | `request-field-presence.recall` | 0.5155 (50/97) | **0.9333 (14/15)** ✓ |
 | `request-field-presence.precision` | 0.6494 (50/77) | 0.7368 (14/19) |
-| `field-type.accuracy` | 0.8969 (287/320) | **0.9000 (225/250)** ✓ |
+| `field-type.accuracy` | 0.8969 (287/320) | **0.9000 (225/250)** ✓ *boundary* |
 | `response-field-presence.precision` | 0.4538 (270/595) | 0.4207 (236/561) |
 | `response-field-presence.recall` | 0.4954 (270/545) | 0.5153 (236/458) |
 
 **A change to the crawler moved five inference metrics and carried two over
-their gates.** That is the opposite of the original claim and a stronger form
+their gates.** `field-type` is marked *boundary* deliberately: it reads
+exactly its `≥ 0.9` gate, with zero margin, on a denominator that moved
+320 → 250 in the same change. A gate passing by nothing on a shifted
+denominator is not a result to lean on. That is the opposite of the original claim and a stronger form
 of the same argument: these numbers are substantially about **capture**, which
 is 0021's finding reached a second way (0046 §4.1).
 

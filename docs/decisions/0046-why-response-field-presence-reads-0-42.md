@@ -102,22 +102,25 @@ by infer dropping fields it could see.
 
 ## 4. What the number is actually measuring
 
-Both halves trace to one root, and it is 0021's finding arriving again:
-**§5 builds response schemas as a union over observed bodies, so
-`response-field-presence` is largely a measurement of the seeded instance,
-not of inference.**
+**The two metrics have different subjects, and folding them together is the
+mistake that would let the real defect go unfixed.**
 
-- Its **recall** is bounded above by seed coverage. With no team, comment,
-  notification or token in the store, 62 declared fields are unreachable
-  whatever infer does, and the null-valued subtrees remove most of the rest.
-- Its **precision** is, on this target, a measurement of one endpoint's
-  response shape.
+- **Recall is the seeded instance.** §5 builds response schemas as a union
+  over observed bodies, so recall is bounded above by seed coverage. With no
+  team, comment, notification or token in the store, 62 declared fields are
+  unreachable whatever infer does, and the null-valued subtrees account for
+  most of the rest. This half is 0021's finding again: a number badged as
+  inference that is substantially about capture.
+- **Precision is an inference defect, and it is not the seed's fault.**
+  Modelling a data-keyed map as a record type is a representation error in how
+  `JsonSchemaNode` is used, and it would be wrong on a fully-seeded instance
+  too — richer seed data would make it *worse*, not better, because more
+  routes means more spurious fields. This half is genuinely §7's to fix.
 
-That makes it a real red — the model genuinely disagrees with the document —
-but it is not primarily a statement about §7's judgement, which is what a
-category in the `inference` suite reads as. Per 0021's rule: before reading a
+So the single red hides two findings with different owners, and reporting it
+as one number is what kept them together. Per 0021's rule: before reading a
 score as evidence about a stage, disable a piece of that stage and check the
-number moves.
+number moves — and here the two halves move for different reasons.
 
 ### 4.1 Corroboration: the state-independence work moved it
 
@@ -154,6 +157,13 @@ measurement harness.
 - **Seed coverage.** 62 fields are unreachable until the seed creates a team,
   a comment, a notification and a token. That is capture-side work with a
   known list.
+- **Whether `/api/v1/routes` belongs in the graded universe at all.** Distinct
+  from the representation fix and not answered by it: this is a *route
+  manifest*, not a resource, and §8 would generate its 307-field type into the
+  clone's data model even once maps are modelled correctly. The document
+  declares it, so the universe filter admits it correctly — the question is
+  whether the mock backend should carry it, and that is a §8 scoping decision
+  rather than a grading one.
 - **Whether `response-field-presence` belongs in the `inference` suite** given
-  §4. 0021 raised the same question for twelve other numbers and it was not
-  settled then either.
+  §4 — at least for its recall half. 0021 raised the same question for twelve
+  other numbers and it was not settled then either.
