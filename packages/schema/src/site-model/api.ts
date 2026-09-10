@@ -31,7 +31,7 @@ import { deriveEndpointId, patternParams } from '../identity.js';
 import { AuthEvidenceSchema, AuthRequirementSchema, resolveAuthRequirement } from '../auth.js';
 import { JsonSchemaNodeSchema } from '../json-schema.js';
 import { GapIdSchema } from '../gap.js';
-import { ControlIdSchema } from '../controls.js';
+import { BindingEvidenceKindSchema, ControlIdSchema } from '../controls.js';
 import { EntityNameSchema, FieldNameSchema } from './entities.js';
 
 /**
@@ -144,7 +144,7 @@ export const OperationDiscoverySchema = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('bound-from-control'),
     controlId: ControlIdSchema,
-    evidence: z.enum(['form-action', 'fetch-literal', 'xhr-literal', 'href']),
+    evidence: BindingEvidenceKindSchema,
     gapId: GapIdSchema,
   }),
 ]);

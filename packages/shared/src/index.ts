@@ -13,3 +13,5 @@ export * from './option-sets.js';
 export * from './field-of-view.js';
 export * from './field-of-view.declarations.js';
 export * from './capture-idempotence.js';
+export * from './path-pattern.js';
+export * from './control-binding.js';

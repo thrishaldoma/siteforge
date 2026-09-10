@@ -25,7 +25,7 @@ import { SAFE_HTTP_METHODS, deriveEndpointId, patternParams } from './identity.j
 import { JsonSchemaNodeSchema } from './json-schema.js';
 import { GapIdSchema } from './gap.js';
 import { AuthEvidenceSchema, AuthRequirementSchema, resolveAuthRequirement } from './auth.js';
-import { ControlIdSchema } from './controls.js';
+import { BindingEvidenceKindSchema, ControlIdSchema } from './controls.js';
 
 export const ParamPrimitiveTypeSchema = z.enum([
   'string',
@@ -197,7 +197,12 @@ export const EndpointDescriptorSchema = z
       kind: z.literal('bound-from-control'),
       /** The `SkippedControl` this endpoint was recovered from. */
       controlId: ControlIdSchema,
-      evidence: z.enum(['form-action', 'fetch-literal']),
+      /**
+       * Which rung of §7.6's ranking bound it (0041 §2). One vocabulary, shared
+       * with `OperationDiscoverySchema` — the two were already out of step,
+       * this side missing `href`, which is the rung that actually fires.
+       */
+      evidence: BindingEvidenceKindSchema,
       /** Carried forward from the skipped control; the behaviour is still unobserved. */
       gapId: GapIdSchema,
     }),

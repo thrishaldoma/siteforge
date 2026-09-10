@@ -232,6 +232,30 @@ export const SkippedControlSchema = z
     }
   });
 
+/**
+ * How a control was bound to what it reaches — §7.6's ranking, one vocabulary.
+ *
+ * Declared here, beside the controls it describes, and read by **both**
+ * `EndpointSchema.discovery` and `OperationDiscoverySchema`. It had been
+ * spelled out twice and the two had already drifted: the capture side listed
+ * `['form-action','fetch-literal']` and the model side
+ * `['form-action','fetch-literal','xhr-literal','href']`, so the rung that
+ * actually fires on a real target was unrepresentable in the artifact §7.6
+ * writes. §13's duplicated-derived-value rule; §14's fix the schema.
+ *
+ * `fetch-literal` and `xhr-literal` are kept and currently unproduced: 0041
+ * §2.2 declines the rung that would emit them, on the measurement that a 1 MB
+ * bundle holds 67 scope ids and 66 path literals, so associating one with one
+ * is positional proximity in minified output.
+ */
+export const BindingEvidenceKindSchema = z.enum([
+  'form-action',
+  'href',
+  'control-local-literal',
+  'fetch-literal',
+  'xhr-literal',
+]);
+
 export const SkippedControlIndexSchema = z.strictObject({
   ...artifactEnvelope('skipped-control-index'),
   siteId: SiteIdSchema,
@@ -248,3 +272,4 @@ export type SkipCause = z.infer<typeof SkipCauseSchema>;
 export type ProbeDiagnostic = z.infer<typeof ProbeDiagnosticSchema>;
 export type SkippedControl = z.infer<typeof SkippedControlSchema>;
 export type SkippedControlIndex = z.infer<typeof SkippedControlIndexSchema>;
+export type BindingEvidenceKind = z.infer<typeof BindingEvidenceKindSchema>;

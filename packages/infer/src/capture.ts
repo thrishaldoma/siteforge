@@ -22,6 +22,8 @@ import {
   type RouteMeta,
   type StateDeltasDocument,
   type StyleSheetDocument,
+  SkippedControlIndexSchema,
+  type SkippedControlIndex,
 } from '@siteforge/schema';
 
 export interface CapturedRoute {
@@ -37,6 +39,13 @@ export interface Capture {
   readonly manifest: CaptureManifest;
   readonly endpoints: EndpointIndex;
   readonly routes: readonly CapturedRoute[];
+  /**
+   * §7.6's input. **Absent, not empty, when the probe pass did not run** — a
+   * read-only crawl writes no `flows/`, and `controls: []` would say "the pass
+   * ran and skipped nothing", which is the opposite claim. 0019's rule: the two
+   * must not render identically.
+   */
+  readonly skippedControls: SkippedControlIndex | null;
 }
 
 export class CaptureReadError extends Error {}
@@ -56,6 +65,10 @@ export function readCapture(root: string): Capture {
     EndpointIndexSchema,
     'the endpoint index',
   );
+  const skippedPath = join(root, 'flows', 'skipped-controls.json');
+  const skippedControls = existsSync(skippedPath)
+    ? SkippedControlIndexSchema.parse(JSON.parse(readFileSync(skippedPath, 'utf8')))
+    : null;
   const routesDir = join(root, 'routes');
   const routes: CapturedRoute[] = existsSync(routesDir)
     ? readdirSync(routesDir, { withFileTypes: true })
@@ -78,5 +91,5 @@ export function readCapture(root: string): Capture {
           ),
         }))
     : [];
-  return { root, manifest, endpoints, routes };
+  return { root, manifest, endpoints, routes, skippedControls };
 }

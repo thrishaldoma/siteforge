@@ -41,6 +41,7 @@ import {
 } from './entities.js';
 import { narrowedField, narrowingObjection } from './narrowing.js';
 import { operationOf } from './operations.js';
+import { bindSkippedControls } from './binding.js';
 import { inferComponents, inferLayout } from './components.js';
 import { inferTokens } from './tokens.js';
 
@@ -62,6 +63,35 @@ export interface InferReport {
   readonly objections: readonly string[];
   /** Entity merges the containment pass made, with the counts each rests on. */
   readonly merges: readonly string[];
+  /**
+   * §7.6's tally, or why it did not run.
+   *
+   * Three states, and they must not collapse into one (0019): the ranking ran;
+   * the capture carried no `flows/` at all, so there was no input; or the piece
+   * was ablated. The first draft reported the ablation as "no flows/ in this
+   * capture", which is a false statement about the artifact — and the exact
+   * shape of conflation this field exists to prevent.
+   */
+  readonly binding: BindingTally | BindingNotRun;
+}
+
+export interface BindingNotRun {
+  readonly ran: false;
+  readonly reason: 'no-flows-in-capture' | 'disabled';
+}
+
+/** What §7.6's ranking did, per rung. 0041 §5 predicts every one of these. */
+export interface BindingTally {
+  readonly ran: true;
+  readonly considered: number;
+  readonly bound: number;
+  readonly declined: number;
+  readonly unbound: number;
+  /** Distinct operations after dedup by (method, pattern). */
+  readonly operations: number;
+  readonly byRank: Readonly<Record<string, number>>;
+  readonly declinedByRung: Readonly<Record<string, number>>;
+  readonly silentRungs: readonly string[];
 }
 
 /**
@@ -92,6 +122,8 @@ export interface InferOptions {
   readonly carryNarrowings?: boolean;
   /** Piece 4. Off: no components and no tokens. */
   readonly presentation?: boolean;
+  /** Piece 5 (§7.6). Off: no skipped control is bound, and every gap stands alone. */
+  readonly bindControls?: boolean;
 }
 
 export interface InferResult {
@@ -279,6 +311,7 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
     mergeEntities = true,
     carryNarrowings = true,
     presentation = true,
+    bindControls = true,
   } = options;
 
   // --- piece 1: rows, deduplicated by entity identity before anything counts
@@ -322,7 +355,18 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
     const name = keyed.get(shapeIdentity(row));
     return name !== undefined && declared.has(name) ? name : null;
   };
-  const operations = capture.endpoints.endpoints.map((e) => operationOf(e, entityOf));
+  const observedOperations = capture.endpoints.endpoints.map((e) => operationOf(e, entityOf));
+
+  // --- piece 5: §7.6, controls capture never fired
+  //
+  // Appended after the observed ones so an observation always wins the dedup
+  // inside `bindSkippedControls`: a weaker claim must not displace a stronger
+  // one about the same (method, pattern).
+  const bound =
+    bindControls && capture.skippedControls !== null
+      ? bindSkippedControls(capture, capture.skippedControls)
+      : null;
+  const operations = [...observedOperations, ...(bound?.operations ?? [])];
 
   // --- piece 4: components and tokens
   const layout = inferLayout(capture.routes);
@@ -360,6 +404,29 @@ export function inferSiteModel(capture: Capture, options: InferOptions = {}): In
       components: model.components.length,
       objections,
       merges,
+      binding:
+        bound === null
+          ? { ran: false as const, reason: bindControls ? ('no-flows-in-capture' as const) : ('disabled' as const) }
+          : {
+              ran: true as const,
+              considered: bound.report.considered,
+              bound: bound.report.bound.length,
+              declined: bound.report.declined.length,
+              unbound: bound.report.unbound.length,
+              operations: bound.operations.length,
+              byRank: bound.report.bound.reduce<Record<string, number>>((acc, b) => {
+                const rung = b.evidence.find((e) => e.rank === b.rank)?.rung ?? '?';
+                acc[rung] = (acc[rung] ?? 0) + 1;
+                return acc;
+              }, {}),
+              declinedByRung: bound.report.declined.reduce<Record<string, number>>((acc, d) => {
+                acc[d.rung] = (acc[d.rung] ?? 0) + 1;
+                return acc;
+              }, {}),
+              // A rung nobody can prove fires. Reported rather than silent —
+              // §13, and 0041 §5 predicts exactly which ones these are.
+              silentRungs: bound.report.silentRungs,
+            },
     },
   };
 }

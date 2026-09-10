@@ -1,8 +1,7 @@
 # 0041 — §7.6's ranking, declared before it is built
 
-*Status: design, declared before implementation. Nothing here is built yet.
-Implementation follows in the next commit; the prediction in §5 is the point of
-the ordering.*
+*Status: accepted. §§1–5 were committed at `8b48122`, before any code; §7 is
+what the run returned. Every predicted number was exact.*
 
 0030 declared the shared record and the *select-binding* ranking. This declares
 the **URL** ranking — §7.6 — under the rule the ladder restructure produced
@@ -242,3 +241,92 @@ are `button`, `link`, `textbox`, `checkbox`, `combobox`, `tab`, `menuitem` —
 (`getEventListeners` or `cursor: pointer`, most likely) and are landmarks rather
 than controls. Rank 1 declines them correctly, so it does not block this work,
 but a landmark in the interaction candidate set is a capture-side question.
+
+---
+
+## 7. Measured
+
+Run against the same committed capture, at the commit after the declaration.
+
+| | predicted | measured |
+|---|---|---|
+| controls in | 84 | **84** |
+| rank 1 **not a control** — declines | 7 | **7** |
+| rank 2 **not ours** — declines | 7 | **7** |
+| rank 3 **form-action** — binds | 0 | **0** (reported as `never fired`) |
+| rank 4 **href** — binds | 58 | **58** |
+| rank 5 **control-local literal** — binds | 0 | **0** (reported as `never fired`) |
+| unbound; the gap stands alone | 12 | **12** |
+| distinct operations after dedup | 12 | **12** |
+| in-universe | 0 | **0** |
+
+```
+binding (§7.6)   84 control(s) → 58 bound, 14 declined, 12 unbound
+    bound by     href 58
+    declined by  not-a-control 7 · not-ours 7
+    operations   12 distinct, after dedup by (method, pattern)
+    never fired  form-action, control-local-literal
+```
+
+Nine numbers, nine exact. That is worth one sentence of scepticism rather than
+satisfaction: the prediction was *derived* from the committed capture by the
+same reading of the same files the implementation then performed, so it is a
+check that the code does what the analysis said, not an independent forecast.
+What it rules out is the thing it was written to rule out — a build that did
+not reach the model, reporting the same "nothing moved" a null result reports.
+
+### 7.1 The input differed and no metric moved, and both halves were needed
+
+`--without binding` is a new ablation, and `assessVariantIsMeasurable` passes
+it: 34 operations against 22, different sha256. So the piece reaches the model.
+
+Graded both ways, and the two reports are **identical line for line** — every
+`capture-fidelity` and `inference` metric, byte for byte.
+
+That is 0018's control row holding on real data rather than on a fixture:
+*"adding an out-of-universe operation must move nothing, which asserts the
+universe filter excludes rather than merely labels."* Twelve of them, and it
+excluded all twelve.
+
+Neither half alone would have said anything. Identical scores with a
+byte-identical model is a no-op (0021's third ablation row); a differing model
+with unchecked scores is a claim nobody tested.
+
+### 7.2 `synthesized-endpoint` — the number, and it is `vacuous 0/0`
+
+The category asked for. It reads:
+
+```
+✗ synthesized-endpoint.precision     vacuous       0/0  ≥ 0.9 !
+    synthesized endpoints infer emitted
+```
+
+**Unchanged, and §5.1 said so in advance.** What changed is the *cause*, which
+is the deliverable:
+
+- **before** — §13's third vacuity cause, **unimplemented stage**: 84 controls
+  in the artifact, no code path in `packages/infer` emitting
+  `bound-from-control`. The one that hides, because the input looks right.
+- **after** — two disjoint populations with two better causes. The **58**
+  bindings exist and are excluded by the universe filter *working*. The **12**
+  unbound ran the ranking and it declined: §13's fourth cause, **declined on
+  evidence**, which is not work at all.
+
+The category is still not measuring anything on this target, and it is now
+honestly ungradeable rather than silently unbuilt. A first real number needs a
+target whose controls carry API URLs in the DOM — a server-rendered app with
+`<form action>` rather than a Vue SPA — which is a target-selection question
+(0019's criteria) and not more infer work.
+
+### 7.3 Two things the build changed that the design did not anticipate
+
+- **The error taxonomy said no to `try/catch` here, and it was right.**
+  `new URL('nonsense')` throws a `TypeError`, which §13 classes as *never*
+  operational, so `rethrowIfDefect` would rethrow ordinary page input. Rather
+  than argue the taxonomy into an exception, the code asks a question that does
+  not throw: `URL.canParse`. `pnpm lint` found both catches.
+- **`report.binding` needed three states, not two.** The first draft printed
+  "no flows/ in this capture" for the *ablated* run, which is a false statement
+  about the artifact — and precisely the 0019 conflation the field exists to
+  prevent, committed by the person who wrote the field. Now `ran: false` with
+  `reason: 'no-flows-in-capture' | 'disabled'`.

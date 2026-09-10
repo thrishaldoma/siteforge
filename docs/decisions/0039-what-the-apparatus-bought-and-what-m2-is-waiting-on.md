@@ -107,6 +107,18 @@ partition, from 0021 and 0023:
 
 ## 3. The recommendation: §7.6, and it is the one thing that unblocks a category
 
+> **Corrected at `0041 §5.1`, after measuring.** This section says §7.6 "would
+> move a currently-vacuous graded category". **It does not, on this target**,
+> and the claim should have read *the only unbuilt thing that **could** move
+> it*. Measured: all 65 extractable URLs are SPA routes, none under `/api/v1`;
+> the 10 buttons whose handlers would name an API path have no extractable
+> literal anywhere. `synthesized-endpoint` stays `vacuous 0/0`. The
+> recommendation to build §7.6 stands and was carried out — what it bought is a
+> change of *cause*, from §13's third vacuity cause to its fourth, which 0041
+> §7.2 sets out. The error is recorded rather than edited away because it is
+> the same shape this document is about: a claim asserted from a plausible
+> reading rather than from a measurement.
+
 **`packages/infer` contains zero occurrences of `bound-from-control`.** §7.6 —
 binding a skipped control to a URL out of a `<form action>` or a `fetch()`
 literal — has never been written.

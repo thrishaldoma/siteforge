@@ -28,6 +28,11 @@ const VARIANTS = {
   merge: { mergeEntities: false },
   narrowings: { carryNarrowings: false },
   presentation: { presentation: false },
+  // Piece 5 (§7.6). 0041 §5 predicts this one's outcome in advance: the model
+  // must differ by 12 operations and no graded metric may move, because every
+  // bound URL is out of universe. A prediction written first is the only thing
+  // that separates that from a build which never reached the model.
+  binding: { bindControls: false },
 };
 
 const siteId = process.argv[2] ?? 'vikunja';
@@ -69,6 +74,29 @@ console.log(`  rows seen        ${report.rowsSeen}`);
 console.log(`  entities         ${report.entities}  ${model.entities.map((e) => e.name).join(', ')}`);
 console.log(`  operations       ${report.operations}`);
 console.log(`  components       ${report.components}`);
+
+// §7.6's tally (0041 §5 predicts every number here). `null` means the capture
+// carried no `flows/` at all — a read-only crawl — which is a different
+// statement from "the ranking ran and bound nothing".
+if (report.binding.ran === false) {
+  const why =
+    report.binding.reason === 'disabled'
+      ? 'the piece is ablated — flows/ was not read'
+      : 'no flows/ in this capture, so §7.6 had no input';
+  console.log(`  binding (§7.6)   did not run: ${why}`);
+} else {
+  const b = report.binding;
+  const kv = (o) => Object.entries(o).map(([k, v]) => `${k} ${v}`).join(' · ') || '—';
+  console.log(`  binding (§7.6)   ${b.considered} control(s) → ${b.bound} bound, ${b.declined} declined, ${b.unbound} unbound`);
+  console.log(`      bound by     ${kv(b.byRank)}`);
+  console.log(`      declined by  ${kv(b.declinedByRung)}`);
+  console.log(`      operations   ${b.operations} distinct, after dedup by (method, pattern)`);
+  if (b.silentRungs.length > 0) {
+    // A rung nobody can prove fires, said out loud rather than left to be
+    // assumed working (§13, and 0032 §6.4's tally for the same reason).
+    console.log(`      never fired  ${b.silentRungs.join(', ')}`);
+  }
+}
 console.log(`  tokens           ${model.tokens.colors.length} colour(s), ${model.tokens.spacing.length} spacing, ${model.tokens.fontSizes.length} size(s)`);
 console.log(`  route templates  ${model.routes.length}`);
 
