@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/capture/scripts/capture-lib.mjs",
+    "find": "\nexport function installEscapeGuards(page, { onBlocked }) {",
+    "replace": "\n/** A page obtained without calling newPage, so the lint has no call to match. */\nexport async function firstOpenPage(context) {\n  const [page] = context.pages();\n  return page;\n}\n\nexport function installEscapeGuards(page, { onBlocked }) {"
+  }
+]

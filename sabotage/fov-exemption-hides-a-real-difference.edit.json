@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/capture/scripts/capture-idempotence.mjs",
+    "find": "    reason: 'as above — one HAR per capture context',\n  },\n  {\n    path: 'auth',",
+    "replace": "    reason: 'as above — one HAR per capture context',\n  },\n  {\n    path: 'coverage.json',\n    reason: 'counts move between runs',\n  },\n  {\n    path: 'auth',"
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/capture-idempotence.ts",
+    "find": "    const agreed = new Set(claim.hashPerRun).size === 1;\n    if (!agreed) continue;",
+    "replace": ""
+  }
+]

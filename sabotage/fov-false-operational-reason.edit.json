@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/errors.ts",
+    "find": " */\nexport function rethrowIfDefect(err: unknown): void {",
+    "replace": " */\n/** Swallow a defect behind a reason that is not true. */\nexport function swallowQuietly(err: unknown): void {\n  try {\n    void err;\n  } catch {\n    // operational: nothing here can throw, which is why this reason is false\n  }\n}\n\nexport function rethrowIfDefect(err: unknown): void {"
+  }
+]

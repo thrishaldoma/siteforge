@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/infer/src/variant.ts",
+    "find": "  if (baseline !== variant) return [];",
+    "replace": "  // The narrowings row trips this and the capture genuinely has no enums, so\n  // exempt it rather than carrying a red harness.\n  if (baseline !== variant || piece === 'narrowings') return [];"
+  }
+]

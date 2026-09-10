@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/infer/src/entities.ts",
+    "find": "    if (containers.length !== 1) continue;",
+    "replace": "    if (containers.length === 0) continue;"
+  }
+]

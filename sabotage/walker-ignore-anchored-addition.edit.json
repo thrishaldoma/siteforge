@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/scan-walker.ts",
+    "find": "  '/packages/schema/fixtures/**',\n] as const;",
+    "replace": "  '/packages/schema/fixtures/**',\n  '**/coverage',\n] as const;"
+  }
+]

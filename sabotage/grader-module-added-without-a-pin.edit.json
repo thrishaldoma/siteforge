@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/src/grade/thresholds.ts",
+    "find": null,
+    "replace": "/**\n * Gate thresholds, lifted out of `grade-contract.ts` so they read in one place.\n */\nexport const NARROWING_PRECISION_FLOOR = 0.9;\nexport const FIELD_TYPE_ACCURACY_FLOOR = 0.8;\n"
+  }
+]

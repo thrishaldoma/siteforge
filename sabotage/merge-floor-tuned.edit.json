@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/site-model/entities.ts",
+    "find": "export const MERGE_MIN_SHARED_FIELDS = 4;",
+    "replace": "export const MERGE_MIN_SHARED_FIELDS = 1;"
+  }
+]

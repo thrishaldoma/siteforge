@@ -1,0 +1,7 @@
+[
+  {
+    "file": "scripts/sabotage.mjs",
+    "find": "    } else if (now !== hash) {",
+    "replace": "    } else if (now !== hash && !file.endsWith('.js')) {"
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/capture/scripts/undriveable-ancestors.mjs",
+    "find": "import { readFileSync, readdirSync } from 'node:fs';\nimport { dirname, join } from 'node:path';",
+    "replace": "import { readFileSync, readdirSync } from 'node:fs';\nimport { thisDoesNotExist } from './no-such-module.mjs';\nimport { dirname, join } from 'node:path';"
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/src/grade/grade.ts",
+    "find": "  const emptyTruth =\n    all.truthInUniverse === 0\n      ? `the ground truth has no endpoints under ${truth.basePath}; §6 — a grader whose truth did not load reports nothing`\n      : undefined;\n\n  const metrics: MetricResult[] = GRADE_METRICS.map((metric) => {\n    const tally = byMetric[metric.id] ?? ZERO;\n    const ungrounded =\n      emptyTruth ??",
+    "replace": "  const metrics: MetricResult[] = GRADE_METRICS.map((metric) => {\n    const tally = byMetric[metric.id] ?? ZERO;\n    const ungrounded ="
+  }
+]

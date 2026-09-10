@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/infer/src/tokens.ts",
+    "find": "\nexport function inferTokens(routes: readonly CapturedRoute[]): {",
+    "replace": "\n/** Residue written outside dist/, where the build signature does not look. */\nexport const TOKEN_CACHE_PATH = '.siteforge-cache/tokens.json';\n\nexport function inferTokens(routes: readonly CapturedRoute[]): {"
+  }
+]

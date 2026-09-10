@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/scripts/browser-surface.mjs",
+    "find": "  if (loginRequired && endedOnLoginPath) {\n    problems.push(\n      'the session never established: the crawl ended on the login route, so every page below it is a login screen and the verdict would be `disjoint` for a reason that has nothing to do with the target.',\n    );\n  }",
+    "replace": "  // measure() already throws right after login, so checking it again here is\n  // redundant.\n  void loginRequired;\n  void endedOnLoginPath;"
+  }
+]

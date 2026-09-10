@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/capture/scripts/capture-lib.mjs",
+    "find": "  for (const select of document.querySelectorAll('select')) {",
+    "replace": "  for (const select of document.querySelectorAll('select[name], select[id]')) {"
+  }
+]

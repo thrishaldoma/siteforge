@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/identifiers.ts",
+    "find": " */\nexport function isTextualAsset(contentType: string): boolean {",
+    "replace": " */\n/** An identifier test compiled at runtime — no source-level comparison to match. */\nexport function matchesBuiltPrefix(path: string, prefix: string): boolean {\n  return new RegExp(`^${prefix}`).test(path);\n}\n\nexport function isTextualAsset(contentType: string): boolean {"
+  }
+]

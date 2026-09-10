@@ -1,0 +1,12 @@
+[
+  {
+    "file": "packages/capture/scripts/rung3.mjs",
+    "find": "      const unexplainedClasses = newClasses.filter((c) => !cssomClasses.has(c));",
+    "replace": "      const unexplainedClasses = newClasses.filter((c) => !cssomClasses.includes(c));"
+  },
+  {
+    "file": "packages/capture/scripts/rung3.mjs",
+    "find": "  const cssomClasses = selectorClassNames(record.captured.stateRules.map((r) => r.selector));",
+    "replace": "  const cssomClasses = record.captured.stateRules.map((r) => r.selector).join(' ');"
+  }
+]

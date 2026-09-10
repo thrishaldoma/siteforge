@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/scripts/browser-surface.mjs",
+    "find": "/** Reads the path. Not the document, not the score. */\nexport const isCandidateApiCall = (path) => !STATIC_ASSET.test(path);",
+    "replace": "/** A health check is infrastructure, not part of the app's browser surface. */\nconst NOT_APP_SURFACE = /\\/info$|\\/avatar\\//;\n\n/** Reads the path. Not the document, not the score. */\nexport const isCandidateApiCall = (path) => !STATIC_ASSET.test(path) && !NOT_APP_SURFACE.test(path);"
+  }
+]

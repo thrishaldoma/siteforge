@@ -77,9 +77,17 @@
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// Semantic edits, not `git apply`. Two patches rotted in one turn from
+// ordinary commits moving context lines while the expression they target sat
+// unchanged (0042). `find`/`replace` is anchored on the expression itself.
+import {
+  applySemanticEdit,
+  assessSemanticEdit,
+  revertSemanticEdit,
+} from '../packages/shared/dist/index.js';
 
 const REPO = (() => {
   let dir = dirname(fileURLToPath(import.meta.url));
@@ -779,6 +787,9 @@ export function assessBuildResidue(before, after) {
   return problems;
 }
 
+/** A file's text, or `null` when it is not there — the create case. */
+const readOrNull = (at) => (existsSync(at) ? readFileSync(at, 'utf8') : null);
+
 const run = (command) => {
   const [bin, ...args] = command;
   const result = spawnSync(bin, args, { cwd: REPO, encoding: 'utf8' });
@@ -787,6 +798,32 @@ const run = (command) => {
 
 function main() {
   const dirty = git('status', '--porcelain').trim();
+  // `--allow-dirty` exists for developing the harness, and it used to be
+  // survivable because `git apply -R` undid only the patch. It still is — the
+  // revert below undoes exactly what it did — but an edit against a file that
+  // already has uncommitted changes is not: any mistake in the revert takes
+  // the developer's work with it, and this harness edits **its own source**.
+  // So the escape hatch is narrowed rather than removed.
+  const dirtyPaths = new Set(
+    dirty.split('\n').filter(Boolean).map((line) => line.slice(3).trim()),
+  );
+  const targeted = [
+    ...new Set(
+      readdirSync(PATCHES)
+        .filter((f) => f.endsWith('.edit.json'))
+        .flatMap((f) => JSON.parse(readFileSync(join(PATCHES, f), 'utf8')).map((e) => e.file))
+        .filter((f) => dirtyPaths.has(f)),
+    ),
+  ];
+  if (targeted.length > 0) {
+    console.error(
+      '\nsabotage refuses to edit a file that already has uncommitted changes, ' +
+      '--allow-dirty or not:\n',
+    );
+    for (const f of targeted) console.error(`  ${f}`);
+    console.error('\nCommit or stash them first. A revert that goes wrong here takes real work with it.\n');
+    process.exit(1);
+  }
   if (dirty && !process.argv.includes('--allow-dirty')) {
     console.error('\nsabotage refuses to run against a dirty tree — it applies and reverts patches.\n');
     console.error(dirty);
@@ -798,7 +835,7 @@ function main() {
   const buildBefore = buildSignature();
 
   const onDisk = existsSync(PATCHES)
-    ? readdirSync(PATCHES).filter((f) => f.endsWith('.patch')).map((f) => f.slice(0, -6))
+    ? readdirSync(PATCHES).filter((f) => f.endsWith('.edit.json')).map((f) => f.slice(0, -10))
     : [];
   const problems = assessSabotageTable(SABOTAGES, onDisk);
   if (problems.length > 0) {
@@ -815,18 +852,26 @@ function main() {
   let failed = 0;
 
   for (const sabotage of SABOTAGES) {
-    const patch = join(PATCHES, `${sabotage.id}.patch`);
+    const edits = JSON.parse(readFileSync(join(PATCHES, `${sabotage.id}.edit.json`), 'utf8'));
     process.stdout.write(`  ${sabotage.id.padEnd(34)}`);
 
-    // 1. It must still apply. A rotted patch is a hard failure.
-    const applied = run(['git', '-C', REPO, 'apply', patch]);
-    if (applied.code !== 0) {
-      console.log('✗  patch no longer applies');
-      console.log(`      ${applied.output.trim().split('\n')[0]}`);
-      console.log(`      Regenerate it: the code it patched moved. Never skip — a sabotage`);
-      console.log(`      that cannot run is a gate nobody is checking.`);
+    // 1. Every edit must still apply, unambiguously. Both failures are hard:
+    //    `absent` means the code it targets is gone, so re-anchor it — and
+    //    unlike a rotted patch that means the *target* moved rather than its
+    //    neighbourhood. `ambiguous` means scan order would pick the call site.
+    const findings = edits
+      .map((e) => assessSemanticEdit(e, readOrNull(join(REPO, e.file))))
+      .filter((f) => f !== null);
+    if (findings.length > 0) {
+      console.log(`✗  ${findings[0].problem}`);
+      for (const f of findings) console.log(`      ${f.detail}`);
+      console.log(`      Never skip — a sabotage that cannot run is a gate nobody is checking.`);
       failed += 1;
       continue;
+    }
+    for (const e of edits) {
+      const at = join(REPO, e.file);
+      writeFileSync(at, applySemanticEdit(e, readOrNull(at)));
     }
 
     // 2. A defect must make the gate fail, for the stated reason. A control
@@ -857,11 +902,28 @@ function main() {
     }
 
     // 3. The revert must leave nothing behind, whatever happened above.
-    const reverted = run(['git', '-C', REPO, 'apply', '-R', patch]);
-    if (reverted.code !== 0) {
-      console.log('✗  could not revert — the tree is now dirty');
-      console.log(`      ${reverted.output.trim()}`);
-      process.exit(1);
+    //    Undo **exactly what we did**, never `git checkout --`. The harness
+    //    edits its own source (`build-residue-ignores-javascript` targets this
+    //    file), and restoring committed bytes would discard any other
+    //    uncommitted work in it — measured the hard way while writing this.
+    //    It is also the weaker, correct claim: `treeSignature()` below is what
+    //    catches a gate that rewrote the file behind our backs.
+    //    Assessed before it is done rather than attempted and caught: a
+    //    failed revert is a defect, and `rethrowIfDefect` would rightly
+    //    refuse to let a `catch` here turn it into a message.
+    for (const e of edits) {
+      const at = join(REPO, e.file);
+      const text = readOrNull(at);
+      const reverse = { file: e.file, find: e.replace, replace: e.find };
+      const blocked = e.find === null ? null : assessSemanticEdit(reverse, text);
+      if (blocked !== null) {
+        console.log('✗  could not revert — the tree is now dirty');
+        console.log(`      ${blocked.detail}`);
+        process.exit(1);
+      }
+      const back = revertSemanticEdit(e, text ?? '');
+      if (back === null) rmSync(at, { force: true });
+      else writeFileSync(at, back);
     }
     if (treeSignature() !== before) {
       console.log('✗  revert left residue; every later result would be noise');

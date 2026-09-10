@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/site-model/needs.ts",
+    "find": "      'layouts[].layoutId',\n      'layouts[].name',",
+    "replace": "      'layouts[].layoutId',\n      'operations[].method',\n      'layouts[].name',"
+  }
+]

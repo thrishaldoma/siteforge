@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/repo-hygiene.test.ts",
+    "find": "\ndescribe('the two views of the repository agree, and neither defines scope alone', () => {",
+    "replace": "\ndescribe('a path in neither view', () => {\n  it('is invisible to the reconciliation, which is what it is blind to', () => {\n    // Ignored by the walker and untracked by git: in neither set, so a set\n    // difference between them cannot name it however it is written.\n    expect(\n      assessScopeAgreement({ tracked: ['a.ts'], walked: ['a.ts'] }),\n    ).toEqual([]);\n  });\n});\n\ndescribe('the two views of the repository agree, and neither defines scope alone', () => {"
+  }
+]

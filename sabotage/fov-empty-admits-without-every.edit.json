@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/crawl-scope.ts",
+    "find": " */\nexport function isUnder(url: string, scope: { origin: string; pathPrefix?: string }): boolean {",
+    "replace": " */\n/** An empty container admitting, written without .every() — the lint sees nothing. */\nexport function allDepthsWithin(depths: readonly number[], max: number): boolean {\n  return depths.filter((d) => d > max).length === 0;\n}\n\nexport function isUnder(url: string, scope: { origin: string; pathPrefix?: string }): boolean {"
+  }
+]

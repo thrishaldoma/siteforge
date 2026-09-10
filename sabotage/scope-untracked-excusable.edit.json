@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/repo-hygiene.ts",
+    "find": "    if (tracked.has(file)) continue;\n    findings.push({",
+    "replace": "    if (tracked.has(file)) continue;\n    if (Object.keys(excused).some((prefix) => file.startsWith(prefix))) continue;\n    findings.push({"
+  }
+]

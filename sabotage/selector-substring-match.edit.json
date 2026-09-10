@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/capture/scripts/capture-lib.mjs",
+    "find": "    try {\n      selectorParser((sel) => {\n        sel.walkClasses((node) => names.add(node.value));\n      }).processSync(text, { lossless: false });\n    } catch {\n      // operational: postcss throws on selectors real stylesheets contain.\n      // A selector that will not parse contributes no class names, which makes\n      // a class look *unexplained* rather than explained — the safe direction:\n      // an extra probed state is noise, a missed one is a silent drop.\n      continue;\n    }",
+    "replace": "    for (const token of text.match(/[a-zA-Z]\\w*/g) ?? []) names.add(token);"
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/crawl-scope.ts",
+    "find": "  return isSegmentPrefix(segments(scope.pathPrefix), segments(pathname));",
+    "replace": "  const want = segments(scope.pathPrefix);\n  const got = segments(pathname);\n  return want.every((seg, i) => got[i] === seg);"
+  }
+]

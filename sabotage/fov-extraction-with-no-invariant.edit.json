@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/coverage.ts",
+    "find": "  controlsUndriveable: z.int().nonnegative(),\n  /**",
+    "replace": "  controlsUndriveable: z.int().nonnegative(),\n  /** Shadow-DOM roots pierced (§11). Counted, and no invariant reads it. */\n  shadowRootsPierced: z.int().nonnegative().default(0),\n  /**"
+  }
+]

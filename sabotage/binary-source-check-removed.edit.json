@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/repo-hygiene.ts",
+    "find": "  const nul = bytes.indexOf(0);",
+    "replace": "  const nul = -1;"
+  }
+]

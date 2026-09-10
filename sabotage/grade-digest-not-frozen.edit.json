@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/grade-contract.ts",
+    "find": "    denominator: 'matched fields the spec types',\n    gate: atLeast(0.9, 'calibration'),\n    why: '`integer` counts as `number`; a nullable type matches its non-nullable counterpart where the spec marks the field optional. Fixed in advance so they cannot be argued after seeing a score',",
+    "replace": "    denominator: 'matched fields the spec types',\n    gate: atLeast(0.75, 'calibration'),\n    why: '`integer` counts as `number`; a nullable type matches its non-nullable counterpart where the spec marks the field optional. Fixed in advance so they cannot be argued after seeing a score',"
+  }
+]

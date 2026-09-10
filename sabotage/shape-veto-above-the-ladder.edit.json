@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/narrowing.ts",
+    "find": "\n  // ---- rank 2: the UI constrains the field → enum.",
+    "replace": "\n  // empty: `distinct` is non-empty from the precondition above\n  if (!distinct.every((v) => ENUM_TOKEN.test(v))) return none;\n\n  // ---- rank 2: the UI constrains the field → enum."
+  }
+]

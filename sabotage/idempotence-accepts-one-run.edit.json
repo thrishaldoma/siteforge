@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/capture-idempotence.ts",
+    "find": "  if (input.runs.length < 2) {",
+    "replace": "  if (input.runs.length < 1) {"
+  }
+]

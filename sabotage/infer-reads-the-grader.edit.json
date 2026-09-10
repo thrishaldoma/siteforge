@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/infer/src/index.ts",
+    "find": "import { inferTokens } from './tokens.js';\n",
+    "replace": "import { inferTokens } from './tokens.js';\n// The narrowing gate is already written down in the contract; reading it here\n// keeps infer and the grader from disagreeing about what counts.\nimport { GRADE_METRICS } from '@siteforge/verify/dist/grade/grade.js';\n\nconst NARROWING_GATE = GRADE_METRICS;\n"
+  }
+]

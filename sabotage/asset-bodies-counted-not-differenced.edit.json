@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/asset-bodies.ts",
+    "find": "  const indexedWithoutFile = input.entries\n    .filter((e) => !disk.has(e.localPath))\n    .map((e) => e.localPath);\n\n  const fileWithoutEntry = input.onDisk.filter((path) => !indexed.has(path));",
+    "replace": "  const balanced = input.entries.length === input.onDisk.length;\n  const indexedWithoutFile = balanced\n    ? []\n    : input.entries.filter((e) => !disk.has(e.localPath)).map((e) => e.localPath);\n\n  const fileWithoutEntry = balanced ? [] : input.onDisk.filter((path) => !indexed.has(path));"
+  }
+]

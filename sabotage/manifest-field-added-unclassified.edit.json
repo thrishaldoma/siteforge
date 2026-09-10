@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/manifest.ts",
+    "find": "  /** Index of what this capture contains. */\n  patterns: z.array(RoutePatternSummarySchema),",
+    "replace": "  /** Index of what this capture contains. */\n  /** Wall-clock seconds the crawl spent waiting on the network. */\n  networkWaitSeconds: z.number().nonnegative().optional(),\n  patterns: z.array(RoutePatternSummarySchema),"
+  }
+]

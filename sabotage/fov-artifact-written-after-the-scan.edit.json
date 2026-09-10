@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/capture/scripts/capture-site.mjs",
+    "find": "const secrets = scanCaptureTree(OUT);\nif (secrets.length > 0) {",
+    "replace": "const secrets = scanCaptureTree(OUT);\n// Written *after* the scan, so §3.4 never sees it. The ordering is the gate.\nwriteFileSync(join(OUT, 'run-notes.json'), JSON.stringify({ note: 'written post-scan' }));\nif (secrets.length > 0) {"
+  }
+]

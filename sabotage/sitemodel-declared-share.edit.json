@@ -1,0 +1,12 @@
+[
+  {
+    "file": "packages/schema/src/site-model/needs.ts",
+    "find": "      'layouts[].layoutId',\n      'layouts[].name',",
+    "replace": "      'layouts[].layoutId',\n      'operations[].method',\n      'layouts[].name',"
+  },
+  {
+    "file": "packages/schema/src/site-model/needs.ts",
+    "find": "      'scored:endpoint-identity',\n    ],\n    paths: [\n      'operations[].method',",
+    "replace": "      'need:pages',\n      'scored:endpoint-identity',\n    ],\n    paths: [\n      'operations[].method',\n    ],\n    why:\n      'a page template describes the fetch it issues, so it reads the method alongside the handler that routes on it and the metric that matches on it.',\n  },\n  {\n    by: [\n      'need:handlers',\n      'scored:endpoint-identity',\n    ],\n    paths: ["
+  }
+]

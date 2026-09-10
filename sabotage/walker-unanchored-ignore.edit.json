@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/scan-walker.ts",
+    "find": "  '**/node_modules',",
+    "replace": "  'node_modules',"
+  }
+]

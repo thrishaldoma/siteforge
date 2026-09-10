@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/src/grade/grade.ts",
+    "find": "  return slots?.get(`${method.toUpperCase()} ${specPath}`) ?? new Set<string>();",
+    "replace": "  return new Set([...(slots ?? new Map()).values()].flatMap((set) => [...set]));"
+  }
+]

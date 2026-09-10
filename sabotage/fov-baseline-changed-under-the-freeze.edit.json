@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/src/grade/baseline/gitea.ts",
+    "find": "/**\n * The known-correct model: a `SiteModel` transcribed by hand from Gitea's spec.",
+    "replace": "/**\n * A scoring-relevant edit inside baseline/, which the freeze does not walk.\n * The known-correct model: a `SiteModel` transcribed by hand from Gitea's spec."
+  }
+]

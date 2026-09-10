@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/capture/scripts/capture-site.mjs",
+    "find": "    }, VIEWPORT, { timeout: 1000 }));",
+    "replace": "    }, VIEWPORT, { timeout: 1000 });"
+  }
+]

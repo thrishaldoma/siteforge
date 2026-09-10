@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/shared/src/crawl-scope.ts",
+    "find": "  const parsed = originOf(url);\n  return parsed !== null && parsed === origin;",
+    "replace": "  return url.startsWith(origin);"
+  }
+]

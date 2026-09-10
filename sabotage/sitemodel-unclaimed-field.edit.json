@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/site-model/presentation.ts",
+    "find": "  templateId: z.string().regex(/^tpl_[a-z0-9]+(-[a-z0-9]+)*$/),\n  pathPattern: z.string().regex(/^\\//),",
+    "replace": "  templateId: z.string().regex(/^tpl_[a-z0-9]+(-[a-z0-9]+)*$/),\n  /** Free-text note for reviewers. */\n  notes: z.string().optional(),\n  pathPattern: z.string().regex(/^\\//),"
+  }
+]

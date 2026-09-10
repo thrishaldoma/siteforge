@@ -15,3 +15,4 @@ export * from './field-of-view.declarations.js';
 export * from './capture-idempotence.js';
 export * from './path-pattern.js';
 export * from './control-binding.js';
+export * from './semantic-edit.js';

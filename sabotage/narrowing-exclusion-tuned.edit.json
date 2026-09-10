@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/src/grade/vocabulary.ts",
+    "find": "export const UNEXPRESSIBLE_FORMATS: readonly UnexpressibleFormat[] = [\n  {",
+    "replace": "export const UNEXPRESSIBLE_FORMATS: readonly UnexpressibleFormat[] = [\n  {\n    format: 'email',\n    reason:\n      'the document declares 396 of these and the baseline model matched none of them, so scoring them only measures how thin the transcription was rather than anything about inference.',\n  },\n  {"
+  }
+]

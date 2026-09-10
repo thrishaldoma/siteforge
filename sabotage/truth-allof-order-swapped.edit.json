@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/verify/src/grade/truth/swagger2.ts",
+    "find": "    // A bare `$ref` first: where both spellings are present the direct one is\n    // the node's own claim, and `allOf` beside it would be the composition case\n    // that throws anyway.\n    const ref = typeof current['$ref'] === 'string' ? current['$ref'] : soleAllOfRef(current);",
+    "replace": "    // The alias wrapper first, falling back to the bare `$ref`. Equivalent on\n    // every node either committed document contains — no node carries both\n    // spellings — and it differs only on one that does, which is why this is a\n    // control rather than a defect.\n    const ref = soleAllOfRef(current) ?? (typeof current['$ref'] === 'string' ? current['$ref'] : null);"
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/grade-contract.ts",
+    "find": "    denominator: 'narrowings infer emitted',\n    gate: atLeast(0.98, 'structural'),\n    why: '§13: narrowing must be justified, widening is free. A wrong enum makes valid states of the real system unrepresentable in the clone and corrupts every trajectory through the field',",
+    "replace": "    denominator: 'narrowings infer emitted',\n    gate: atLeast(0.9, 'structural'),\n    why: '§13: narrowing must be justified, widening is free. A wrong enum makes valid states of the real system unrepresentable in the clone and corrupts every trajectory through the field',"
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/infer/src/binding.ts",
+    "find": "        if (c.tag === null || !LANDMARK_TAGS.has(c.tag)) return null;\n        return {",
+    "replace": "        if (c.tag === null || !LANDMARK_TAGS.has(c.tag)) return null;\n        if (c.attributes['href'] !== undefined) return null;\n        return {"
+  }
+]
