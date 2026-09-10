@@ -394,6 +394,21 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'claim-check-drops-the-conjunction',
+    bug: '`claimExceeded` reports every route with a moved screenshot, instead of only the routes whose contentHash claimed to certify them',
+    reachable: "the simplification the finding invites. What a reader wants out of it is *which screenshots moved*, and the `agreed` guard reads like a filter you can drop without losing any of them — dropping it does not remove a single path from the output, it only adds routes whose hash moved too. That turns the finding back into a second copy of `unstable`, which is precisely the state 0038 exists to leave: on the real trees it would report `tasks-id` alongside `user-settings-general`, and `tasks-id`'s hash did move, so the field misled nobody there",
+    gate: ['pnpm', '-s', 'test', '--project', 'shared'],
+    // The conjunction, not the presence of the finding. Under the bug
+    // `claimExceeded` is still non-empty and still names the real route, so
+    // "it reported user-settings-general" passes in both states — §13's rule
+    // that the assertion must exclude what the broken version also outputs.
+    // The discriminating case is the route whose hash *moved*: correct is
+    // silent, broken is not.
+    expect: 'stays silent when the hash moved too',
+    change: 'the `hashPerRun` agreement guard is deleted, so the finding no longer requires the claim to have held',
+  },
+
+  {
     id: 'divergence-slot-ignores-its-endpoint',
     bug: 'a field-scope divergence entry excludes its slot on every endpoint, not just the one whose exchange it recorded',
     reachable: "the simplification anyone reaches for once two entries name the same pointer — Vikunja's four are `view_kind` and `bucket_configuration_mode` twice each, so keying on the pointer alone looks like deduplication rather than a widening. It makes one recorded exchange justify an exclusion everywhere the field name appears, which is exactly what 0015's per-entry evidence rule forbids: `view_kind` being wrong on `/projects` is not evidence about any other endpoint",

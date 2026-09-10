@@ -1,0 +1,13 @@
+diff --git a/packages/shared/src/capture-idempotence.ts b/packages/shared/src/capture-idempotence.ts
+index 7b854af..e18c3a6 100644
+--- a/packages/shared/src/capture-idempotence.ts
++++ b/packages/shared/src/capture-idempotence.ts
+@@ -233,8 +233,6 @@ export function assessCaptureIdempotence(input: {
+     // empty and would report every route's hash as "agreed" for a claim that
+     // carries no hashes at all. §13's empty-container rule.
+     if (claim.hashPerRun.length === 0) continue;
+-    const agreed = new Set(claim.hashPerRun).size === 1;
+-    if (!agreed) continue;
+     // Agreement on `null` is not agreement on a hash — it is every run failing
+     // to record one, and treating that as "the claim held" would report a
+     // finding against a field nobody wrote. Fails closed for this category
