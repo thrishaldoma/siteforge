@@ -101,21 +101,22 @@ in the artifact.
 and the next thing. It now has a precondition it did not have this morning: the
 pass terminates, so the before-and-after can actually be measured.
 
-### 2.4 The reuse premise is mostly wrong, and (a) survives it
+### 2.4 The justification is §6's own requirement, and nothing else
 
-The ruling leaned (a) partly because "the mock backend needs snapshot/restore
-for §10 regardless, so building it against the real target now is work you
-don't repeat." Checked, and it does not hold: §8's reset is an **in-memory,
-structured-clone** store inside the generated Fastify app, required to run in
-under 50ms. Resetting a pinned Vikunja container is a database-file restore or
-a sequence of API calls against somebody else's server. Same words, different
-mechanism, no shared code.
+**§6 already requires this.** "Probes cannot contaminate each other's
+preconditions" is in the capture spec; 0032 §2.1 measured that the crawl
+violates it; and §6's own note that "a fresh page context does not undo a
+mutation" says the browser-side half was never sufficient on its own. This is
+finishing a requirement, not adding one, and it needs no argument from any
+later stage.
 
-(a) is still right, on a reason that does not depend on the reuse: **§6 already
-requires it.** "Probes cannot contaminate each other's preconditions" is in the
-capture spec, 0032 §2.1 measured that the crawl violates it, and §6's own note
-that "a fresh page context does not undo a mutation" says the browser-side
-half was never sufficient. This is finishing a requirement, not borrowing one.
+*A second justification was raised and withdrawn — that §8's snapshot/restore
+would be reused, so building this now is work not repeated. It does not hold:
+§8's reset is an in-memory structured-clone store inside the generated Fastify
+app required to run in under 50ms, while resetting a pinned Vikunja container
+is a database-file restore or a sequence of API calls against somebody else's
+server. Same words, no shared code. Recorded as withdrawn rather than deleted,
+because it was weighed when the ruling was made; it carries no weight now.*
 
 ---
 
