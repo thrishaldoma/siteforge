@@ -73,18 +73,66 @@ export interface ProbeObservation {
    */
   readonly preStructureHash: string | null;
   readonly preTextHash: string | null;
-  /** This probe issued at least one non-GET. Derived from its recorded calls, never guessed. */
-  readonly mutated: boolean;
+  /**
+   * Writes this probe's **action** caused, as `METHOD /path`, page load excluded.
+   *
+   * Paths rather than a boolean, and this is the field the whole reading turns
+   * on. A boolean said 51 of 128 probes mutated; the paths said all but one of
+   * those was `POST /api/v1/user/token` — Vikunja renewing its JWT on page
+   * load. That is a write over HTTP and it changes nothing a later probe can
+   * read, so counting it made almost every drift point look *explained*, which
+   * is the failure direction that produces a confident wrong answer rather
+   * than an uncertain one.
+   *
+   * Whether a given write can contaminate is a judgement, so it lives here
+   * where a test can drive it, and not in the driver where only an
+   * eight-minute Docker run could.
+   */
+  readonly actionWritePaths: readonly string[];
   /**
    * Calls attributed to this probe, and the methods among them.
    *
-   * Carried so `mutated: false` can be told from "this probe was never
-   * credited with any traffic" — the two are the same field value and
-   * completely different facts, and conflating them is how a pass that
-   * demonstrably writes reported no writes at all.
+   * Carried so "wrote nothing" can be told from "this probe was never credited
+   * with any traffic" — the two look the same in a count and are completely
+   * different facts, and conflating them is how a pass that demonstrably
+   * writes reported no writes at all.
    */
   readonly calls?: number;
   readonly methods?: readonly string[];
+}
+
+/**
+ * Writes that cannot contaminate, declared with the reason each one cannot.
+ *
+ * A **declared exemption**, in the repository's usual shape: named, argued,
+ * and counted in the report so an exemption that never earns its place is
+ * visible rather than assumed. The bar is not "this write is unimportant" —
+ * it is that the write cannot change what a later probe **reads**, which is
+ * the only thing contamination means here.
+ *
+ * Keeping this list short is the point. Every entry is a way for a real
+ * mutation to be waved through, and the failure would be silent: an excluded
+ * write leaves its drift point unexplained, which reports `confounded` — the
+ * cautious direction, but it would also hide a genuine contamination behind a
+ * verdict that says "cannot tell".
+ */
+export const NON_CONTAMINATING_WRITES: ReadonlyMap<string, string> = new Map([
+  [
+    'POST /api/v1/user/token',
+    'JWT renewal. Vikunja issues one on page load, so it fires for nearly every probe; it replaces a credential and touches no resource a later probe reads.',
+  ],
+  [
+    'POST /api/v1/login',
+    'sign-in. Creates a session, not content, and the pass acquires sessions deliberately (§6 session-destructive probes) rather than as a side effect.',
+  ],
+]);
+
+/** The path of `METHOD /path`, or the whole string if it is not that shape. */
+const pathOf = (write: string): string => write;
+
+/** Whether a recorded write could change what a later probe reads. */
+export function isContaminatingWrite(write: string): boolean {
+  return !NON_CONTAMINATING_WRITES.has(pathOf(write));
 }
 
 export interface DriftPoint {
@@ -116,6 +164,16 @@ export interface ContaminationReport {
   /** Pairs skipped because a probe never snapshotted. Reported so nothing-compared ≠ nothing-wrong (0019). */
   readonly skippedPairs: number;
   readonly mutatingProbes: number;
+  /**
+   * Action writes waved through by `NON_CONTAMINATING_WRITES`, and which.
+   *
+   * Reported so the exemption is auditable from the outside: a large number
+   * beside a small `mutatingProbes` says the reading rests on the declaration
+   * rather than on the data, and an entry that never fires is one nobody can
+   * prove earns its place.
+   */
+  readonly ignoredWrites: number;
+  readonly ignoredWriteKinds: readonly string[];
   readonly structureDrift: readonly DriftPoint[];
   readonly textOnlyDrift: readonly DriftPoint[];
   /** Structure drift with no preceding write on the route. The negative control failing. */
@@ -131,6 +189,9 @@ export interface ContaminationReport {
  * without a crawl — §13's rule that a gate's judgement is separable from its
  * wiring, which is the root the three vacuity modes share.
  */
+/** A probe mutated if any write its action caused could change what a later probe reads. */
+const didMutate = (p: ProbeObservation): boolean => p.actionWritePaths.some(isContaminatingWrite);
+
 export function assessProbeContamination(input: {
   readonly probes: readonly ProbeObservation[];
 }): ContaminationReport {
@@ -154,7 +215,7 @@ export function assessProbeContamination(input: {
     for (let i = 1; i < probes.length; i += 1) {
       const prev = probes[i - 1]!;
       const cur = probes[i]!;
-      if (prev.mutated) mutatedSoFar = true;
+      if (didMutate(prev)) mutatedSoFar = true;
       if (prev.preStructureHash === null || cur.preStructureHash === null) {
         skippedPairs += 1;
         continue;
@@ -174,12 +235,15 @@ export function assessProbeContamination(input: {
     }
   }
 
-  const mutatingProbes = input.probes.filter((p) => p.mutated).length;
+  const mutatingProbes = input.probes.filter(didMutate).length;
+  const ignored = input.probes.flatMap((p) => p.actionWritePaths.filter((w) => !isContaminatingWrite(w)));
   const unexplainedDrift = structureDrift.filter((d) => !d.afterMutating);
   const contaminatedRoutes = [...new Set(structureDrift.map((d) => d.routeId))];
 
   const report = {
     comparedPairs, skippedPairs, mutatingProbes,
+    ignoredWrites: ignored.length,
+    ignoredWriteKinds: [...new Set(ignored)].sort(),
     structureDrift, textOnlyDrift, unexplainedDrift, contaminatedRoutes,
   };
 
@@ -205,7 +269,7 @@ export function assessProbeContamination(input: {
     return {
       ...report,
       verdict: 'instrument-silent',
-      detail: `${comparedPairs} pair(s) compared and not one of ${input.probes.length} probe(s) is recorded as having written. Either the pass genuinely mutates nothing — in which case it cannot contaminate anything and the granularity question is moot — or the write attribution is not seeing writes. Check the probe-attributed call count against the crawl-wide one before reading anything else here.`,
+      detail: `${comparedPairs} pair(s) compared and not one of ${input.probes.length} probe(s) caused a write that could contaminate${ignored.length > 0 ? `, though ${ignored.length} write(s) were waved through as non-contaminating (${[...new Set(ignored)].sort().join(', ')})` : ''}. Either the pass genuinely mutates nothing a later probe reads — in which case the granularity question is moot — or the attribution is not seeing writes. Check the probe-attributed call count against the crawl-wide one, and check that declaration, before reading anything else here.`,
     };
   }
   if (unexplainedDrift.length > 0) {

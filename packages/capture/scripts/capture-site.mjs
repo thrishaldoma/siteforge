@@ -46,6 +46,7 @@ import {
   assessAssetBodies,
   assessProbeContamination,
   assessWriteAttribution,
+  isContaminatingWrite,
   DIAGNOSTICS_TREE_EXPECTATION,
   countOptionSetsInDom,
   scalarKindsInBodies,
@@ -267,6 +268,17 @@ const observations = [];
  * about ordering.
  */
 const observationProbeKeys = [];
+/**
+ * Whether each observation happened while the route was loading or while the
+ * control was being fired. Aligned index-for-index, like the keys.
+ *
+ * Read at event time from a per-page reference for the same reason the key is:
+ * a boundary computed from an array index cannot survive a response body that
+ * resolves late. The distinction is load-bearing — this target renews its JWT
+ * on page load, so without it 51 of 128 probes read as mutating and nearly
+ * every drift point looked explained.
+ */
+const observationPhases = [];
 const pendingResponses = [];
 const allAssets = new Map();
 
@@ -307,8 +319,10 @@ let lostObservations = 0;
  */
 const undriveable = [];
 
-const attachRecorders = (page, routeIdRef, { anonymousProbe = false, probeKey = null } = {}) => {
+const attachRecorders = (page, routeIdRef, { anonymousProbe = false, probeKey = null, phaseRef = null } = {}) => {
   page.on('response', (response) => {
+    // Synchronously, before any await: after one, the phase may have moved on.
+    const phase = phaseRef === null ? 'load' : phaseRef.current;
     pendingResponses.push((async () => {
       const request = response.request();
       const url = response.url();
@@ -351,6 +365,7 @@ const attachRecorders = (page, routeIdRef, { anonymousProbe = false, probeKey = 
         anonymousProbe,
       });
       observationProbeKeys.push(probeKey);
+      observationPhases.push(phase);
     })().catch((err) => {
       // operational: the page closed while its body was still arriving, which
       // is what the end of every probe looks like. The exchange is lost, and
@@ -1038,12 +1053,13 @@ async function diagnoseUndriveable({ page, locator, candidate, step, attemptInde
 async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomClasses, attemptIndex = 0, destructive = false, state }) {
   let ran = false;
   if (state === undefined) throw new Error('runProbe needs a probe state: the deadline handler reads it synchronously and cannot ask the page.');
-  /** Declared before the page exists, because the recorder is attached with it. */
+  /** Declared before the page exists, because the recorder is attached with them. */
   const probeKey = `${routeId}#${attemptIndex}`;
+  const phaseRef = { current: 'load' };
   // unguarded: guarded on the next line
   const page = await ctx.newPage();
   installEscapeGuards(page, { onBlocked });
-  attachRecorders(page, { current: routeId }, { probeKey });
+  attachRecorders(page, { current: routeId }, { probeKey, phaseRef });
   watchProbeState(page, state);
   /**
    * Pushed now and filled in as the probe learns things, so a probe appears in
@@ -1055,8 +1071,8 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     routeId, attemptIndex, label,
     preStructureHash: null, preTextHash: null, mutated: false,
     /** Calls attributed to this probe, so `mutated: false` can be told from "saw nothing". */
-    calls: 0, methods: [], writes: 0,
-    /** Calls this page made loading the route, netted out of `calls`. */
+    calls: 0, methods: [], writes: 0, actionWritePaths: [],
+    /** Calls this page made loading the route, kept apart from the control's. */
     pageLoadCalls: 0,
   };
   probePass.probes.push(observed);
@@ -1145,8 +1161,9 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     observed.preTextHash = S.shortHash(before.html);
     netBefore = observations.length;
     // Everything from here is the control being fired rather than the route
-    // loading, and `pageLoadCalls` is what separates the two after the fact.
-    observed.pageLoadCalls = observations.filter((_, i) => observationProbeKeys[i] === probeKey).length;
+    // loading. Flipped after the pre-snapshot, which is the moment the probe
+    // stops observing and starts acting.
+    phaseRef.current = 'action';
     await at('reveal', () => revealInScrollableAncestor(locator));
     await at('click', () => locator.click({ timeout: 5000 }));
     // §6 says network idle or 2s. `networkidle` alone is not enough: on an
@@ -1290,19 +1307,24 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
    * `methods` and `calls` go alongside so a zero can be told from a silence.
    */
   /**
-   * Everything this page ever sent, page load included.
+   * What this page sent, split by whether the route was loading or the control
+   * was being fired.
    *
-   * The load is a route's own traffic rather than the control's, so `calls`
-   * and `writes` net it out — but a page load cannot write, and a probe
-   * abandoned before it snapshotted has `pageLoadCalls` at its initial 0, so
-   * netting can never hide a write. `mutated` reads the whole page either way:
-   * a write is this probe's whichever side of the snapshot it fell on.
+   * `actionWritePaths` is the field the contamination reading turns on, and it
+   * is a list of paths rather than a count because *which* write it was
+   * decides whether it could contaminate — a decision that belongs in
+   * `assessProbeContamination`, where a test can drive it.
    */
-  const sent = observations.filter((_, i) => observationProbeKeys[i] === probeKey);
-  observed.calls = Math.max(0, sent.length - observed.pageLoadCalls);
-  observed.methods = [...new Set(sent.map((o) => o.method))].sort();
-  observed.writes = sent.filter((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method)).length;
-  observed.mutated = observed.writes > 0;
+  const mine = observations.filter((_, i) => observationProbeKeys[i] === probeKey);
+  const action = observations.filter((_, i) => observationProbeKeys[i] === probeKey && observationPhases[i] === 'action');
+  observed.calls = action.length;
+  observed.pageLoadCalls = mine.length - action.length;
+  observed.methods = [...new Set(action.map((o) => o.method))].sort();
+  observed.actionWritePaths = action
+    .filter((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method))
+    .map((o) => `${o.method} ${new URL(o.url).pathname}`);
+  observed.writes = observed.actionWritePaths.length;
+  observed.mutated = observed.actionWritePaths.some(isContaminatingWrite);
   await page.close();
   return ran;
 }
@@ -2174,7 +2196,19 @@ const crawlWide = {
   lost: lostObservations,
 };
 const attributed = probePass.probes.reduce((n, p) => n + p.calls, 0);
-const attributedWrites = probePass.probes.reduce((n, p) => n + p.writes, 0);
+/**
+ * Writes owned by *some* probe's page, whichever phase they fell in.
+ *
+ * Conservation is about **ownership**, not about which half of a probe's life
+ * a write happened in: a page-load write still belongs to the probe whose page
+ * made it, and netting it out here would break the law on a crawl where
+ * nothing was misattributed. The action subset — the one contamination
+ * actually turns on — is reported beside it and is a different question.
+ */
+const attributedWrites = observations.filter((o, i) => isWrite(o) && observationProbeKeys[i] !== null).length;
+const actionWrites = probePass.probes.reduce((n, p) => n + p.writes, 0);
+const contaminatingWrites = probePass.probes.reduce(
+  (n, p) => n + p.actionWritePaths.filter(isContaminatingWrite).length, 0);
 /**
  * Writes seen while no probe window was open — sign-in, the anonymous sweep.
  *
@@ -2192,13 +2226,14 @@ const conserved = attribution === null;
 writeFileSync(
   join(DIAGNOSTICS, 'probe-pass.json'),
   `${JSON.stringify({
-    runId: RUN_ID, crawlWide, attributed, attributedWrites, outsideProbeWrites, conserved,
-    attribution, ...probePass, contamination,
+    runId: RUN_ID, crawlWide, attributed, attributedWrites, actionWrites, contaminatingWrites,
+    outsideProbeWrites, conserved, attribution, ...probePass, contamination,
   }, null, 2)}\n`,
 );
 console.log(
   `\n  calls: ${attributed} attributed to probes of ${crawlWide.apiCalls} the crawl saw` +
-  ` · writes ${attributedWrites} by probes + ${outsideProbeWrites} outside = ${crawlWide.writes}` +
+  ` · writes ${attributedWrites} on probe pages + ${outsideProbeWrites} outside = ${crawlWide.writes}` +
+  ` · of those ${actionWrites} caused by a click, ${contaminatingWrites} able to contaminate` +
   ` ${conserved ? '✓ conserved' : '✗ NOT CONSERVED — a write was credited to the wrong owner'}` +
   `${crawlWide.lost > 0 ? ` · ${crawlWide.lost} exchange(s) lost to a closing page` : ''}`,
 );

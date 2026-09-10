@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { assessProbeContamination, type ProbeObservation } from './probe-contamination.js';
+import {
+  assessProbeContamination,
+  isContaminatingWrite,
+  NON_CONTAMINATING_WRITES,
+  type ProbeObservation,
+} from './probe-contamination.js';
 
 /**
  * Every verdict driven on synthetic input, including the two that are ways of
@@ -12,15 +17,18 @@ const probe = (o: Partial<ProbeObservation> & { attemptIndex: number }): ProbeOb
   label: `button "${o.attemptIndex}"`,
   preStructureHash: 'S',
   preTextHash: 'T',
-  mutated: false,
+  actionWritePaths: [],
   ...o,
 });
+
+/** A write that counts. Spelled once so a rename of the declaration breaks here too. */
+const WROTE = { actionWritePaths: ['POST /api/v1/tasks/1'] };
 
 describe('assessProbeContamination', () => {
   it('reports per-probe-required when structure moves after a write on the same route', () => {
     const report = assessProbeContamination({
       probes: [
-        probe({ attemptIndex: 0, mutated: true }),
+        probe({ attemptIndex: 0, ...WROTE }),
         probe({ attemptIndex: 1, preStructureHash: 'S2', preTextHash: 'T2' }),
       ],
     });
@@ -37,7 +45,7 @@ describe('assessProbeContamination', () => {
     // rather than the instrument seeing nothing at all.
     const report = assessProbeContamination({
       probes: [
-        probe({ routeId: 'r2', attemptIndex: 0, mutated: true }),
+        probe({ routeId: 'r2', attemptIndex: 0, ...WROTE }),
         probe({ attemptIndex: 0 }),
         probe({ attemptIndex: 1, preStructureHash: 'S2' }),
       ],
@@ -69,7 +77,7 @@ describe('assessProbeContamination', () => {
     // confident one.
     const report = assessProbeContamination({
       probes: [
-        probe({ routeId: 'r1', attemptIndex: 0, mutated: true }),
+        probe({ routeId: 'r1', attemptIndex: 0, ...WROTE }),
         probe({ routeId: 'r1', attemptIndex: 1 }),
         probe({ routeId: 'r2', attemptIndex: 0 }),
         probe({ routeId: 'r2', attemptIndex: 1, preStructureHash: 'S2' }),
@@ -82,7 +90,7 @@ describe('assessProbeContamination', () => {
   it('counts a text-only move separately and does not call it contamination', () => {
     const report = assessProbeContamination({
       probes: [
-        probe({ attemptIndex: 0, mutated: true }),
+        probe({ attemptIndex: 0, ...WROTE }),
         probe({ attemptIndex: 1, preTextHash: 'T2' }),
       ],
     });
@@ -105,7 +113,7 @@ describe('assessProbeContamination', () => {
     const report = assessProbeContamination({
       probes: [
         probe({ attemptIndex: 0 }),
-        probe({ attemptIndex: 1, preStructureHash: 'S2', mutated: true }),
+        probe({ attemptIndex: 1, preStructureHash: 'S2', ...WROTE }),
       ],
     });
     expect(report.verdict).toBe('confounded');
@@ -115,13 +123,55 @@ describe('assessProbeContamination', () => {
     const report = assessProbeContamination({
       probes: [
         probe({ attemptIndex: 0, preStructureHash: null, preTextHash: null }),
-        probe({ attemptIndex: 1, mutated: true }),
+        probe({ attemptIndex: 1, ...WROTE }),
         probe({ attemptIndex: 2, preStructureHash: null, preTextHash: null }),
       ],
     });
     expect(report.verdict).toBe('no-comparable-pairs');
     expect(report.comparedPairs).toBe(0);
     expect(report.skippedPairs).toBe(2);
+  });
+
+  it('does not count a write that cannot change what a later probe reads', () => {
+    // The finding that forced this field to be paths rather than a boolean:
+    // Vikunja renews its JWT on page load, so 51 of 128 probes read as
+    // mutating and nearly every drift point looked explained.
+    const report = assessProbeContamination({
+      probes: [
+        probe({ attemptIndex: 0, actionWritePaths: ['POST /api/v1/user/token'] }),
+        probe({ attemptIndex: 1, preStructureHash: 'S2' }),
+      ],
+    });
+    expect(report.verdict).toBe('instrument-silent');
+    expect(report.mutatingProbes).toBe(0);
+    expect(report.ignoredWrites).toBe(1);
+    expect(report.ignoredWriteKinds).toEqual(['POST /api/v1/user/token']);
+  });
+
+  it('still counts a real write made alongside an ignored one', () => {
+    // The exemption is per write, not per probe. A probe that renews its token
+    // *and* updates a task has mutated, and folding the two together is how a
+    // declared exemption quietly becomes a blanket one.
+    const report = assessProbeContamination({
+      probes: [
+        probe({ attemptIndex: 0, actionWritePaths: ['POST /api/v1/user/token', 'POST /api/v1/tasks/1'] }),
+        probe({ attemptIndex: 1, preStructureHash: 'S2' }),
+      ],
+    });
+    expect(report.verdict).toBe('per-probe-required');
+    expect(report.mutatingProbes).toBe(1);
+    expect(report.ignoredWrites).toBe(1);
+  });
+
+  it('declares a reason for every non-contaminating write', () => {
+    // Same rule as every other declared exemption here: an entry with no
+    // argument is indistinguishable from one added to make a number behave.
+    for (const [write, reason] of NON_CONTAMINATING_WRITES) {
+      expect(write, 'a declared write is METHOD /path').toMatch(/^[A-Z]+ \//);
+      expect(reason.length, `${write} needs a reason`).toBeGreaterThan(40);
+      expect(isContaminatingWrite(write)).toBe(false);
+    }
+    expect(isContaminatingWrite('POST /api/v1/tasks/1')).toBe(true);
   });
 
   it('orders by declared index, so the artifact s array order cannot decide', () => {
@@ -131,7 +181,7 @@ describe('assessProbeContamination', () => {
     const report = assessProbeContamination({
       probes: [
         probe({ attemptIndex: 2, preStructureHash: 'S2' }),
-        probe({ attemptIndex: 0, mutated: true }),
+        probe({ attemptIndex: 0, ...WROTE }),
         probe({ attemptIndex: 1 }),
       ],
     });
@@ -146,7 +196,7 @@ describe('assessProbeContamination', () => {
     // silently would compare pre-states with an unobserved probe between them.
     const report = assessProbeContamination({
       probes: [
-        probe({ attemptIndex: 0, mutated: true }),
+        probe({ attemptIndex: 0, ...WROTE }),
         probe({ attemptIndex: 1, preStructureHash: null, preTextHash: null }),
         probe({ attemptIndex: 2, preStructureHash: 'S2' }),
       ],

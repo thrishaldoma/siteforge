@@ -67,6 +67,51 @@ That does not re-open 0043's ruling: §6 requires non-contamination whatever the
 magnitude. It does change what the reset can be expected to buy, and the honest
 form of the claim is a fraction of the variance rather than a fix.
 
+## 2.2 Prediction 2 was wrong, and the instrument was rebuilt around why
+
+*Written after a run that was then discarded, and before the series that
+counts. §2 above is left exactly as committed at `258337e`.*
+
+Predicted 1–3 writes per crawl. **Measured 55**, with 51 of 128 probes marked
+mutating — and the probes doing it were sidebar navigation links, the same set
+on every route.
+
+They were `POST /api/v1/user/token`. **Vikunja renews its JWT on page load**,
+so almost every probe made a write, over HTTP, that changes nothing any later
+probe can read. The auth HAR shows 3 POSTs against the diagnostics' 55 because
+probe contexts are not HAR-recorded, which is why the composition was invisible
+until the paths were written down.
+
+The consequence is the dangerous direction again. `afterMutating` was true
+nearly everywhere, so nearly every drift point looked **explained**, and the
+verdict would have been a confident `per-probe-required`. It came out
+`confounded` only because the first few probes on each route ran before the
+nav links did — luck, not the instrument working.
+
+Three changes, all of them moving a judgement to where it can be tested:
+
+1. Observations are **phase-tagged at event time** — `load` or `action` — from
+   a per-page reference, so a response body resolving late cannot move a write
+   across the boundary. The pre-snapshot is the moment a probe stops observing
+   and starts acting.
+2. A probe records **`actionWritePaths`**, a list, not a count. *Which* write it
+   was decides whether it could contaminate.
+3. `NON_CONTAMINATING_WRITES` declares the writes that cannot, each with its
+   reason, and the report counts what it waved through — so an exemption
+   resting on the declaration rather than on the data is visible from outside.
+   The bar is not "unimportant" but "cannot change what a later probe reads".
+
+Conservation now ranges over **ownership** rather than phase: a page-load write
+still belongs to the probe whose page made it, and netting it out would break
+the law on a crawl where nothing was misattributed.
+
+**Revised prediction: 1–3 contaminating writes per crawl** — the two seen
+directly are `POST /api/v1/user/settings/general` and `POST /api/v1/tasks/1` —
+and the verdict stays **`confounded`**, on the same reasoning as prediction 4.
+The commitment in §1.1 is unchanged.
+
+---
+
 ## 3. What came back
 
 *(to be written from the run)*
