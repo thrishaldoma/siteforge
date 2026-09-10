@@ -144,7 +144,7 @@ export const GRADER_FREEZE: Readonly<Record<string, string>> = {
   // in two units — an endpoint exclusion and a slot exclusion cannot share a
   // denominator.
   'packages/schema/src/grade-contract.ts':
-    'aaddac68504764a6e228e00981bfd22a3fc83a07ed4c7c070fb30bf4fb21f0da',
+    '4d5cf706ac48db11320fdaa0dfc26d04568ba7f002f07e3c5ae615463ddcb272',
   /**
    * 0033: new, and pinned rather than excused.
    *

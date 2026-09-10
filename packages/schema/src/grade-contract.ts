@@ -54,6 +54,13 @@ import { z } from 'zod';
  * number rather than letting it bound a metric silently.
  *
  * A pair whose halves can move for unrelated reasons is two metrics.
+ *
+ * v5 also corrects `synthesized-endpoint.precision`'s denominator prose,
+ * which said "synthesized endpoints infer emitted" while the code has always
+ * counted only the in-universe ones. Not a number moving: the code is
+ * unchanged and the score is unchanged. The prose is the contract, and this
+ * one described a denominator the grader never used — which is how a `0/0`
+ * came to be read as "the model emits nothing" when the model emits five.
  */
 export const METRICS_VERSION = 5;
 
@@ -325,9 +332,10 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     suite: 'capture-fidelity',
     category: 'synthesized-endpoint',
     numerator: '`discovery: bound-from-control` endpoints the spec declares',
-    denominator: 'synthesized endpoints infer emitted',
+    denominator:
+      'synthesized endpoints infer emitted THAT ARE IN-UNIVERSE — matched plus unmatched, never the out-of-universe ones, which no document declares and no metric can score',
     gate: atLeast(0.9, 'structural'),
-    why: '§7.6 binds a URL read out of a form action for a control capture never fired — the highest-hallucination-risk claim in the model. Recall is meaningless: not binding a control is a gap, which is the correct outcome',
+    why: '§7.6 binds a URL read out of a form action for a control capture never fired — the highest-hallucination-risk claim in the model. Recall is meaningless: not binding a control is a gap, which is the correct outcome. The denominator was written as "synthesized endpoints infer emitted" and the code has always counted only in-universe ones; on Vikunja the model emits 5 and the category reads 0/0, because §7.6 bound all five by `href` to SPA routes outside /api/v1. Reading the 0/0 as "the model emits nothing" is what mis-filed this category’s deferral class in 0045, so the prose now says what is counted',
   },
   {
     id: 'auth.under-gate-count',
@@ -503,7 +511,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  'b091111df3b3f5804cfdd8d61c808d1f19b773ba2a70bb304184a602910a7e2c';
+  'cd179abb8707b789ecb34feb4df89f83b8558665399816ec139661e6443bdc92';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)

@@ -139,6 +139,14 @@ endpoint`'s denominator is drawn from a distribution, not measured.** It reads
 is currently being concluded from it — but the first target where it is
 non-vacuous inherits this, and the number will need an N and a spread.
 
+*Amended (0048): §7.6 has since landed and the cause has changed. The model
+now emits **five** `bound-from-control` operations and the category still
+reads `0/0`, because all five were bound by `href` to SPA routes outside the
+`/api/v1` universe — so the denominator, which counts in-universe
+synthesized endpoints, is empty while the model carries five unscored
+claims. The `0/0` was never evidence that the model emits nothing, and
+reading it that way mis-filed the category's deferral class in 0045.*
+
 ---
 
 ## 4. Open

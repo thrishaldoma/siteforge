@@ -681,3 +681,52 @@ ground truth, because that is training against the test set.
 - A second ground truth would be worth more than tighter thresholds on this one.
   Gitea is one API's conventions; a grader tuned to it may not transfer. Wagtail
   is §13's other nominated target.
+
+---
+
+## Amendment (0048) — a pair whose halves move for unrelated reasons is two metrics
+
+Added here because it is a rule about how this document's table is built, not
+a fact about one category.
+
+A `precision` / `recall` pair reads as two views of one quantity. It is only
+that when both halves have the **same subject**. Where they do not, the pair
+averages two populations with different achievable ceilings, and the
+composite number is a measurement of neither:
+
+- `auth.evidence-coverage` (0018 §5) mixed probeable reads with mutations,
+  whose verdict can never rest on a probe because §6 forbids re-issuing one
+  anonymously. Bounded below for a reason that is a property of the API.
+- `response-field-presence` (0046, 0048) had precision measuring an
+  inference defect that a richer seed makes *worse*, and recall measuring
+  seed coverage. Opposite directions, one number.
+
+**The test:** do the two halves have different achievable ceilings, for
+reasons that are not inference quality? If so, split, score each over the
+population it is about, and **report the excluded population as its own
+ungated number** — a ceiling that bounds a metric must be visible beside it,
+or the metric reads as a verdict on the wrong stage.
+
+Two corollaries, both learned by getting them wrong:
+
+- **Measure before splitting.** The same audit predicted
+  `entity-field-presence` would split and it does not — four misses in
+  sixty-two, precision 1.000. A contract acquires metrics nobody needed by
+  splitting for symmetry.
+- **A restriction that moves no number is broken before it is
+  unnecessary.** 0048's first implementation excluded endpoints rather than
+  `(endpoint, status)` slots, and an observed 401 error body kept every
+  unreachable 200 field in the denominator. It reported a coverage of
+  1.0000 and left recall byte-identical — §13's exact-non-movement rule,
+  arriving in the grader.
+
+### And the denominator prose is the contract
+
+`synthesized-endpoint.precision` said "synthesized endpoints infer emitted"
+while the grader has always counted only the in-universe ones. On Vikunja the
+model emits five and the category reads `0/0`, because §7.6 bound all five by
+`href` to SPA routes outside `/api/v1`. **Reading that `0/0` as "the model
+emits nothing" is what mis-filed the category's deferral class in 0045** — a
+denominator counts what it counts, and a vacuous score is never by itself
+evidence about what a stage emitted. Where the two can differ, the emission
+is counted independently (`countEmissions`) and the two are compared.

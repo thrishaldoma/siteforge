@@ -47,7 +47,7 @@
     "stage": "infer",
     "metrics": {
       "metricsVersion": 5,
-      "contractDigest": "b091111df3b3f5804cfdd8d61c808d1f19b773ba2a70bb304184a602910a7e2c",
+      "contractDigest": "cd179abb8707b789ecb34feb4df89f83b8558665399816ec139661e6443bdc92",
       "categories": [
         "endpoint-identity",
         "path-param-arity",
