@@ -83,8 +83,10 @@ route in seven is flaky" — it is the only route carrying the affected widget.
 This is a rasteriser antialiasing difference. It is **ours**, not the target's:
 no bytes crossed the wire differently, `dom.json` and `styles.json` for this
 route are byte-identical in all five runs, and the server never saw the
-difference. It is not animation — 0032 §3.1 already measured that reduced
-motion moves this number by exactly zero.
+difference. Nor is it animation, though **not** for the reason 0032 §3.1 gave —
+see §2.4.1, which retires that argument's evidence: `prefers-reduced-motion` is
+set on both crawl contexts since 0031 §2.1, and a ±1 antialiasing difference on
+a static rounded corner is not a frame of a transition.
 
 ### 2.4 The baseline correction, which is the real finding
 
@@ -104,6 +106,31 @@ So the honest baseline is not a number:
 > target's).
 > **3 more differ whenever the run set draws both raster states**, which any
 > sufficiently long run set does.
+
+### 2.4.1 Two sentences already in the record are false as written
+
+Correcting the number is not enough, because the number was never the strongest
+claim made from that sample. Both of these were measured at N=3 on a uniform
+draw and both go further than the data ever supported:
+
+- **0028 §:** *"And the deterministic core is deterministic: 77 of 81 paths
+  reproduce byte for byte."* Three of those 77 do not.
+- **0032 §3:** *"Everything else in all seven routes — every screenshot, every
+  asset, every inferred schema — reproduces exactly."* Two screenshots do not.
+
+Neither is amended in place, because a decision document is a record of what was
+believed on the evidence available and rewriting it hides the failure mode. They
+are corrected here, and this section is what a reader of either should reach.
+
+**And one conclusion keeps its verdict while losing its evidence.** 0032 §3.1
+reads the reduced-motion fix as animation-independent because the count was
+"exactly 4 both times" — §13's exact-non-movement signal. That is now explained
+at least as well by both samples landing in the same raster state, so the
+observation is no longer discriminating. The verdict survives on a separate and
+stronger argument: the residual is a `<time datetime>` written server-side
+before a browser existed, which no motion setting can reach. Flagged because
+"the evidence for a true claim evaporated" is exactly the kind of thing that
+goes unnoticed when only the claim is checked.
 
 And 0032 §4.2's proposed gate — an equality against 4 at N=2 — would have been
 **a coin flip wired to a red light**. It fails whenever the two runs disagree and
