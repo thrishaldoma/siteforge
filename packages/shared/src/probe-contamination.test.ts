@@ -33,13 +33,33 @@ describe('assessProbeContamination', () => {
   it('fails the negative control when structure moves with no write before it', () => {
     // The half that makes the reading falsifiable: a read-only prefix that
     // moves means the fingerprint is tracking something other than our writes.
+    // A write exists elsewhere in the pass, so this is a real control failure
+    // rather than the instrument seeing nothing at all.
+    const report = assessProbeContamination({
+      probes: [
+        probe({ routeId: 'r2', attemptIndex: 0, mutated: true }),
+        probe({ attemptIndex: 0 }),
+        probe({ attemptIndex: 1, preStructureHash: 'S2' }),
+      ],
+    });
+    expect(report.verdict).toBe('confounded');
+    expect(report.unexplainedDrift).toHaveLength(1);
+  });
+
+  it('reports instrument-silent before confounded when nothing wrote at all', () => {
+    // Ordering, asserted. With no write anywhere there is no positive case for
+    // the negative control to be a control against, and calling it a failed
+    // control sends the reader after a confound in the fingerprint instead of
+    // after the attribution. This is the shape a real crawl produced: 0 writes
+    // attributed to 128 probes on a target the same crawl watched being
+    // written to.
     const report = assessProbeContamination({
       probes: [
         probe({ attemptIndex: 0 }),
         probe({ attemptIndex: 1, preStructureHash: 'S2' }),
       ],
     });
-    expect(report.verdict).toBe('confounded');
+    expect(report.verdict).toBe('instrument-silent');
     expect(report.unexplainedDrift).toHaveLength(1);
   });
 
@@ -76,6 +96,19 @@ describe('assessProbeContamination', () => {
       probes: [probe({ attemptIndex: 0 }), probe({ attemptIndex: 1 })],
     });
     expect(report.verdict).toBe('instrument-silent');
+  });
+
+  it('does not let a route s own drift be excused by that route s later write', () => {
+    // `afterMutating` is a prefix property: only a write at or before the
+    // earlier probe can explain the change. A write that happens afterwards is
+    // downstream of the drift and cannot have caused it.
+    const report = assessProbeContamination({
+      probes: [
+        probe({ attemptIndex: 0 }),
+        probe({ attemptIndex: 1, preStructureHash: 'S2', mutated: true }),
+      ],
+    });
+    expect(report.verdict).toBe('confounded');
   });
 
   it('reports no-comparable-pairs rather than a clean run when nothing snapshotted', () => {

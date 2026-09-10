@@ -1025,6 +1025,8 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
   const observed = {
     routeId, attemptIndex, label,
     preStructureHash: null, preTextHash: null, mutated: false,
+    /** Calls attributed to this probe, so `mutated: false` can be told from "saw nothing". */
+    calls: 0, methods: [],
   };
   probePass.probes.push(observed);
   /** `step`, plus the field the deadline handler reads. One place, so they cannot disagree. */
@@ -1045,6 +1047,15 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     if (request.isNavigationRequest() && request.frame() === page.mainFrame()) navigationsStarted += 1;
   });
   let locator = null;
+  /**
+   * Where this probe's own calls begin in the crawl-wide record.
+   *
+   * Function-scoped rather than local to the `try`, because what the probe
+   * *sent* has to be recorded however it leaves — see the tail. `-1` means it
+   * never got as far as snapshotting, which is a different statement from
+   * "it sent nothing".
+   */
+  let netBefore = -1;
   try {
     /**
      * `domcontentloaded`, not `networkidle`.
@@ -1101,7 +1112,7 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     const before = await at('snap-before', snap);
     observed.preStructureHash = S.shortHash(before.structure);
     observed.preTextHash = S.shortHash(before.html);
-    const netBefore = observations.length;
+    netBefore = observations.length;
     await at('reveal', () => revealInScrollableAncestor(locator));
     await at('click', () => locator.click({ timeout: 5000 }));
     // §6 says network idle or 2s. `networkidle` alone is not enough: on an
@@ -1121,7 +1132,6 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     }
 
     const networkCalls = observations.slice(netBefore);
-    observed.mutated = networkCalls.some((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method));
     const snapshot = (snapped, hash) => ({
       url: snapped.url, routeId, domHash: hash, a11yHash: S.shortHash(snapped.attrs), focusedRef: null,
     });
@@ -1224,6 +1234,33 @@ async function runProbe({ ctx, routeId, record, candidate, flowId, label, cssomC
     recordUndriveable({ routeId, candidate, label, kind, diagnostic });
   }
   await settle(2000);
+  /**
+   * What this probe sent, recorded on **every** exit path.
+   *
+   * It was computed inside the `try`, after the click and two waits, and
+   * therefore only for probes that got all the way through — so a probe that
+   * clicked "Save", fired its POST and then timed out on the snapshot after it
+   * was recorded as having written nothing. Measured on the first real run:
+   * 128 probes, **zero** writes attributed, while the same crawl observed
+   * `POST /api/v1/user/settings/general` and `POST /api/v1/tasks/1` from the
+   * browser — writes on two crawled routes that no probe would own up to. The
+   * seed cannot explain them: it calls the API directly with `PUT`, outside the
+   * page, so the recorder never sees it.
+   *
+   * That is §13's own warning arriving in a new place — the failure mode
+   * produced the *reassuring* output. "No probe writes" reads as "nothing can
+   * contaminate anything", which is exactly the answer that would have retired
+   * the question.
+   *
+   * After `settle`, so responses the page was still delivering are counted;
+   * `methods` and `calls` go alongside so a zero can be told from a silence.
+   */
+  if (netBefore >= 0) {
+    const sent = observations.slice(netBefore);
+    observed.calls = sent.length;
+    observed.methods = [...new Set(sent.map((o) => o.method))].sort();
+    observed.mutated = sent.some((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method));
+  }
   await page.close();
   return ran;
 }
@@ -1449,6 +1486,10 @@ async function main() {
   console.log(`\ncapture — ${TARGET_ID} at ${PIN.image}\n`);
 
   rmSync(OUT, { recursive: true, force: true });
+  // Cleared with the artifact, not left behind: a run that dies before writing
+  // its diagnostics would otherwise leave the *previous* run's file in place,
+  // and the harness would read it as this one's.
+  rmSync(join(REPO, 'capture', `${TARGET.siteId}-diagnostics`), { recursive: true, force: true });
   mkdirSync(join(OUT, 'network'), { recursive: true });
   mkdirSync(join(OUT, 'auth'), { recursive: true });
 
@@ -2074,9 +2115,27 @@ write('stage-report.json', S.StageReportSchema, {
 const DIAGNOSTICS = join(REPO, 'capture', `${TARGET.siteId}-diagnostics`);
 mkdirSync(DIAGNOSTICS, { recursive: true });
 const contamination = assessProbeContamination({ probes: probePass.probes });
+/**
+ * The crawl's own totals, beside the probe-attributed ones.
+ *
+ * The pair is the check: probes accounting for far fewer calls than the crawl
+ * saw means calls are being lost or belong to page loads, and it is visible
+ * here rather than inferred later from an endpoint list. This is the comparison
+ * that caught the zero.
+ */
+const crawlWide = {
+  apiCalls: observations.length,
+  methods: [...new Set(observations.map((o) => o.method))].sort(),
+  writes: observations.filter((o) => !['GET', 'HEAD', 'OPTIONS'].includes(o.method)).length,
+};
+const attributed = probePass.probes.reduce((n, p) => n + p.calls, 0);
 writeFileSync(
   join(DIAGNOSTICS, 'probe-pass.json'),
-  `${JSON.stringify({ runId: RUN_ID, ...probePass, contamination }, null, 2)}\n`,
+  `${JSON.stringify({ runId: RUN_ID, crawlWide, attributed, ...probePass, contamination }, null, 2)}\n`,
+);
+console.log(
+  `\n  calls: ${attributed} attributed to probes of ${crawlWide.apiCalls} the crawl saw` +
+  ` · crawl-wide writes ${crawlWide.writes} (${crawlWide.methods.join(', ')})`,
 );
 console.log(
   `\n  probe pass: ${probePass.probes.length} probe(s) · ${contamination.comparedPairs} adjacent pair(s) compared` +

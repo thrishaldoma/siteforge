@@ -75,6 +75,16 @@ export interface ProbeObservation {
   readonly preTextHash: string | null;
   /** This probe issued at least one non-GET. Derived from its recorded calls, never guessed. */
   readonly mutated: boolean;
+  /**
+   * Calls attributed to this probe, and the methods among them.
+   *
+   * Carried so `mutated: false` can be told from "this probe was never
+   * credited with any traffic" — the two are the same field value and
+   * completely different facts, and conflating them is how a pass that
+   * demonstrably writes reported no writes at all.
+   */
+  readonly calls?: number;
+  readonly methods?: readonly string[];
 }
 
 export interface DriftPoint {
@@ -182,6 +192,22 @@ export function assessProbeContamination(input: {
       detail: `no adjacent probe pair on any route had both pre-states recorded (${skippedPairs} pair(s) skipped). Nothing was compared, which is not the same as nothing being wrong.`,
     };
   }
+  if (mutatingProbes === 0) {
+    // Before `confounded`, deliberately. With no write anywhere, "the negative
+    // control failed" is the wrong description of what happened — there was no
+    // positive case for it to be a control *against*, and reporting a failed
+    // control would send the reader looking for a confound in the fingerprint
+    // when the thing to check is why a pass that demonstrably writes reported
+    // no writes. Measured: a crawl attributed 0 writes to 128 probes while
+    // observing `POST /user/settings/general` and `POST /tasks/1` from the
+    // browser, because the attribution ran too late in a probe's life to
+    // survive one that timed out after clicking.
+    return {
+      ...report,
+      verdict: 'instrument-silent',
+      detail: `${comparedPairs} pair(s) compared and not one of ${input.probes.length} probe(s) is recorded as having written. Either the pass genuinely mutates nothing — in which case it cannot contaminate anything and the granularity question is moot — or the write attribution is not seeing writes. Check the probe-attributed call count against the crawl-wide one before reading anything else here.`,
+    };
+  }
   if (unexplainedDrift.length > 0) {
     return {
       ...report,
@@ -196,16 +222,9 @@ export function assessProbeContamination(input: {
       detail: `${structureDrift.length} structural drift point(s) across ${contaminatedRoutes.length} route(s), every one downstream of a write. Probes on one route disturb each other, so resetting at the route boundary would leave the contamination in place.`,
     };
   }
-  if (mutatingProbes > 0) {
-    return {
-      ...report,
-      verdict: 'no-within-route-contamination',
-      detail: `${comparedPairs} pair(s) compared, ${mutatingProbes} probe(s) issued writes, and no route's structure moved. Within-route reset is not what the evidence asks for; cross-route contamination is a separate question the single-run view cannot see.`,
-    };
-  }
   return {
     ...report,
-    verdict: 'instrument-silent',
-    detail: `${comparedPairs} pair(s) compared and no probe issued a write, so a constant pre-state says nothing about contamination. A pass that mutates nothing cannot contaminate anything, and this instrument cannot tell that from a fingerprint that does not see writes.`,
+    verdict: 'no-within-route-contamination',
+    detail: `${comparedPairs} pair(s) compared, ${mutatingProbes} probe(s) issued writes, and no route's structure moved. Within-route reset is not what the evidence asks for; cross-route contamination is a separate question the single-run view cannot see.`,
   };
 }
