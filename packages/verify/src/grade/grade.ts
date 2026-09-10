@@ -174,6 +174,9 @@ interface FieldClaim {
 
 const responseKey = (status: string | number, pointer: string): string => `${status} ${pointer}`;
 
+/** The status half of a `responseKey`. One reader, so the two cannot drift. */
+const statusOf = (key: string): string => key.slice(0, key.indexOf(' '));
+
 /** The reserved `status` on a field-scope divergence naming the request body. */
 const REQUEST_SLOT = 'request';
 
@@ -407,15 +410,42 @@ function fieldCategories(
      * emitted, which is empty at precisely these slots, so they never
      * contributed to it.
      */
-    const modelResponses = modelResponseFields(pair);
-    const statusesWithBody = new Set(
-      [...modelResponses.keys()].map((k) => k.slice(0, k.indexOf(' '))),
+    /**
+     * Model fields at a status the document declares no response for, and
+     * the crawl observed, score in neither direction (0049).
+     *
+     * Vikunja's server answers an uncredentialed request with
+     * `401 {"message": …}` everywhere, and its Swagger declares 401 response
+     * fields twice in the whole document. Charging infer for recording a
+     * body §6's anonymous re-issue correctly observed is scoring the
+     * document, not the model.
+     *
+     * **Both conditions come from outside the model.** "The document is
+     * silent here" is read from the truth snapshot; "the crawl saw this
+     * status" is read from `capture/network/endpoints.json` through
+     * `pair.observedStatuses`. Using the model's own responses for the
+     * second would excuse a status infer *invented*, which is exactly the
+     * hallucination this category exists to catch — §13's rule that an
+     * invariant's observed side is derived independently of what it checks.
+     *
+     * Not a known-divergence entry per slot: 18 of them would put the
+     * category over its `denominator × 0.05` cap and have the grader report
+     * a document unfit for grading the 236 fields it is fine for. A
+     * systematic omission is one judgement, not eighteen (0049 §2).
+     */
+    const declaredStatuses = new Set([...truthResponseFields(pair).keys()].map(statusOf));
+    const observedStatuses = new Set(pair.observedStatuses ?? []);
+    const undeclaredButObserved = (key: string): boolean =>
+      !declaredStatuses.has(statusOf(key)) && observedStatuses.has(statusOf(key));
+
+    const modelResponses = new Map(
+      [...modelResponseFields(pair)].filter(([key]) => !undeclaredButObserved(key)),
     );
+    const statusesWithBody = new Set([...modelResponses.keys()].map(statusOf));
     const truthResponses = truthResponseFields(pair);
     const reachableTruth = new Map<string, TruthField>();
     for (const [key, field] of truthResponses) {
-      const status = key.slice(0, key.indexOf(' '));
-      if (statusesWithBody.has(status)) reachableTruth.set(key, field);
+      if (statusesWithBody.has(statusOf(key))) reachableTruth.set(key, field);
       // else: the crawl saw no body at this status, so every field the
       // document declares on it is unreachable whatever infer does. Counted
       // as seed coverage below rather than as a recall miss.

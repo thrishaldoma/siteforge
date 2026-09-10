@@ -25,11 +25,32 @@ export interface ObservedEndpoint {
   readonly method: string;
   /** The URL pattern, as capture records it: `/api/v1/repos/:owner/:repo`. */
   readonly pathPattern: string;
+  /**
+   * The response statuses the crawl actually saw, from the capture artifact.
+   *
+   * Carried here rather than read off the model, because 0049's exclusion
+   * turns on it: a slot is only excused for being undeclared if the crawl
+   * *observed* that status. Taking it from the model would excuse a status
+   * infer invented, which is the hallucination the category exists to catch
+   * — and §13's rule is that an invariant's observed side must be derived
+   * independently of the thing it checks.
+   *
+   * Optional so a caller that has not plumbed it through gets the strict
+   * behaviour (nothing excused) rather than the permissive one.
+   */
+  readonly statuses?: readonly string[];
 }
 
 export interface MatchedPair {
   readonly operation: ApiOperation;
   readonly truth: TruthEndpoint;
+  /**
+   * Statuses the crawl observed for this endpoint, from the capture (0049).
+   *
+   * Empty when the caller did not plumb them through, which is the strict
+   * reading: nothing is excused.
+   */
+  readonly observedStatuses?: readonly string[];
 }
 
 export interface Matching {
@@ -110,6 +131,20 @@ export function matchEndpoints(
   const outOfUniverse = operations.filter((o) => !inUniverse(o.pathPattern, truth.basePath));
   const inside = operations.filter((o) => inUniverse(o.pathPattern, truth.basePath));
 
+  /**
+   * Observed statuses, keyed the same way the pairing is (0049).
+   *
+   * Built here so a pair carries the crawl's own record of what it saw,
+   * rather than each scorer re-deriving it from the model in front of it.
+   */
+  const statusesByKey = new Map<string, readonly string[]>();
+  for (const o of observed) {
+    if (o.statuses === undefined) continue;
+    const k = key(o.method, pathShape(o.pathPattern));
+    const prior = statusesByKey.get(k) ?? [];
+    statusesByKey.set(k, [...new Set([...prior, ...o.statuses])]);
+  }
+
   const truthInside = truth.endpoints.filter((e) => inUniverse(e.fullPath, truth.basePath));
   const truthByKey = groupBy(truthInside, (e) => key(e.method, e.shape));
   const modelByKey = groupBy(inside, (o) => key(o.method, pathShape(o.pathPattern)));
@@ -129,7 +164,13 @@ export function matchEndpoints(
     }
     const spec = specs[0];
     if (spec === undefined) unmatchedOperations.push(candidates[0]!);
-    else pairs.push({ operation: candidates[0]!, truth: spec });
+    else {
+      pairs.push({
+        operation: candidates[0]!,
+        truth: spec,
+        observedStatuses: statusesByKey.get(k) ?? [],
+      });
+    }
   }
 
   // Arity, over endpoints that agree on their literal segments. Only a *unique*

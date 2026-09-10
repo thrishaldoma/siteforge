@@ -443,6 +443,16 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'undeclared-status-excuses-a-hallucination',
+    bug: 'the undeclared-status exclusion drops the observed-side condition, so a response at a status the crawl NEVER SAW is excused too — an invented endpoint response stops counting as a false positive, in the category whose whole job is catching hallucination',
+    reachable: "the observed-side condition is the half that is easy to drop, because the rule reads naturally without it: 'the document does not declare this status, so do not score it'. Reading the condition off the model's own responses instead of the capture is the same defect in a form that looks like a simplification, and §13 already records three cases of an invariant's observed side being derived from the thing it checks.",
+    gate: ['pnpm', '-s', 'test', '--project', 'verify'],
+    // The hallucination direction. A row asserting only that a genuinely
+    // observed 401 is excused passes in both states — the bug excuses it too.
+    expect: 'does NOT excuse a status the crawl never saw',
+  },
+
+  {
     id: 'seed-expiry-never-fires',
     bug: 'the seed expiry returns null whatever it is handed, so narrowing stays deferred after codegen begins seeding the store from response schemas',
     reachable: "an expiry that never fires looks exactly like an expiry whose event has not happened, and this one is designed to sit silent for months before its single moment. `>= 0` is also how an off-by-one is spelled — the guard reads as an emptiness check either way.",

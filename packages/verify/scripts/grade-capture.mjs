@@ -48,7 +48,18 @@ const model = SiteModelSchema.parse(
 const capture = JSON.parse(
   readFileSync(join(REPO, 'capture', siteId, 'network', 'endpoints.json'), 'utf8'),
 );
-const observed = capture.endpoints.map((e) => ({ method: e.method, pathPattern: e.pathPattern }));
+/**
+ * The observed side, from the capture and nothing else.
+ *
+ * `statuses` is carried because 0049's exclusion turns on whether the crawl
+ * *saw* a status the document is silent about — read from the artifact, never
+ * from the model, or a status infer invented would excuse itself.
+ */
+const observed = capture.endpoints.map((e) => ({
+  method: e.method,
+  pathPattern: e.pathPattern,
+  statuses: (e.responses ?? []).map((r) => String(r.status)),
+}));
 
 const gateOf = (metric) => {
   if (metric.gate === null) return 'reported';

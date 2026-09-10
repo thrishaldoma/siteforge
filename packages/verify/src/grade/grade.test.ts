@@ -214,6 +214,93 @@ describe('a zero denominator is a scored outcome (§6)', () => {
   });
 });
 
+describe('a status the document omits and the crawl saw scores in neither direction (0049)', () => {
+  /**
+   * Vikunja answers an uncredentialed request with `401 {"message": …}`
+   * everywhere and declares 401 fields twice in its whole document. Charging
+   * infer for a body §6's anonymous re-issue correctly observed is scoring
+   * the document. Built on the Gitea baseline because the judgement has to
+   * be drivable on synthetic input (§13), not only by the real run.
+   */
+  const withErrorBody = (statuses: readonly string[]): GradeInput => {
+    const op = GITEA_BASELINE.operations[0]!;
+    const errorBody: JsonSchemaNode = { type: 'object', properties: { message: { type: 'string' } } };
+    return {
+      ...input,
+      model: {
+        ...GITEA_BASELINE,
+        operations: [
+          { ...op, responses: [...op.responses, { status: 401, schema: errorBody }] },
+          ...GITEA_BASELINE.operations.slice(1),
+        ],
+      },
+      observed: GITEA_OBSERVED.map((o) =>
+        o.pathPattern === op.pathPattern && o.method === op.method ? { ...o, statuses } : o,
+      ),
+    } as GradeInput;
+  };
+
+  const precisionOf = (i: GradeInput) =>
+    gradeSiteModel(i).metrics.find((m) => m.id === 'response-field-presence.precision')!;
+
+  it('excuses the field when the crawl observed that status', () => {
+    const before = precisionOf(input);
+    const after = precisionOf(withErrorBody(['200', '401']));
+    // Excluded from BOTH sides, so the denominator is where it shows.
+    expect(after.denominator).toBe(before.denominator);
+    expect(after.numerator).toBe(before.numerator);
+  });
+
+  /**
+   * The control that makes the exclusion safe, and the reason the predicate
+   * reads the capture rather than the model: a status infer INVENTED is a
+   * hallucination, which is what this category exists to catch. Reading
+   * "the model has a response here" would excuse exactly that.
+   */
+  it('does NOT excuse a status the crawl never saw — that is a hallucination', () => {
+    const before = precisionOf(input);
+    const invented = precisionOf(withErrorBody(['200']));
+    expect(invented.denominator).toBe(before.denominator + 1);
+    expect(invented.numerator).toBe(before.numerator);
+    expect(invented.value).toBeLessThan(before.value!);
+  });
+
+  it('does NOT excuse a status the document DOES declare', () => {
+    // 200 is declared and observed; a wrong field there is still a miss.
+    const op = GITEA_BASELINE.operations[0]!;
+    const first = op.responses[0]!;
+    const polluted: GradeInput = {
+      ...input,
+      model: {
+        ...GITEA_BASELINE,
+        operations: [
+          {
+            ...op,
+            responses: [
+              { ...first, schema: {
+                ...first.schema,
+                properties: { ...(first.schema.properties ?? {}), sf_invented: { type: 'string' } },
+              } },
+              ...op.responses.slice(1),
+            ],
+          },
+          ...GITEA_BASELINE.operations.slice(1),
+        ],
+      },
+      observed: GITEA_OBSERVED.map((o) =>
+        o.pathPattern === op.pathPattern && o.method === op.method ? { ...o, statuses: ['200'] } : o,
+      ),
+    } as GradeInput;
+    expect(precisionOf(polluted).denominator).toBe(precisionOf(input).denominator + 1);
+  });
+
+  it('excuses nothing when the caller plumbs no statuses through', () => {
+    // The strict default: an absent observed side must not read as consent.
+    const noStatuses = { ...withErrorBody(['200', '401']), observed: GITEA_OBSERVED };
+    expect(precisionOf(noStatuses).denominator).toBe(precisionOf(input).denominator + 1);
+  });
+});
+
 describe('field types, under the two normalisations fixed in advance', () => {
   const required = { type: 'string', required: true };
   it('counts integer as a match for number, both ways', () => {

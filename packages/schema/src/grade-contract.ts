@@ -55,6 +55,14 @@ import { z } from 'zod';
  *
  * A pair whose halves can move for unrelated reasons is two metrics.
  *
+ * v5 also excludes, from `response-field-presence`, slots at a status the
+ * document declares no response for and the crawl observed (0049). Vikunja's
+ * server answers `401 {"message": …}` everywhere and its Swagger declares 401
+ * fields twice in 368KB; charging infer for a body §6's anonymous re-issue
+ * correctly recorded is scoring the document. Both halves of the predicate
+ * come from outside the model — a status infer *invented*, that the crawl
+ * never saw, stays a false positive.
+ *
  * v5 also corrects `synthesized-endpoint.precision`'s denominator prose,
  * which said "synthesized endpoints infer emitted" while the code has always
  * counted only the in-universe ones. Not a number moving: the code is
@@ -247,7 +255,8 @@ export const GRADE_METRICS: readonly GradeMetric[] = [
     suite: 'capture-fidelity',
     category: 'response-field-presence',
     numerator: 'emitted (status, pointer) response fields the spec declares',
-    denominator: 'response fields infer emitted, on matched endpoints',
+    denominator:
+      'response fields infer emitted, on matched endpoints, EXCLUDING slots at a status the document declares no response for AND the crawl observed — a document omission, not an inference defect',
     gate: atLeast(0.95, 'calibration'),
     why: 'the half that is genuinely about inference, and the half a richer seed makes WORSE rather than better. 0046: 307 of 308 false positives were one data-keyed map modelled as a record type, and more route groups would mean more spurious fields. Unchanged by the split — the denominator is the same set — so the number before and after is comparable',
   },
@@ -511,7 +520,7 @@ export function computeGradeContractDigest(): string {
  * so moving a threshold without updating this line fails the suite.
  */
 export const GRADE_CONTRACT_DIGEST =
-  'cd179abb8707b789ecb34feb4df89f83b8558665399816ec139661e6443bdc92';
+  '509635e28a20cedb8a9c197015410f62b8bf501d1ec10ec06e9037f50ab6fa7a';
 
 // ---------------------------------------------------------------------------
 // Known divergence (0015 §1)
