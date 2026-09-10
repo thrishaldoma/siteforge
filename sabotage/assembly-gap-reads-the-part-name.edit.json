@@ -1,0 +1,7 @@
+[
+  {
+    "file": "packages/schema/src/model-assembly.ts",
+    "find": "    const available = input.inputs[gap.input] ?? 0;\n    if (available === 0) {",
+    "replace": "    const available = input.inputs[gap.part] ?? 0;\n    if (available === 0) {"
+  }
+]

@@ -22,7 +22,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  DEFERRALS, GRADE_SUITES, SiteModelSchema, assessDeferrals, assessSeedExpiry, countEmissions,
+  DEFERRALS, GRADE_SUITES, MODEL_ASSEMBLY_GAPS, SiteModelSchema, assessDeferrals,
+  assessModelAssembly, assessSeedExpiry, countEmissions,
 } from '../../schema/dist/index.js';
 import { gradeSiteModel } from '../dist/grade/grade.js';
 import { loadVikunjaTruth } from '../dist/grade/truth/vikunja.js';
@@ -199,7 +200,61 @@ if (deferralFindings.length > 0) {
   for (const f of deferralFindings) console.log(`    ${f.category}: ${f.problem} — ${f.detail}`);
 }
 
-if (deferralFindings.length > 0 || seedExpiry !== null) process.exitCode = 1;
+/**
+ * The parts capture fills and infer assembles as `[]`.
+ *
+ * Read from `coverage.json`, which is capture's own count of what the raw
+ * input held — the independently-derived side §6 requires — rather than from
+ * the artifacts again. Counting the model's inputs with the model's own
+ * reader is how both sides move together and the check goes vacuous.
+ */
+const coverage = JSON.parse(
+  readFileSync(join(REPO, 'capture', siteId, 'coverage.json'), 'utf8'),
+);
+/**
+ * Only inputs this capture actually counts.
+ *
+ * `components` is **absent on purpose**, and its absence is the honest
+ * answer rather than a convenience: `inferComponents` reads repeated DOM
+ * subtrees and `coverage.json` has no counter for those, so any number put
+ * here would be a stand-in for a quantity nobody measured — and the first
+ * one tried (`interactionCandidates`, 2085) made a producer that ran look
+ * like an artifact nobody assembles. §13: an unmeasured limitation cannot be
+ * ranked, and inventing the measurement is worse than declaring the blind
+ * spot. `entities` and `operations` are here as the live negative control:
+ * both have a real input and both assemble, so the check staying silent on
+ * them is evidence it is not silent by construction.
+ */
+const assemblyInputs = {
+  fonts: coverage.extracted.fonts,
+  assets: coverage.extracted.assets,
+  flows: coverage.extracted.controlsFired,
+  entities: coverage.extracted.endpoints,
+  operations: coverage.extracted.endpoints,
+};
+const assembly = assessModelAssembly({
+  declared: MODEL_ASSEMBLY_GAPS,
+  inputs: assemblyInputs,
+  parts: {
+    fonts: model.fonts.length, assets: model.assets.length,
+    behaviours: model.behaviours.length,
+    entities: model.entities.length, operations: model.operations.length,
+  },
+});
+console.log('\n  model assembly (0047) — what capture filled and infer leaves empty:');
+// Printed from the same map the assessment reads. Printing from
+// `coverage.extracted[g.input]` instead put a 0 beside `behaviours`, whose
+// input is `flows` and whose counter is `controlsFired` — a display that
+// reads exactly like the empty-input case the check is built to reject.
+for (const g of MODEL_ASSEMBLY_GAPS) {
+  console.log(`    ! ${g.part.padEnd(12)} capture holds ${String(assemblyInputs[g.input] ?? 0).padStart(4)}  ·  model carries ${model[g.part].length}`);
+}
+if (assembly.length > 0) {
+  console.log(`\n  ✗ ${assembly.length} model part(s) no longer match their declaration:`);
+  for (const f of assembly) console.log(`    ${f.part}: ${f.problem} — ${f.detail}`);
+}
+
+if (deferralFindings.length > 0 || seedExpiry !== null || assembly.length > 0) process.exitCode = 1;
 
 if (report.failedCategories.length > 0) {
   console.log(`  ✗ failed: ${report.failedCategories.join(', ')}`);

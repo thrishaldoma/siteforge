@@ -39,3 +39,4 @@ export * from './deferral.js';
 export * from './stage-report.js';
 export * from './capture-model.js';
 export * from './site-model/index.js';
+export * from './model-assembly.js';

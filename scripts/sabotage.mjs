@@ -433,6 +433,16 @@ export const SABOTAGES = [
   },
 
   {
+    id: 'assembly-gap-reads-the-part-name',
+    bug: "the model-assembly check looks up a part's capture input by the part's own name, so `behaviours` reads `inputs.behaviours` — undefined — and every declaration whose input is named differently reports as having no input at all",
+    reachable: "it is the bug that was in the grader's own print line an hour after the check was written: `behaviours` is assembled from `flows`, the display read `coverage.extracted[g.input]` against a counter called `controlsFired`, and it printed `capture holds 0` beside a capture holding 113. Reading the part name is the obvious thing to write and produces a number in both states, so nothing throws and nothing looks wrong.",
+    gate: ['pnpm', '-s', 'test', '--project', 'schema'],
+    // The name-vs-input distinction. Asserted where the two differ, because a
+    // row whose part and input share a name passes under the bug.
+    expect: 'reads the declared input name, not the part name',
+  },
+
+  {
     id: 'seed-expiry-never-fires',
     bug: 'the seed expiry returns null whatever it is handed, so narrowing stays deferred after codegen begins seeding the store from response schemas',
     reachable: "an expiry that never fires looks exactly like an expiry whose event has not happened, and this one is designed to sit silent for months before its single moment. `>= 0` is also how an off-by-one is spelled — the guard reads as an emptiness check either way.",
