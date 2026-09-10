@@ -160,6 +160,39 @@ export const PINS = {
     ]) await call('/api/v1/projects/2/tasks', 'PUT', { title }, token);
     for (const title of ['bug', 'enhancement', 'question'])
       await call('/api/v1/labels', 'PUT', { title }, token);
+
+    /**
+     * One task with an assignee, a reminder and a label (0051).
+     *
+     * Without this every task on the instance has `assignees: null`,
+     * `labels: null` and `reminders: null`, so infer emits `{type:'null'}`
+     * for each — correctly, since that is all it saw — and the grader scores
+     * it against a document that declares arrays. **21 of `field-type`'s 25
+     * disagreements and 63 of 126 recall misses were that**: numbers badged
+     * as inference that were reading a degenerate instance.
+     *
+     * Not scoring pressure. §8 builds the mock store from captured
+     * responses and §10's validators read seeded state, so an instance
+     * where no task has ever been assigned or labelled cannot support the
+     * tasks the environment exists to pose.
+     *
+     * **One `POST`, because the task update replaces.** Setting assignees
+     * and then reminders in two calls silently clears the first. And it is
+     * the task-update form rather than `PUT /tasks/1/assignees`, which
+     * answers 201 and leaves the field null — both found by probing a
+     * booted container before this was written.
+     *
+     * One task, not four, deliberately: the union over observed bodies then
+     * sees both a populated array and a null, which is the shape a real
+     * instance has and the one `nullable` is for.
+     */
+    await call('/api/v1/tasks/1', 'POST', {
+      id: 1,
+      assignees: [{ id: 1, username }],
+      reminders: [{ reminder: '2099-01-01T09:00:00Z', relative_period: 0, relative_to: '' }],
+    }, token);
+    await call('/api/v1/tasks/1/labels', 'PUT', { label_id: 1 }, token);
+
     return token;
   },
 
