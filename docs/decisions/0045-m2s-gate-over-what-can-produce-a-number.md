@@ -106,7 +106,20 @@ captures whose endpoint sets differ:
 their gates.** `field-type` is marked *boundary* deliberately: it reads
 exactly its `≥ 0.9` gate, with zero margin, on a denominator that moved
 320 → 250 in the same change. A gate passing by nothing on a shifted
-denominator is not a result to lean on. That is the opposite of the original claim and a stronger form
+denominator is not a result to lean on.
+
+*Amended after 0047 and 0048.* A fresh crawl of the same pinned digest, with
+the map fix changing the model, reports **`0.9000` on `225/250` again —
+numerator and denominator both byte-identical.** §13 says exact
+non-movement is the first thing to disbelieve, so it was checked rather than
+noted: `field-type` is scored over fields present on *both* sides, and every
+field 0047 removed was model-only, so none of them was ever in this
+denominator. The stability is real and it is a statement about the crawl's
+determinism in this region, not about the metric. **The gate is still met
+with zero margin and is still not a result to lean on** — and per the
+ruling, the threshold is not being tuned to move it off the line. The next
+real change to matched-field types will move it, and that is when it becomes
+a number. That is the opposite of the original claim and a stronger form
 of the same argument: these numbers are substantially about **capture**, which
 is 0021's finding reached a second way (0046 §4.1).
 
